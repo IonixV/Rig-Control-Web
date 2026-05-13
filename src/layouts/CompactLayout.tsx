@@ -654,7 +654,7 @@ function CompactLayout({
               <span className="text-[0.5625rem] uppercase tracking-widest font-bold text-[#8e9299]">POTA Spots</span>
               <SpotSettingsGear accent="emerald" onClick={() => setShowPotaSettings(true)} />
             </div>
-            <div className="max-h-64 overflow-y-auto custom-scrollbar">
+            <div className="max-h-64 overflow-y-auto overflow-x-hidden custom-scrollbar">
               {renderSpotsTable(false)}
             </div>
           </div>
@@ -667,7 +667,7 @@ function CompactLayout({
               <span className="text-[0.5625rem] uppercase tracking-widest font-bold text-[#8e9299]">SOTA Spots</span>
               <SpotSettingsGear accent="amber" onClick={() => setShowSotaSettings(true)} />
             </div>
-            <div className="max-h-64 overflow-y-auto custom-scrollbar">
+            <div className="max-h-64 overflow-y-auto overflow-x-hidden custom-scrollbar">
               {renderSotaSpotsTable()}
             </div>
           </div>
@@ -680,7 +680,7 @@ function CompactLayout({
               <span className="text-[0.5625rem] uppercase tracking-widest font-bold text-[#8e9299]">WWFF Spots</span>
               <SpotSettingsGear accent="sky" onClick={() => setShowWwffSettings(true)} />
             </div>
-            <div className="max-h-64 overflow-y-auto custom-scrollbar">
+            <div className="max-h-64 overflow-y-auto overflow-x-hidden custom-scrollbar">
               {renderWwffSpotsTable()}
             </div>
           </div>

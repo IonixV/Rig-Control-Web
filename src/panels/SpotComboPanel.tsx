@@ -59,7 +59,7 @@ export default function SpotComboPanel({
           />
         </div>
       </div>
-      <div className={cn('overflow-y-auto custom-scrollbar', maxHeightClass)}>
+      <div className={cn('overflow-y-auto overflow-x-hidden custom-scrollbar', maxHeightClass)}>
         {activeTab === 'pota' && renderPotaTable(false)}
         {activeTab === 'sota' && renderSotaTable()}
         {activeTab === 'wwff' && renderWwffTable()}

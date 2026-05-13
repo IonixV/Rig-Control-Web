@@ -27,7 +27,7 @@ export interface SpotsPanelProps {
 
 export default function SpotsPanel({ renderTable }: SpotsPanelProps) {
   return (
-    <div className="overflow-x-auto">
+    <div>
       {renderTable()}
     </div>
   );

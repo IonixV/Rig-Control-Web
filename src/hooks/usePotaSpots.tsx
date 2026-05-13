@@ -447,20 +447,20 @@ export function usePotaSpots({
 
   // ── Render functions ──────────────────────────────────────────────────────
   const renderSpotsTable = (showFullLocation: boolean) => (
-    <table className="w-full text-[0.625rem] font-mono border-collapse table-fixed">
+    <table className="w-full text-[0.625rem] font-mono border-collapse table-auto">
       <thead>
         <tr className="bg-[#0a0a0a]">
           {([
-            { key: 'activator', label: 'Activator', width: 'w-[18%]' },
-            { key: 'frequency', label: 'Frequency', width: 'w-[18%]' },
-            { key: 'mode', label: 'Mode', width: 'w-[10%]' },
-            { key: 'locationDesc', label: 'Location', width: 'w-[44%]' },
-            { key: 'spotTime', label: 'Age', width: 'w-[10%]' },
+            { key: 'activator', label: 'Activator', width: '' },
+            { key: 'frequency', label: 'Frequency', width: '' },
+            { key: 'mode', label: 'Mode', width: '' },
+            { key: 'locationDesc', label: 'Location', width: 'w-full' },
+            { key: 'spotTime', label: 'Age', width: '' },
           ] as const).map(({ key, label, width }) => (
             <th
               key={key}
               onClick={() => handlePotaSort(key)}
-              className={cn("px-2 py-1.5 text-left text-[0.5625rem] uppercase text-[#8e9299] cursor-pointer hover:text-white select-none whitespace-nowrap border-b border-[#2a2b2e]", width)}
+              className={cn("px-2 py-1.5 text-left text-[0.5625rem] uppercase text-[#8e9299] cursor-pointer hover:text-white select-none border-b border-[#2a2b2e]", width)}
             >
               {label}
               {potaSortCol === key && potaSortDir !== 'api' && (
@@ -520,20 +520,20 @@ export function usePotaSpots({
   );
 
   const renderSotaSpotsTable = () => (
-    <table className="w-full text-[0.625rem] font-mono border-collapse table-fixed">
+    <table className="w-full text-[0.625rem] font-mono border-collapse table-auto">
       <thead>
         <tr className="bg-[#0a0a0a]">
           {([
-            { key: 'activatorCallsign', label: 'Activator', width: 'w-[18%]' },
-            { key: 'frequency', label: 'Frequency', width: 'w-[18%]' },
-            { key: 'mode', label: 'Mode', width: 'w-[10%]' },
-            { key: 'summitCode', label: 'Location', width: 'w-[44%]' },
-            { key: 'timeStamp', label: 'Age', width: 'w-[10%]' },
+            { key: 'activatorCallsign', label: 'Activator', width: '' },
+            { key: 'frequency', label: 'Frequency', width: '' },
+            { key: 'mode', label: 'Mode', width: '' },
+            { key: 'summitCode', label: 'Location', width: 'w-full' },
+            { key: 'timeStamp', label: 'Age', width: '' },
           ] as const).map(({ key, label, width }) => (
             <th
               key={key}
               onClick={() => handleSotaSort(key)}
-              className={cn("px-2 py-1.5 text-left text-[0.5625rem] uppercase text-[#8e9299] cursor-pointer hover:text-white select-none whitespace-nowrap border-b border-[#2a2b2e]", width)}
+              className={cn("px-2 py-1.5 text-left text-[0.5625rem] uppercase text-[#8e9299] cursor-pointer hover:text-white select-none border-b border-[#2a2b2e]", width)}
             >
               {label}
               {sotaSortCol === key && sotaSortDir !== 'api' && (
@@ -589,20 +589,20 @@ export function usePotaSpots({
   );
 
   const renderWwffSpotsTable = () => (
-    <table className="w-full text-[0.625rem] font-mono border-collapse table-fixed">
+    <table className="w-full text-[0.625rem] font-mono border-collapse table-auto">
       <thead>
         <tr className="bg-[#0a0a0a]">
           {([
-            { key: 'activator', label: 'Activator', width: 'w-[18%]' },
-            { key: 'frequency_khz', label: 'Frequency', width: 'w-[18%]' },
-            { key: 'mode', label: 'Mode', width: 'w-[10%]' },
-            { key: 'reference', label: 'Location', width: 'w-[44%]' },
-            { key: 'spot_time', label: 'Age', width: 'w-[10%]' },
+            { key: 'activator', label: 'Activator', width: '' },
+            { key: 'frequency_khz', label: 'Frequency', width: '' },
+            { key: 'mode', label: 'Mode', width: '' },
+            { key: 'reference', label: 'Location', width: 'w-full' },
+            { key: 'spot_time', label: 'Age', width: '' },
           ] as const).map(({ key, label, width }) => (
             <th
               key={key}
               onClick={() => handleWwffSort(key)}
-              className={cn("px-2 py-1.5 text-left text-[0.5625rem] uppercase text-[#8e9299] cursor-pointer hover:text-white select-none whitespace-nowrap border-b border-[#2a2b2e]", width)}
+              className={cn("px-2 py-1.5 text-left text-[0.5625rem] uppercase text-[#8e9299] cursor-pointer hover:text-white select-none border-b border-[#2a2b2e]", width)}
             >
               {label}
               {wwffSortCol === key && wwffSortDir !== 'api' && (
