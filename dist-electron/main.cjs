@@ -57691,6 +57691,7 @@ function createInitialContext(io2, baseDir, dataDir) {
     cwPlayheadStraight: false,
     cwMachine: "IDLE",
     cwPendingElement: null,
+    cwLastSentElement: null,
     cwElementEndMs: 0,
     cwKeyIsDown: false,
     cwBufferReady: false,
@@ -58682,16 +58683,19 @@ function cwTick(ctx) {
         ctx.cwMachine = "SENDING_DIT";
         ctx.cwElementEndMs = nowMs + ditMs;
         ctx.cwPendingElement = null;
+        ctx.cwLastSentElement = "dit";
         cwSetKey(ctx, true);
       } else if (ctx.cwPlayheadDah && !ctx.cwPlayheadDit) {
         ctx.cwMachine = "SENDING_DAH";
         ctx.cwElementEndMs = nowMs + ditMs * 3;
         ctx.cwPendingElement = null;
+        ctx.cwLastSentElement = "dah";
         cwSetKey(ctx, true);
       } else if (ctx.cwPlayheadDit && ctx.cwPlayheadDah) {
         ctx.cwMachine = "SENDING_DIT";
         ctx.cwElementEndMs = nowMs + ditMs;
         ctx.cwPendingElement = "dah";
+        ctx.cwLastSentElement = "dit";
         cwSetKey(ctx, true);
       }
     } else if (ctx.cwMachine === "SENDING_DIT" || ctx.cwMachine === "SENDING_DAH") {
@@ -58710,7 +58714,7 @@ function cwTick(ctx) {
         if (ctx.cwSettings.mode === "iambic-b" && ctx.cwPendingElement) {
           next = ctx.cwPendingElement;
         } else if (ctx.cwPlayheadDit && ctx.cwPlayheadDah) {
-          next = ctx.cwPendingElement === "dah" ? "dah" : "dit";
+          next = ctx.cwLastSentElement === "dit" ? "dah" : "dit";
         } else if (ctx.cwPlayheadDit) {
           next = "dit";
         } else if (ctx.cwPlayheadDah) {
@@ -58720,11 +58724,13 @@ function cwTick(ctx) {
         if (next === "dit") {
           ctx.cwMachine = "SENDING_DIT";
           ctx.cwElementEndMs += ditMs;
+          ctx.cwLastSentElement = "dit";
           if (ctx.cwSettings.mode === "iambic-b" && ctx.cwPlayheadDah) ctx.cwPendingElement = "dah";
           cwSetKey(ctx, true);
         } else if (next === "dah") {
           ctx.cwMachine = "SENDING_DAH";
           ctx.cwElementEndMs += ditMs * 3;
+          ctx.cwLastSentElement = "dah";
           if (ctx.cwSettings.mode === "iambic-b" && ctx.cwPlayheadDit) ctx.cwPendingElement = "dit";
           cwSetKey(ctx, true);
         } else {
@@ -58821,6 +58827,8 @@ async function closeKeyerPort(ctx) {
   ctx.cwIsKeying = false;
   ctx.cwKeyIsDown = false;
   ctx.cwMachine = "IDLE";
+  ctx.cwPendingElement = null;
+  ctx.cwLastSentElement = null;
   ctx.cwPaddleBuffer = [];
 }
 async function syncKeyerPort(ctx, forceReopen = false) {
@@ -58847,6 +58855,7 @@ function registerCwHandlers(socket, ctx) {
         ctx.cwPlayheadStraight = false;
         ctx.cwMachine = "IDLE";
         ctx.cwPendingElement = null;
+        ctx.cwLastSentElement = null;
         ctx.cwElementEndMs = 0;
         ctx.cwKeyIsDown = false;
         ctx.cwBufferReady = false;

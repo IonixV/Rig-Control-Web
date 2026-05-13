@@ -22,9 +22,11 @@ export function useCWKeyer({ socket, connected, localAudioOutputDevice }: UseCWK
   const cwStuckAlertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ditPressedRef = useRef(false);
   const dahPressedRef = useRef(false);
+  const cwVerboseRef = useRef(false);
   const cwStateRef = useRef({
     machine: 'IDLE' as 'IDLE' | 'SENDING_DIT' | 'SENDING_DAH' | 'INTER_ELEMENT',
     pendingElement: null as 'dit' | 'dah' | null,
+    lastSentElement: null as 'dit' | 'dah' | null,
     // Audio-clock seconds: in SENDING = tone-off time; in INTER_ELEMENT = gap-end time.
     elementEndTime: 0,
     keyIsDown: false,
@@ -166,38 +168,33 @@ export function useCWKeyer({ socket, connected, localAudioOutputDevice }: UseCWK
 
       if (s.machine === 'IDLE') {
         if (ditPressedRef.current && !dahPressedRef.current) {
-          s.machine = 'SENDING_DIT';
-          s.pendingElement = null;
-          s.keyIsDown = true;
-          setCwKeyActive(true);
-          s.elementEndTime = scheduleElement(ditSec);
+          s.machine = 'SENDING_DIT'; s.pendingElement = null; s.lastSentElement = 'dit';
+          s.keyIsDown = true; setCwKeyActive(true); s.elementEndTime = scheduleElement(ditSec);
+          if (cwVerboseRef.current) console.log(`[CW-TICK] IDLE→SENDING_DIT dit=true dah=false`);
         } else if (dahPressedRef.current && !ditPressedRef.current) {
-          s.machine = 'SENDING_DAH';
-          s.pendingElement = null;
-          s.keyIsDown = true;
-          setCwKeyActive(true);
-          s.elementEndTime = scheduleElement(ditSec * 3);
+          s.machine = 'SENDING_DAH'; s.pendingElement = null; s.lastSentElement = 'dah';
+          s.keyIsDown = true; setCwKeyActive(true); s.elementEndTime = scheduleElement(ditSec * 3);
+          if (cwVerboseRef.current) console.log(`[CW-TICK] IDLE→SENDING_DAH dit=false dah=true`);
         } else if (ditPressedRef.current && dahPressedRef.current) {
-          s.machine = 'SENDING_DIT';
-          s.pendingElement = 'dah';
-          s.keyIsDown = true;
-          setCwKeyActive(true);
-          s.elementEndTime = scheduleElement(ditSec);
+          s.machine = 'SENDING_DIT'; s.pendingElement = 'dah'; s.lastSentElement = 'dit';
+          s.keyIsDown = true; setCwKeyActive(true); s.elementEndTime = scheduleElement(ditSec);
+          if (cwVerboseRef.current) console.log(`[CW-TICK] IDLE→SENDING_DIT(squeeze) pending=dah`);
         }
       } else if (s.machine === 'SENDING_DIT' || s.machine === 'SENDING_DAH') {
+        const sendingMachine = s.machine;
         if (settings.mode === 'iambic-b') {
-          if (s.machine === 'SENDING_DIT' && dahPressedRef.current && s.pendingElement !== 'dah') {
+          if (sendingMachine === 'SENDING_DIT' && dahPressedRef.current && s.pendingElement !== 'dah') {
             s.pendingElement = 'dah';
-          } else if (s.machine === 'SENDING_DAH' && ditPressedRef.current && s.pendingElement !== 'dit') {
+            if (cwVerboseRef.current) console.log(`[CW-TICK] SENDING_DIT: iambic-b captured pending=dah`);
+          } else if (sendingMachine === 'SENDING_DAH' && ditPressedRef.current && s.pendingElement !== 'dit') {
             s.pendingElement = 'dit';
+            if (cwVerboseRef.current) console.log(`[CW-TICK] SENDING_DAH: iambic-b captured pending=dit`);
           }
         }
         if (now >= s.elementEndTime) {
-          s.keyIsDown = false;
-          setCwKeyActive(false);
-          s.machine = 'INTER_ELEMENT';
-          // Advance from the scheduled element end — not from now — to prevent drift.
-          s.elementEndTime += ditSec;
+          s.keyIsDown = false; setCwKeyActive(false);
+          s.machine = 'INTER_ELEMENT'; s.elementEndTime += ditSec;
+          if (cwVerboseRef.current) console.log(`[CW-TICK] ${sendingMachine}→INTER_ELEMENT pending=${s.pendingElement} dit=${ditPressedRef.current} dah=${dahPressedRef.current}`);
         }
       } else if (s.machine === 'INTER_ELEMENT') {
         if (now >= s.elementEndTime) {
@@ -205,23 +202,22 @@ export function useCWKeyer({ socket, connected, localAudioOutputDevice }: UseCWK
           if (settings.mode === 'iambic-b' && s.pendingElement) {
             next = s.pendingElement;
           } else if (ditPressedRef.current && dahPressedRef.current) {
-            next = s.pendingElement === 'dah' ? 'dah' : 'dit';
+            next = s.lastSentElement === 'dit' ? 'dah' : 'dit';
           } else if (ditPressedRef.current) {
             next = 'dit';
           } else if (dahPressedRef.current) {
             next = 'dah';
           }
+          if (cwVerboseRef.current) console.log(`[CW-TICK] INTER_ELEMENT→${next ?? 'IDLE'} mode=${settings.mode} pending=${s.pendingElement} lastSent=${s.lastSentElement} dit=${ditPressedRef.current} dah=${dahPressedRef.current}`);
           s.pendingElement = null;
           if (next === 'dit') {
-            s.machine = 'SENDING_DIT';
-            s.keyIsDown = true;
-            setCwKeyActive(true);
+            s.machine = 'SENDING_DIT'; s.lastSentElement = 'dit';
+            s.keyIsDown = true; setCwKeyActive(true);
             if (settings.mode === 'iambic-b' && dahPressedRef.current) s.pendingElement = 'dah';
             s.elementEndTime = scheduleElement(ditSec);
           } else if (next === 'dah') {
-            s.machine = 'SENDING_DAH';
-            s.keyIsDown = true;
-            setCwKeyActive(true);
+            s.machine = 'SENDING_DAH'; s.lastSentElement = 'dah';
+            s.keyIsDown = true; setCwKeyActive(true);
             if (settings.mode === 'iambic-b' && ditPressedRef.current) s.pendingElement = 'dit';
             s.elementEndTime = scheduleElement(ditSec * 3);
           } else {
@@ -277,6 +273,11 @@ export function useCWKeyer({ socket, connected, localAudioOutputDevice }: UseCWK
         return;
       }
       const s = cwSettingsRef.current;
+      if (cwVerboseRef.current) {
+        const hit = e.code === s.ditKey ? 'dit' : e.code === s.dahKey ? 'dah' : e.code === s.straightKey ? 'straight' : null;
+        if (hit) console.log(`[CW-KEY] ↓ code=${e.code} key=${e.key} repeat=${e.repeat} ctrl=${e.ctrlKey} alt=${e.altKey} shift=${e.shiftKey} → ${hit} | before: dit=${ditPressedRef.current} dah=${dahPressedRef.current} machine=${cwStateRef.current.machine}`);
+        else console.log(`[CW-KEY] ↓ code=${e.code} key=${e.key} repeat=${e.repeat} (no match — ditKey=${s.ditKey} dahKey=${s.dahKey} straightKey=${s.straightKey})`);
+      }
       if (s.mode === 'straight') {
         if (e.code === s.straightKey && !e.repeat) {
           e.preventDefault();
@@ -284,14 +285,18 @@ export function useCWKeyer({ socket, connected, localAudioOutputDevice }: UseCWK
           emitCwKey(true);
         }
       } else {
-        if (e.code === s.ditKey && e.key === 'Control' && !e.repeat) {
+        if (e.code === s.ditKey) {
           e.preventDefault();
-          ditPressedRef.current = true;
-          emitCwPaddle(true, dahPressedRef.current, false);
-        } else if (e.code === s.dahKey && e.key === 'Control' && !e.repeat) {
+          if (!ditPressedRef.current) {
+            ditPressedRef.current = true;
+            emitCwPaddle(true, dahPressedRef.current, false);
+          }
+        } else if (e.code === s.dahKey) {
           e.preventDefault();
-          dahPressedRef.current = true;
-          emitCwPaddle(ditPressedRef.current, true, false);
+          if (!dahPressedRef.current) {
+            dahPressedRef.current = true;
+            emitCwPaddle(ditPressedRef.current, true, false);
+          }
         }
       }
     };
@@ -299,6 +304,10 @@ export function useCWKeyer({ socket, connected, localAudioOutputDevice }: UseCWK
     const onKeyUp = (e: KeyboardEvent) => {
       if (isTypingTarget(document.activeElement as Element)) return;
       const s = cwSettingsRef.current;
+      if (cwVerboseRef.current) {
+        const hit = e.code === s.ditKey ? 'dit' : e.code === s.dahKey ? 'dah' : e.code === s.straightKey ? 'straight' : null;
+        if (hit) console.log(`[CW-KEY] ↑ code=${e.code} key=${e.key} → ${hit} | before: dit=${ditPressedRef.current} dah=${dahPressedRef.current} machine=${cwStateRef.current.machine}`);
+      }
       if (s.mode === 'straight') {
         if (e.code === s.straightKey) {
           e.preventDefault();
@@ -362,7 +371,7 @@ export function useCWKeyer({ socket, connected, localAudioOutputDevice }: UseCWK
     };
 
     const onCwStuckKeyAlert = () => {
-      cwStateRef.current = { machine: 'IDLE', pendingElement: null, elementEndTime: 0, keyIsDown: false };
+      cwStateRef.current = { machine: 'IDLE', pendingElement: null, lastSentElement: null, elementEndTime: 0, keyIsDown: false };
       ditPressedRef.current = false;
       dahPressedRef.current = false;
       emitCwPaddle(false, false, false);
@@ -377,16 +386,20 @@ export function useCWKeyer({ socket, connected, localAudioOutputDevice }: UseCWK
       cwConnectTimeRef.current = performance.now();
     };
 
+    const onVerboseMode = (v: boolean) => { cwVerboseRef.current = v; };
+
     socket.on("settings-data", onSettingsData);
     socket.on("cw-port-status", onCwPortStatus);
     socket.on("cw-stuck-key-alert", onCwStuckKeyAlert);
     socket.on("connect", onConnect);
+    socket.on("verbose-mode", onVerboseMode);
 
     return () => {
       socket.off("settings-data", onSettingsData);
       socket.off("cw-port-status", onCwPortStatus);
       socket.off("cw-stuck-key-alert", onCwStuckKeyAlert);
       socket.off("connect", onConnect);
+      socket.off("verbose-mode", onVerboseMode);
     };
   }, [socket]);
 

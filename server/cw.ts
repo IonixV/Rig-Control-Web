@@ -141,11 +141,11 @@ export function cwTick(ctx: ServerContext): void {
   } else {
     if (ctx.cwMachine === "IDLE") {
       if (ctx.cwPlayheadDit && !ctx.cwPlayheadDah) {
-        ctx.cwMachine = "SENDING_DIT"; ctx.cwElementEndMs = nowMs + ditMs; ctx.cwPendingElement = null; cwSetKey(ctx, true);
+        ctx.cwMachine = "SENDING_DIT"; ctx.cwElementEndMs = nowMs + ditMs; ctx.cwPendingElement = null; ctx.cwLastSentElement = "dit"; cwSetKey(ctx, true);
       } else if (ctx.cwPlayheadDah && !ctx.cwPlayheadDit) {
-        ctx.cwMachine = "SENDING_DAH"; ctx.cwElementEndMs = nowMs + ditMs * 3; ctx.cwPendingElement = null; cwSetKey(ctx, true);
+        ctx.cwMachine = "SENDING_DAH"; ctx.cwElementEndMs = nowMs + ditMs * 3; ctx.cwPendingElement = null; ctx.cwLastSentElement = "dah"; cwSetKey(ctx, true);
       } else if (ctx.cwPlayheadDit && ctx.cwPlayheadDah) {
-        ctx.cwMachine = "SENDING_DIT"; ctx.cwElementEndMs = nowMs + ditMs; ctx.cwPendingElement = "dah"; cwSetKey(ctx, true);
+        ctx.cwMachine = "SENDING_DIT"; ctx.cwElementEndMs = nowMs + ditMs; ctx.cwPendingElement = "dah"; ctx.cwLastSentElement = "dit"; cwSetKey(ctx, true);
       }
     } else if (ctx.cwMachine === "SENDING_DIT" || ctx.cwMachine === "SENDING_DAH") {
       if (ctx.cwSettings.mode === "iambic-b") {
@@ -164,7 +164,7 @@ export function cwTick(ctx: ServerContext): void {
         if (ctx.cwSettings.mode === "iambic-b" && ctx.cwPendingElement) {
           next = ctx.cwPendingElement;
         } else if (ctx.cwPlayheadDit && ctx.cwPlayheadDah) {
-          next = ctx.cwPendingElement === "dah" ? "dah" : "dit";
+          next = ctx.cwLastSentElement === "dit" ? "dah" : "dit";
         } else if (ctx.cwPlayheadDit) {
           next = "dit";
         } else if (ctx.cwPlayheadDah) {
@@ -172,11 +172,11 @@ export function cwTick(ctx: ServerContext): void {
         }
         ctx.cwPendingElement = null;
         if (next === "dit") {
-          ctx.cwMachine = "SENDING_DIT"; ctx.cwElementEndMs += ditMs;
+          ctx.cwMachine = "SENDING_DIT"; ctx.cwElementEndMs += ditMs; ctx.cwLastSentElement = "dit";
           if (ctx.cwSettings.mode === "iambic-b" && ctx.cwPlayheadDah) ctx.cwPendingElement = "dah";
           cwSetKey(ctx, true);
         } else if (next === "dah") {
-          ctx.cwMachine = "SENDING_DAH"; ctx.cwElementEndMs += ditMs * 3;
+          ctx.cwMachine = "SENDING_DAH"; ctx.cwElementEndMs += ditMs * 3; ctx.cwLastSentElement = "dah";
           if (ctx.cwSettings.mode === "iambic-b" && ctx.cwPlayheadDit) ctx.cwPendingElement = "dit";
           cwSetKey(ctx, true);
         } else {
@@ -270,6 +270,8 @@ export async function closeKeyerPort(ctx: ServerContext): Promise<void> {
   ctx.cwIsKeying = false;
   ctx.cwKeyIsDown = false;
   ctx.cwMachine = "IDLE";
+  ctx.cwPendingElement = null;
+  ctx.cwLastSentElement = null;
   ctx.cwPaddleBuffer = [];
 }
 
@@ -297,7 +299,7 @@ export function registerCwHandlers(socket: Socket, ctx: ServerContext): void {
         ctx.activeCwClientId = socket.id;
         ctx.cwPaddleBuffer = [];
         ctx.cwPlayheadDit = false; ctx.cwPlayheadDah = false; ctx.cwPlayheadStraight = false;
-        ctx.cwMachine = "IDLE"; ctx.cwPendingElement = null; ctx.cwElementEndMs = 0;
+        ctx.cwMachine = "IDLE"; ctx.cwPendingElement = null; ctx.cwLastSentElement = null; ctx.cwElementEndMs = 0;
         ctx.cwKeyIsDown = false; ctx.cwBufferReady = false;
         ctx.cwTickTimer = setTimeout(() => cwTick(ctx), 4);
       }

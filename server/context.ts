@@ -186,6 +186,7 @@ export interface ServerContext {
   cwPlayheadStraight: boolean;
   cwMachine: "IDLE" | "SENDING_DIT" | "SENDING_DAH" | "INTER_ELEMENT";
   cwPendingElement: "dit" | "dah" | null;
+  cwLastSentElement: "dit" | "dah" | null;
   cwElementEndMs: number;
   cwKeyIsDown: boolean;
   cwBufferReady: boolean;
@@ -330,6 +331,7 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
     cwPlayheadStraight: false,
     cwMachine: "IDLE",
     cwPendingElement: null,
+    cwLastSentElement: null,
     cwElementEndMs: 0,
     cwKeyIsDown: false,
     cwBufferReady: false,
