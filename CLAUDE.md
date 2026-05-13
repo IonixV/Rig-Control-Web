@@ -21,6 +21,7 @@ npm run build            # Build Vite frontend to dist/
 npm run lint             # TypeScript type-check (tsc --noEmit)
 npm run test             # Run Vitest tests
 npm run clean            # Remove dist/, dist-electron/, build/
+npm run build:cw-helper  # Compile cw-key-helper.c for the current platform (scripts/build-cw-helper.mjs)
 
 # Electron
 npm run electron:dev     # Run as Electron desktop app in dev mode
@@ -38,9 +39,9 @@ There is no hot-reload for `server.ts` or any module under `server/` — restart
 Browser / Electron Renderer
       ↕ Socket.io (WSS — HTTPS)
 Express + Socket.io Server  (server.ts orchestrator + server/ modules)
-      ↕ TCP socket         ↕ child_process.spawn   ↕ naudiodon (native)   ↕ serialport (CW key)
-   rigctld (Hamlib)         (unused — FFmpeg        libopus-node            DTR/RTS serial line
-      ↕ Serial/USB           removed from all        (Opus codec)
+      ↕ TCP socket         ↕ child_process.spawn   ↕ naudiodon (native)   ↕ child_process.spawn
+   rigctld (Hamlib)         (unused — FFmpeg        libopus-node            cw-key-helper (C binary)
+      ↕ Serial/USB           removed from all        (Opus codec)            DTR/RTS serial line
    Radio Hardware            paths)
 ```
 
@@ -55,7 +56,7 @@ Express + Socket.io Server  (server.ts orchestrator + server/ modules)
 - **`server/rigctld.ts`** — Spawns and monitors the `rigctld` child process; buffers the last 100 log lines.
 - **`server/rigComm.ts`** — Owns the TCP socket to `rigctld`; polls rig state every 2 s; implements `executeRigCommand` with extended-mode RPRT handling.
 - **`server/audio.ts`** — Manages `naudiodon` I/O streams and `libopus-node` encode/decode; enforces last-interacted-wins mic policy via `activeAudioClientId`.
-- **`server/cw.ts`** — Server-side iambic state machine (A/B/straight); drives DTR/RTS via `serialport`; 5 s stuck-key watchdog.
+- **`server/cw.ts`** — Server-side iambic state machine (A/B/straight); drives DTR/RTS via the `cw-key-helper` C binary subprocess; 5 s stuck-key watchdog.
 - **`server/video.ts`** — Relays WebCodecs H.264 chunks from the Electron source to remote clients; buffers the latest keyframe.
 - **`server/solar.ts`** — Fetches solar/propagation data from hamqsl.com (HF band conditions, VHF phenomena, SFI, SSN); caches server-side and pushes `solar-data` events to clients.
 - **`server/vlog.ts`** — Verbose-logging helper; gated by the `-v` / `--verbose` CLI flag.
@@ -82,7 +83,8 @@ Express + Socket.io Server  (server.ts orchestrator + server/ modules)
 - **`src/components/EditToolbar.tsx`** — Fixed toolbar rendered during compact/phone layout edit mode. Cols/rows ± controls, Add Panel, Reset, and Done buttons. `showRowsControl` prop gates the size controls (phone view omits them).
 - **`src/components/PanelPicker.tsx`** — Two-step modal for adding panels. Step 1 lists available panel types (already-placed panels greyed out). Step 2 (for panels with `PANEL_CONFIG_OPTIONS` entries, e.g. `mufmap`) shows a height slider and Full Width toggle before confirming.
 - **`public/audio-processor.js`** — Static file loaded by `AudioWorklet.addModule()`. Defines two `AudioWorkletProcessor` classes: `PlaybackProcessor` (inbound jitter buffer, 60 ms min / 240 ms max at 48 kHz) and `CaptureProcessor` (posts mic PCM frames to the main thread). Must be a static URL-addressable file; cannot be bundled.
-- **`cw-key-helper.py`** — Python/`pyserial` helper spawnable by the server as a subprocess fallback for CW keying on platforms where Node.js `serialport` has trouble with direct DTR/RTS control. Reads `0`/`1` commands from stdin; reports `OPEN_OK` or `OPEN_ERROR` on startup.
+- **`cw-key-helper.c`** — C source for the CW keyer serial line helper. Compiled to `bin/linux/cw-key-helper`, `bin/mac/cw-key-helper`, and `bin/windows/cw-key-helper.exe` per platform. Spawned by `server/cw.ts` (`openKeyerPort`) to drive DTR or RTS. Opens the port with `O_RDWR | O_NOCTTY | O_NONBLOCK`, configures raw termios (no flow control, `HUPCL` cleared), deasserts the line before printing `OPEN_OK`, then reads `0`/`1` from stdin and toggles the line via `TIOCMBIS`/`TIOCMBIC` (POSIX) or `EscapeCommFunction` (Windows). Replaces the Python/`pyserial` approach; the Node.js `serialport` package asserts DTR before JS can run on Linux with CP210x adapters, causing stuck-key failures. Run `npm run build:cw-helper` to compile for the local platform in dev.
+- **`cw-key-helper.py`** — Original Python/`pyserial` helper. **Superseded by `cw-key-helper.c`**; retained for reference only. No longer bundled or spawned.
 - **`src/types/solar.ts`** — TypeScript interfaces for solar/propagation data: `HfBandCondition`, `VhfCondition`, `SolarData` (SFI, SSN, A/K-index, X-ray, geomagnetic field, solar wind, aurora, proton/electron flux).
 - **`electron/main.ts`** — Electron main process; spawns the Express server, manages `BrowserWindow`, grants camera/mic permissions. Calls `setElectronWindow(win)` and `shutdown()` exported from `server.ts` for lifecycle management.
 - **`electron/preload.ts`** — Exposes `window.electron.resizeWindow(width, height)` via `contextBridge`.
@@ -153,7 +155,9 @@ POTA, SOTA, and WWFF spots are fetched **browser-side** via `setInterval` (no se
 
 ### CW Keyer
 
-Server-side iambic state machine (A/B/straight) in `server/cw.ts`. Client sends `cw-paddle { dit, dah, straight, t }` events where `t` is ms since socket connect (computed via `performance.now() - cwConnectTimeRef`) to decouple element timing from network jitter. Keying output via DTR or RTS on a configurable serial port using `serialport`; `rigctld-ptt` mode also supported. 5 s stuck-key watchdog. Client-side sidetone (`AudioContext` oscillator, routed via `setSinkId`) provides zero-latency local feedback gated on `localAudioReady`. Phone view shows dit/dah touch paddle buttons when rig is in a CW mode and the keyer is enabled.
+Server-side iambic state machine (A/B/straight) in `server/cw.ts`. Client sends `cw-paddle { dit, dah, straight, t }` events where `t` is ms since socket connect (computed via `performance.now() - cwConnectTimeRef`) to decouple element timing from network jitter. Keying output via DTR or RTS through the `cw-key-helper` C binary subprocess (`bin/<platform>/cw-key-helper[.exe]`); `rigctld-ptt` mode also supported. 5 s stuck-key watchdog. Client-side sidetone (`AudioContext` oscillator, routed via `setSinkId`) provides zero-latency local feedback gated on `localAudioReady`. Phone view shows dit/dah touch paddle buttons when rig is in a CW mode and the keyer is enabled.
+
+The C binary is compiled from `cw-key-helper.c` and placed in the platform `bin/` directory. `getCwHelperPath()` in `server/cw.ts` resolves the path using the same pattern as `getRigctldPath()` in `server/rigctld.ts`. In CI (`build.yml`), the binary is compiled before `npm run electron:build` on each platform runner so it is always bundled in the AppImage/DMG/NSIS installer. `bin/**/*` is in `asarUnpack`, so the binary is accessible at runtime outside the ASAR archive.
 
 ### CW Decoder
 
