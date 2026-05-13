@@ -51,6 +51,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Compile CW key helper (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: gcc -O2 -o bin/linux/cw-key-helper cw-key-helper.c
+
+      - name: Compile CW key helper (macOS)
+        if: matrix.os == 'macos-latest'
+        run: clang -O2 -o bin/mac/cw-key-helper cw-key-helper.c
+
+      - name: Set up MSVC (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Compile CW key helper (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: cmd
+        run: cl cw-key-helper.c /Fe:bin\windows\cw-key-helper.exe /O2 /nologo
+
       # --publish never prevents electron-builder from trying to upload to GitHub
       # Releases itself (it lacks a token). The next two steps handle publishing.
       - name: Build

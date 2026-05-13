@@ -1,4 +1,5 @@
 import path from "path";
+import fs from "fs";
 import { spawn } from "child_process";
 import { Socket } from "socket.io";
 import { ServerContext, CwPaddleEvent } from "./context.ts";
@@ -7,9 +8,27 @@ const CW_BUFFER_DEPTH_MS = 60;
 const CW_BUFFER_MAX_MS = 240;
 
 export function getCwHelperPath(baseDir: string): string {
-  let base = baseDir;
-  if (base.endsWith(".asar")) base = base.replace(".asar", ".asar.unpacked");
-  return path.join(base, "cw-key-helper.py");
+  let platformDir: string;
+  let binaryName: string;
+  if (process.platform === "win32") {
+    platformDir = "windows";
+    binaryName = "cw-key-helper.exe";
+  } else if (process.platform === "darwin") {
+    platformDir = "mac";
+    binaryName = "cw-key-helper";
+  } else {
+    platformDir = "linux";
+    binaryName = "cw-key-helper";
+  }
+
+  let binBase = baseDir;
+  if (binBase.endsWith(".asar")) binBase = binBase.replace(".asar", ".asar.unpacked");
+
+  const fullPath = path.join(binBase, "bin", platformDir, binaryName);
+  if (fs.existsSync(fullPath)) return fullPath;
+
+  console.warn(`[CW] cw-key-helper not found at ${fullPath} — run 'npm run build:cw-helper'`);
+  return fullPath;
 }
 
 const setSerialKey = (ctx: ServerContext, active: boolean): Promise<void> => {
@@ -178,8 +197,7 @@ export async function openKeyerPort(ctx: ServerContext, portPath: string): Promi
     let settled = false;
     const settle = () => { if (!settled) { settled = true; resolve(); } };
 
-    const proc = spawn("python3", [
-      getCwHelperPath(ctx.baseDir),
+    const proc = spawn(getCwHelperPath(ctx.baseDir), [
       portPath,
       ctx.cwSettings.keyingMethod === "rts" ? "rts" : "dtr",
       ctx.cwSettings.serialKeyPolarity,
@@ -220,7 +238,7 @@ export async function openKeyerPort(ctx: ServerContext, portPath: string): Promi
 
     proc.on("error", (err: NodeJS.ErrnoException) => {
       const msg = err.code === "ENOENT"
-        ? "python3 not found — install Python 3 with pyserial"
+        ? "cw-key-helper binary not found — run 'npm run build:cw-helper' or rebuild the application"
         : err.message;
       console.error(`[CW] Failed to spawn helper:`, msg);
       ctx.io.emit("cw-port-status", { open: false, port: portPath, error: msg });
@@ -230,7 +248,7 @@ export async function openKeyerPort(ctx: ServerContext, portPath: string): Promi
     setTimeout(() => {
       if (!settled) {
         proc.kill();
-        ctx.io.emit("cw-port-status", { open: false, port: portPath, error: "Helper did not respond — check python3 and pyserial" });
+        ctx.io.emit("cw-port-status", { open: false, port: portPath, error: "Helper did not respond — run 'npm run build:cw-helper' or rebuild the application" });
         settle();
       }
     }, 5000);

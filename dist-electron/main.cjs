@@ -1292,8 +1292,8 @@ var require_node = __commonJS({
           }
           break;
         case "FILE":
-          var fs6 = require("fs");
-          stream2 = new fs6.SyncWriteStream(fd2, { autoClose: false });
+          var fs7 = require("fs");
+          stream2 = new fs7.SyncWriteStream(fd2, { autoClose: false });
           stream2._type = "fs";
           break;
         case "PIPE":
@@ -17639,8 +17639,8 @@ var require_node2 = __commonJS({
           }
           break;
         case "FILE":
-          var fs6 = require("fs");
-          stream2 = new fs6.SyncWriteStream(fd2, { autoClose: false });
+          var fs7 = require("fs");
+          stream2 = new fs7.SyncWriteStream(fd2, { autoClose: false });
           stream2._type = "fs";
           break;
         case "PIPE":
@@ -18358,8 +18358,8 @@ var require_node3 = __commonJS({
           }
           break;
         case "FILE":
-          var fs6 = require("fs");
-          stream2 = new fs6.SyncWriteStream(fd2, { autoClose: false });
+          var fs7 = require("fs");
+          stream2 = new fs7.SyncWriteStream(fd2, { autoClose: false });
           stream2._type = "fs";
           break;
         case "PIPE":
@@ -19251,7 +19251,7 @@ var require_view = __commonJS({
     "use strict";
     var debug = require_src3()("express:view");
     var path6 = require("path");
-    var fs6 = require("fs");
+    var fs7 = require("fs");
     var dirname = path6.dirname;
     var basename = path6.basename;
     var extname = path6.extname;
@@ -19317,7 +19317,7 @@ var require_view = __commonJS({
     function tryStat(path7) {
       debug('stat "%s"', path7);
       try {
-        return fs6.statSync(path7);
+        return fs7.statSync(path7);
       } catch (e) {
         return void 0;
       }
@@ -19922,8 +19922,8 @@ var require_node4 = __commonJS({
           }
           break;
         case "FILE":
-          var fs6 = require("fs");
-          stream2 = new fs6.SyncWriteStream(fd2, { autoClose: false });
+          var fs7 = require("fs");
+          stream2 = new fs7.SyncWriteStream(fd2, { autoClose: false });
           stream2._type = "fs";
           break;
         case "PIPE":
@@ -20096,7 +20096,7 @@ var require_types = __commonJS({
 var require_mime = __commonJS({
   "node_modules/mime/mime.js"(exports2, module2) {
     var path6 = require("path");
-    var fs6 = require("fs");
+    var fs7 = require("fs");
     function Mime() {
       this.types = /* @__PURE__ */ Object.create(null);
       this.extensions = /* @__PURE__ */ Object.create(null);
@@ -20117,7 +20117,7 @@ var require_mime = __commonJS({
     };
     Mime.prototype.load = function(file) {
       this._loading = file;
-      var map = {}, content = fs6.readFileSync(file, "ascii"), lines = content.split(/[\r\n]+/);
+      var map = {}, content = fs7.readFileSync(file, "ascii"), lines = content.split(/[\r\n]+/);
       lines.forEach(function(line) {
         var fields = line.replace(/\s*#.*|^\s*|\s*$/g, "").split(/\s+/);
         map[fields.shift()] = fields;
@@ -20355,7 +20355,7 @@ var require_send = __commonJS({
     var escapeHtml = require_escape_html();
     var etag = require_etag();
     var fresh = require_fresh();
-    var fs6 = require("fs");
+    var fs7 = require("fs");
     var mime = require_mime();
     var ms = require_ms5();
     var onFinished = require_on_finished();
@@ -20688,7 +20688,7 @@ var require_send = __commonJS({
       var i = 0;
       var self2 = this;
       debug('stat "%s"', path7);
-      fs6.stat(path7, function onstat(err, stat) {
+      fs7.stat(path7, function onstat(err, stat) {
         if (err && err.code === "ENOENT" && !extname(path7) && path7[path7.length - 1] !== sep) {
           return next(err);
         }
@@ -20703,7 +20703,7 @@ var require_send = __commonJS({
         }
         var p = path7 + "." + self2._extensions[i++];
         debug('stat "%s"', p);
-        fs6.stat(p, function(err2, stat) {
+        fs7.stat(p, function(err2, stat) {
           if (err2) return next(err2);
           if (stat.isDirectory()) return next();
           self2.emit("file", p, stat);
@@ -20721,7 +20721,7 @@ var require_send = __commonJS({
         }
         var p = join(path7, self2._index[i]);
         debug('stat "%s"', p);
-        fs6.stat(p, function(err2, stat) {
+        fs7.stat(p, function(err2, stat) {
           if (err2) return next(err2);
           if (stat.isDirectory()) return next();
           self2.emit("file", p, stat);
@@ -20733,7 +20733,7 @@ var require_send = __commonJS({
     SendStream.prototype.stream = function stream(path7, options) {
       var self2 = this;
       var res = this.res;
-      var stream2 = fs6.createReadStream(path7, options);
+      var stream2 = fs7.createReadStream(path7, options);
       this.emit("stream", stream2);
       stream2.pipe(res);
       function cleanup() {
@@ -57466,7 +57466,7 @@ var init_rigctld = __esm({
 // electron/main.ts
 var import_electron2 = require("electron");
 var import_path5 = __toESM(require("path"), 1);
-var import_fs5 = __toESM(require("fs"), 1);
+var import_fs6 = __toESM(require("fs"), 1);
 var import_os2 = __toESM(require("os"), 1);
 var import_child_process3 = require("child_process");
 
@@ -57491,7 +57491,7 @@ var { Server, Namespace, Socket } = import_dist.default;
 
 // server.ts
 var import_path4 = __toESM(require("path"), 1);
-var import_fs4 = __toESM(require("fs"), 1);
+var import_fs5 = __toESM(require("fs"), 1);
 
 // server/tls.ts
 var import_os = __toESM(require("os"), 1);
@@ -58538,13 +58538,29 @@ function registerAudioHandlers(socket, ctx, clientId) {
 
 // server/cw.ts
 var import_path3 = __toESM(require("path"), 1);
+var import_fs4 = __toESM(require("fs"), 1);
 var import_child_process2 = require("child_process");
 var CW_BUFFER_DEPTH_MS = 60;
 var CW_BUFFER_MAX_MS = 240;
 function getCwHelperPath(baseDir) {
-  let base = baseDir;
-  if (base.endsWith(".asar")) base = base.replace(".asar", ".asar.unpacked");
-  return import_path3.default.join(base, "cw-key-helper.py");
+  let platformDir;
+  let binaryName;
+  if (process.platform === "win32") {
+    platformDir = "windows";
+    binaryName = "cw-key-helper.exe";
+  } else if (process.platform === "darwin") {
+    platformDir = "mac";
+    binaryName = "cw-key-helper";
+  } else {
+    platformDir = "linux";
+    binaryName = "cw-key-helper";
+  }
+  let binBase = baseDir;
+  if (binBase.endsWith(".asar")) binBase = binBase.replace(".asar", ".asar.unpacked");
+  const fullPath = import_path3.default.join(binBase, "bin", platformDir, binaryName);
+  if (import_fs4.default.existsSync(fullPath)) return fullPath;
+  console.warn(`[CW] cw-key-helper not found at ${fullPath} \u2014 run 'npm run build:cw-helper'`);
+  return fullPath;
 }
 var setSerialKey = (ctx, active) => {
   if (!ctx.cwKeyerProcess || ctx.cwKeyerProcess.killed) return Promise.resolve();
@@ -58730,8 +58746,7 @@ async function openKeyerPort(ctx, portPath) {
         resolve();
       }
     };
-    const proc = (0, import_child_process2.spawn)("python3", [
-      getCwHelperPath(ctx.baseDir),
+    const proc = (0, import_child_process2.spawn)(getCwHelperPath(ctx.baseDir), [
       portPath,
       ctx.cwSettings.keyingMethod === "rts" ? "rts" : "dtr",
       ctx.cwSettings.serialKeyPolarity
@@ -58768,7 +58783,7 @@ async function openKeyerPort(ctx, portPath) {
       console.error("[CW] Helper stderr:", chunk.toString().trim());
     });
     proc.on("error", (err) => {
-      const msg = err.code === "ENOENT" ? "python3 not found \u2014 install Python 3 with pyserial" : err.message;
+      const msg = err.code === "ENOENT" ? "cw-key-helper binary not found \u2014 run 'npm run build:cw-helper' or rebuild the application" : err.message;
       console.error(`[CW] Failed to spawn helper:`, msg);
       ctx.io.emit("cw-port-status", { open: false, port: portPath, error: msg });
       settle();
@@ -58776,7 +58791,7 @@ async function openKeyerPort(ctx, portPath) {
     setTimeout(() => {
       if (!settled) {
         proc.kill();
-        ctx.io.emit("cw-port-status", { open: false, port: portPath, error: "Helper did not respond \u2014 check python3 and pyserial" });
+        ctx.io.emit("cw-port-status", { open: false, port: portPath, error: "Helper did not respond \u2014 run 'npm run build:cw-helper' or rebuild the application" });
         settle();
       }
     }, 5e3);
@@ -59210,11 +59225,11 @@ async function startServer(appPath, userDataPath) {
       distPath = import_path4.default.join(process.cwd(), "dist");
     }
     console.log(`Serving static files from: ${distPath}`);
-    if (import_fs4.default.existsSync(distPath)) {
+    if (import_fs5.default.existsSync(distPath)) {
       app2.use(import_express.default.static(distPath));
       app2.get("*", (req, res) => {
         const indexPath = import_path4.default.join(distPath, "index.html");
-        if (import_fs4.default.existsSync(indexPath)) {
+        if (import_fs5.default.existsSync(indexPath)) {
           res.sendFile(indexPath);
         } else {
           console.error(`File not found: ${indexPath}`);
@@ -59264,8 +59279,8 @@ console.log(`Electron starting. isDev: ${electron_is_dev_default}, NODE_ENV: ${p
 var windowStatePath = import_path5.default.join(import_electron2.app.getPath("userData"), "window-state.json");
 function loadWindowState() {
   try {
-    if (import_fs5.default.existsSync(windowStatePath)) {
-      return JSON.parse(import_fs5.default.readFileSync(windowStatePath, "utf8"));
+    if (import_fs6.default.existsSync(windowStatePath)) {
+      return JSON.parse(import_fs6.default.readFileSync(windowStatePath, "utf8"));
     }
   } catch (e) {
     console.error("Failed to load window state:", e);
@@ -59274,7 +59289,7 @@ function loadWindowState() {
 }
 function saveWindowState(state) {
   try {
-    import_fs5.default.writeFileSync(windowStatePath, JSON.stringify(state));
+    import_fs6.default.writeFileSync(windowStatePath, JSON.stringify(state));
   } catch (e) {
     console.error("Failed to save window state:", e);
   }
@@ -59292,10 +59307,10 @@ function installDesktopIntegration() {
   const desktopDir = import_path5.default.join(home, ".local", "share", "applications");
   const iconDest = import_path5.default.join(iconDir, "rigcontrol-web.png");
   const desktopDest = import_path5.default.join(desktopDir, "rigcontrol-web.desktop");
-  import_fs5.default.mkdirSync(iconDir, { recursive: true });
-  import_fs5.default.mkdirSync(desktopDir, { recursive: true });
+  import_fs6.default.mkdirSync(iconDir, { recursive: true });
+  import_fs6.default.mkdirSync(desktopDir, { recursive: true });
   const iconSrc = import_path5.default.join(appDir, "resources", "app.asar", "assets", "icons", "rcw_512x512.png");
-  import_fs5.default.writeFileSync(iconDest, import_fs5.default.readFileSync(iconSrc));
+  import_fs6.default.writeFileSync(iconDest, import_fs6.default.readFileSync(iconSrc));
   const desktop = [
     "[Desktop Entry]",
     "Type=Application",
@@ -59307,7 +59322,7 @@ function installDesktopIntegration() {
     "Categories=HamRadio;Utility;",
     "Terminal=false"
   ].join("\n") + "\n";
-  import_fs5.default.writeFileSync(desktopDest, desktop);
+  import_fs6.default.writeFileSync(desktopDest, desktop);
   try {
     (0, import_child_process3.execSync)(`update-desktop-database "${desktopDir}"`);
   } catch {
@@ -59327,12 +59342,12 @@ function uninstallDesktopIntegration() {
   const iconDest = import_path5.default.join(hicolorDir, "512x512", "apps", "rigcontrol-web.png");
   const desktopDest = import_path5.default.join(home, ".local", "share", "applications", "rigcontrol-web.desktop");
   let removed = false;
-  if (import_fs5.default.existsSync(iconDest)) {
-    import_fs5.default.rmSync(iconDest);
+  if (import_fs6.default.existsSync(iconDest)) {
+    import_fs6.default.rmSync(iconDest);
     removed = true;
   }
-  if (import_fs5.default.existsSync(desktopDest)) {
-    import_fs5.default.rmSync(desktopDest);
+  if (import_fs6.default.existsSync(desktopDest)) {
+    import_fs6.default.rmSync(desktopDest);
     removed = true;
   }
   if (!removed) {
