@@ -1,6 +1,6 @@
 # RigControl Web — User Guide
 
-RigControl Web is a radio control dashboard that runs in any web browser. It connects to your radio through Hamlib's `rigctld` program, giving you real-time frequency and mode display, one-click tuning, transmit and receive audio over the network, a live video feed of your radio's front panel, a full iambic CW keyer with local sidetone, and live spot displays for Parks on the Air (POTA) and Summits on the Air (SOTA).
+RigControl Web is a radio control dashboard that runs in any web browser. It connects to your radio through Hamlib's `rigctld` program, giving you real-time frequency and mode display, one-click tuning, transmit and receive audio over the network, a live video feed of your radio's front panel, a full iambic CW keyer with local sidetone, live spot displays for Parks on the Air (POTA), Summits on the Air (SOTA), and World Wide Flora & Fauna (WWFF), and solar/propagation data with a live MUF world map.
 
 Whether you are sitting at your shack computer or connecting from a phone, tablet, or laptop across the room (or across the country over a VPN), the interface adapts to your screen size automatically.
 
@@ -25,15 +25,14 @@ Developers and advanced users who want to run from source can find instructions 
 
 ## Screen Layouts
 
-RigControl Web automatically switches between three layouts based on the width of your browser window or device screen:
+RigControl Web automatically switches between two layouts based on the width of your browser window or device screen:
 
 | Layout | When it appears |
 |--------|----------------|
 | **Phone** | Screen narrower than 768 pixels — portrait phones and small tablets |
-| **Compact** | Screen between 768 and 1279 pixels — landscape phones, tablets, smaller desktop windows |
-| **Desktop** | Screen 1280 pixels or wider — full desktop or laptop |
+| **Compact** | Screen 768 pixels or wider — landscape phones, tablets, and desktop windows |
 
-All three layouts show the same information and controls, just arranged differently for the available space.
+Both layouts show the same information and controls, just arranged differently for the available space.
 
 ---
 
@@ -44,4 +43,5 @@ All three layouts show the same information and controls, just arranged differen
 - [Controls](Controls) — VFO, mode, meters, PTT, and radio function buttons
 - [Audio and Video](Audio-and-Video) — Set up the audio feed and video display
 - [Remote Access](Remote-Access) — Connect from another device over your network or VPN
-- [POTA and SOTA Spots](POTA-and-SOTA-Spots) — Live activator spots with click-to-tune
+- [POTA, SOTA, and WWFF Spots](POTA-and-SOTA-Spots) — Live activator spots with click-to-tune
+- [Solar and Propagation](Solar-and-Propagation) — HF/VHF band conditions, solar indices, and the MUF world map

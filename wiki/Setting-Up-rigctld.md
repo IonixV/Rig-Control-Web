@@ -8,7 +8,7 @@ This page walks you through configuring and starting `rigctld` from inside the a
 
 ## Opening General Settings
 
-Click the **gear icon** (⚙) in the top-right corner of the app to open **General Settings**. The settings panel has two tabs: **RIGCTLD** and **SPOTS**. Make sure you are on the **RIGCTLD** tab.
+Click the **gear icon** (⚙) in the top-right corner of the app to open **General Settings**. The settings panel has two tabs: **RIGCTLD** and **CW**. Make sure you are on the **RIGCTLD** tab.
 
 ![RigControl Web — rigctld Settings](https://raw.githubusercontent.com/jbdubbs/Rig-Control-Web/main/assets/rigcontrolweb.manual.rigctld.settings.png)
 

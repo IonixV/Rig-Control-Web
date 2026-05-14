@@ -81,7 +81,7 @@ RigControl Web includes a full iambic CW keyer that works from any browser or th
 
 ### Enabling the Keyer
 
-Open **General Settings → KEYER** and toggle **Enable CW Keyer** on. The keyer becomes active as soon as the rig is connected — no audio session is required. Once enabled, an indicator in the Quick Controls area shows the current WPM.
+Open **General Settings → CW** and toggle **Enable CW Keyer** on. The keyer becomes active as soon as the rig is connected — no audio session is required. Once enabled, an indicator in the Quick Controls area shows the current WPM.
 
 ### Keyboard Keys (Desktop)
 
@@ -137,7 +137,7 @@ RigControl Web includes a real-time Morse code decoder that converts received au
 
 ### Enabling the Decoder
 
-Open **General Settings → CW → CW Decoder** and toggle **Enable CW Decoder** on. The WASM module loads on first enable — a brief "Loading decoder…" state indicates it is initializing. Once loaded, it stays active for the lifetime of the page.
+Add the **CW Decoder** panel to your layout using the **Add Panel** button in the layout editor. Once the panel is present, the GGMorse WASM module loads automatically — a brief "waiting for CW…" placeholder indicates it is initializing. The decoder stays active for the lifetime of the page and can be removed by deleting the panel from the layout.
 
 ### Decoded Text Display
 
@@ -156,11 +156,11 @@ The decoder is fed audio from the inbound pipeline independently of the speaker.
 ### Decoder Independence From the Keyer
 
 The CW Decoder and CW Keyer are independent features. You can:
-- Enable the decoder without enabling the keyer.
-- Enable both at the same time (useful for a QSO: decoding the other station while keying your own).
+- Use the decoder without enabling the keyer.
+- Use both at the same time (useful for a QSO: decoding the other station while keying your own).
 - Enable the keyer without the decoder.
 
-Each is controlled by its own toggle in the KEYER settings tab.
+The keyer is toggled in the **CW** settings tab. The decoder is enabled by adding the **CW Decoder** panel to your layout.
 
 ---
 

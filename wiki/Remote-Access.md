@@ -54,7 +54,8 @@ Once you have accepted the certificate, the RigControl Web interface loads just 
 - Live meters
 - PTT and transmit/receive audio
 - Video feed
-- POTA and SOTA spots
+- POTA, SOTA, and WWFF spots
+- Solar and propagation data
 
 ---
 
