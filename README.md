@@ -23,7 +23,7 @@ Developers who want to run from source will find build instructions in the [Deve
 ## Features
 
 - **Real-time Dashboard**: Frequency, mode, and meter displays (S-Meter, SWR, ALC, Power, VDD) polled live from the rig.
-- **Bidirectional Audio**: Full transmit and receive audio over the network using the Opus 1.5 codec. Works for remote SSB, AM, and FM contacts. Powered by native `naudiodon` I/O and `libopus-node`.
+- **Bidirectional Audio**: Full transmit and receive audio over the network using the Opus 1.5 codec. Works for remote SSB, AM, and FM contacts.
   - Multi-client support.
   - Audio device lists show the host API (MME, DirectSound, WASAPI, ALSA, Pipewire/PulseAudio) and native sample rate so you can pick the right entry for your hardware.
   - **Rig Video Feed**: Display a system video capture device (e.g. HDMI capture card or webcam) so you can see your radio's front panel remotely. Example: FT-710 DVI out → USB HDMI capture card.
@@ -31,24 +31,22 @@ Developers who want to run from source will find build instructions in the [Deve
   - Configurable WPM, keying method (DTR, RTS, or rigctld-PTT), serial port, and iambic mode.
   - Rebindable keyboard keys. Instant local sidetone via Web Audio — no latency from the network.
   - On phone/tablet, dedicated dit (·) and dah (—) touch paddle buttons replace the PTT bar when the rig is in CW mode.
-- **CW Decoder**: Real-time Morse code decoding of received audio using the [GGMorse](https://github.com/ggerganov/ggmorse) library compiled to WebAssembly.
-  - Enable in **General Settings → CW → CW Decoder**. Decoded text streams into a scrolling display in all three layouts.
+- **CW Decoder**: Real-time Morse code decoding of received audio using the [GGMorse](https://github.com/ggerganov/ggmorse) library.
+  - Enable in **General Settings → CW → CW Decoder**. Decoded text streams into a scrolling display.
   - Shows estimated signal pitch (Hz) and speed (WPM) alongside decoded text.
-  - Works even when the local speaker is muted — audio is always fed to the decoder independently of playback.
-- **Live Spots (POTA & SOTA)**: Real-time spot displays for Parks on the Air and Summits on the Air, each independently enable/disable with configurable poll intervals.
+- **Live Spots (POTA, SOTA, WWFF)**: Real-time spot displays, each independently enable/disable with configurable poll intervals.
   - Filterable by mode (SSB, CW, FT8, FT4) and band (multi-select). Configurable maximum spot age.
-  - Sortable columns. Click any spot to instantly tune the VFO and set the mode. SSB spots auto-resolve to USB or LSB based on the 10 MHz boundary.
-  - Layout-aware: inline below Quick Controls (phone), slide-in drawer via header button (compact), inline below Video & Audio (desktop).
+  - Sortable columns. Click any spot to instantly tune the VFO and set the mode.
 - **Phone View**: Dedicated portrait-optimized layout for operating from a phone or tablet.
 - **Split VFO Support**: Full control over split operations with visual feedback.
 - **Works With All Hamlib-Compatible Software**: Configure your logging app or other Hamlib enabled application to use "Hamlib NET rigctl" at `127.0.0.1:4532`.
   - WSJT-X, WSJT-X Improved, FLDigi, VarAC, JS8Call, and more.
   - This means not having to split serial ports to use multiple apps.
-- **Remote Access**: Access your shack from anywhere over your own VPN by pointing a browser to your rig computer's IP on port 3000. (e.g. https://192.168.1.2:3000)
-  - The server runs over **HTTPS** using an auto-generated self-signed certificate. The certificate is regenerated automatically if it expires within 30 days or if the machine's LAN IP changes.
+- **Remote Access**: Access your shack from anywhere over your own VPN (or via not-included reverse proxy) by pointing a browser to your rig computer's IP on port 3000. (e.g. https://192.168.1.2:3000)
+  - The server runs over **HTTPS** using an auto-generated self-signed certificate.
   - On first launch, your browser will show a certificate warning. Navigate to Advanced.... then proceed to the site anyway.
   - Audio capabilities require HTTPS. The built-in HTTPS server satisfies this requirement without needing a reverse proxy for LAN use.
-  - IMPORTANT: For access outside your LAN (internet/VPN), a reverse proxy with a trusted certificate is still recommended.  Setting up a reverse proxy is beyond the scope of this project.
+  - IMPORTANT: For access outside your LAN (internet/VPN), a reverse proxy with a trusted certificate is still recommended.  Setting up a reverse proxy is beyond the scope of this project, but NGINX Proxy Manager or Cloudflare are places to start.
 
 ## TODO
 
@@ -65,21 +63,22 @@ Developers who want to run from source will find build instructions in the [Deve
 
 ### Common
 - **Operating Systems**:
-  - **Windows 10 or higher** (tested on Windows 11 23H2) — Requires Hamlib 4.7.0 or later installed.
+  - **Windows 10 or higher** (tested on Windows 11 23H2) - Requires Hamlib 4.7.0 or later installed.
     - For audio, use MME or DirectSound devices from the backend audio device selector. WASAPI requires the Windows audio device to be configured at 48 kHz in Sound settings (for example, FT-710 only works at 44,100).
-  - **Linux kernel 6.0 or higher** (tested on Fedora 43) — Bundled with latest daily Hamlib snapshot.  Hamlib install not required.
+  - **Linux kernel 6.0 or higher** (tested on Fedora 43) - Requires Hamlib 4.7.0 or later installed
+    - Most Linux distros, including extremely modern ones seem to still be bundling Hamlib 4.6.5.  This will NOT work.  Install from the Hamlib GitHub page.
   - **macOS**
     - Requires externally installed Hamlib 4.7.0 in the system PATH.
     - Completely untested.  No testing hardware.
 
 ### Compile from Source
-- **Node.js**: Version 18 or higher.
+- **Node.js**: Version 24 or higher.
 - **Hamlib**: 4.7.0 or higher.
   - **Electron Apps**: Bundle `rigctld` by placing the binary in `bin/[linux|windows|mac]/`.  Not required.  Will fall back to system Hamlib binaries.
 
 ### Installing Hamlib (if required, 4.7.0 or higher)
 - **Linux**: `sudo apt install libhamlib-utils`, `sudo dnf install hamlib`
-  - **WARNING**: Most linux distros only have a very old version of Hamlib available.  If using the system Hamlib instead of a bundled version, install from source at the [Hamlib website](https://hamlib.github.io/).
+  - **WARNING**: Most Linux distros, including extremely modern ones seem to still be bundling Hamlib 4.6.5 (as of May 2026).  This will NOT work.  Install from the Hamlib GitHub page. [Hamlib website](https://hamlib.github.io/)
 - **macOS**: `brew install hamlib`
 - **Windows**: Download and install from the [Hamlib website](https://hamlib.github.io/).
 
@@ -93,7 +92,7 @@ Developers who want to run from source will find build instructions in the [Deve
    ```bash
    npm run dev
    ```
-3. Open [http://localhost:3000](http://localhost:3000) in your browser.
+3. Open [https://localhost:3000](https://localhost:3000) in your browser.
 
 ## Desktop App (Electron)
 
