@@ -37,6 +37,14 @@ Developers who want to run from source will find build instructions in the [Deve
 - **Live Spots (POTA, SOTA, WWFF)**: Real-time spot displays, each independently enable/disable with configurable poll intervals.
   - Filterable by mode (SSB, CW, FT8, FT4) and band (multi-select). Configurable maximum spot age.
   - Sortable columns. Click any spot to instantly tune the VFO and set the mode.
+- **Solar & Propagation Data**: Live HF band conditions, VHF propagation alerts, and detailed solar indices — all in one panel.
+  - Data sourced from [hamqsl.com](https://www.hamqsl.com/) (N0NBH) with a 1-hour server-side cache; manual refresh available.
+  - Three tabs: **HF** (band conditions + SFI/SN/A/K at a glance), **VHF** (aurora, Es, tropo, MS conditions by region), **SOLAR/GEO** (full solar flux, sunspot, geomagnetic, X-ray, and noise indices). eSFI and eSSN from [prop.kc2g.com](https://prop.kc2g.com/) (KC2G/WWROF/GIRO) shown when available.
+- **MUF / foF2 World Map**: Zoomable SVG world propagation map embedded from [prop.kc2g.com](https://prop.kc2g.com/).
+  - Switch between **MUFD** (Maximum Usable Frequency for a 3000 km path) and **foF2** (F2 layer critical frequency).
+  - Time slots: **Now**, **−1 h**, **−12 h**, **−24 h** for historical comparison.
+  - Scroll to zoom (cursor-anchored), click-drag to pan, pinch-to-zoom on touch. Double-click resets the view. Auto-refreshes every 10 minutes.
+  - Panel height is set when adding the panel via the **Add Panel** picker.
 - **Phone View**: Dedicated portrait-optimized layout for operating from a phone or tablet.
 - **Split VFO Support**: Full control over split operations with visual feedback.
 - **Works With All Hamlib-Compatible Software**: Configure your logging app or other Hamlib enabled application to use "Hamlib NET rigctl" at `127.0.0.1:4532`.
@@ -225,6 +233,37 @@ Each POTA, SOTA, WWFF, and combined Spots panel has its own settings gear icon. 
 - **Max Spot Age**: Discard spots older than this threshold (1–15 minutes).
 - **Mode Filter**: Limit spots to SSB, CW, FT8, FT4, or All.
 - **Band Filter**: Multi-select checkbox grid. All bands shown when none are selected.
+
+### Solar Panel
+
+Add the **Solar** panel to your layout via the **Add Panel** button. No configuration is required — data is fetched automatically by the server.
+
+The panel has three tabs:
+
+- **HF**: Quick-glance SFI / SN / A-index / K-index at the top, followed by a Day/Night condition table for 80m–40m, 30m–20m, 17m–15m, and 12m–10m. Conditions are color-coded Good (green) / Fair (amber) / Poor (red).
+- **VHF**: Propagation condition table (Aurora, Sporadic-E, Troposcatter, Meteor Scatter) broken out by region (N. Hemisphere, N. America, Europe, Europe 6m/4m). Shows Band Open or Band Closed status.
+- **SOLAR/GEO**: Full solar indices — SFI, Sunspot Number, eSFI, eSSN (estimated values from prop.kc2g.com when available) — plus geomagnetic data: A-index, K-index, geomagnetic field description, X-ray flux class, and signal noise level.
+
+A manual refresh button and data timestamp are shown at the bottom of the panel. The server caches solar data for 1 hour; multiple connected clients share the same cached fetch.
+
+### MUF Map Panel
+
+Add the **MUF Map** panel via the **Add Panel** picker. Panel height is set at add-time via the picker's height slider and can be changed by removing and re-adding the panel.
+
+Controls in the panel header:
+
+- **Metric**: **MUFD** — Maximum Usable Frequency for a 3000 km path; **foF2** — F2 layer critical frequency.
+- **Time slot**: **Now** (current), **−1h**, **−12h**, **−24h** for historical comparison.
+- **Refresh** button (top-right): forces an immediate map reload. The map also auto-refreshes every 10 minutes.
+
+Navigation:
+
+- **Scroll** to zoom in/out, anchored to the cursor position.
+- **Click-drag** to pan when zoomed in.
+- **Pinch** to zoom on touch screens.
+- **Double-click** (or tap the zoom percentage badge) to reset to 1×.
+
+Map data is sourced from [prop.kc2g.com](https://prop.kc2g.com/) (KC2G/WWROF/GIRO) and requires an internet connection.
 
 ## License
 
