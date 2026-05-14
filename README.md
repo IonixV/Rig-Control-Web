@@ -32,7 +32,7 @@ Developers who want to run from source will find build instructions in the [Deve
   - Rebindable keyboard keys. Instant local sidetone via Web Audio — no latency from the network.
   - On phone/tablet, dedicated dit (·) and dah (—) touch paddle buttons replace the PTT bar when the rig is in CW mode.
 - **CW Decoder**: Real-time Morse code decoding of received audio using the [GGMorse](https://github.com/ggerganov/ggmorse) library.
-  - Enable in **General Settings → CW → CW Decoder**. Decoded text streams into a scrolling display.
+  - Enable by adding the **CW Decoder** panel to your layout via the **Add Panel** button. Decoded text streams into a scrolling display.
   - Shows estimated signal pitch (Hz) and speed (WPM) alongside decoded text.
 - **Live Spots (POTA, SOTA, WWFF)**: Real-time spot displays, each independently enable/disable with configurable poll intervals.
   - Filterable by mode (SSB, CW, FT8, FT4) and band (multi-select). Configurable maximum spot age.
@@ -164,41 +164,67 @@ The verbose flag is also forwarded to connected browser clients, which will prin
 
 ## Configuration
 
-Open the **General Settings** panel (gear icon) to configure. Settings are organized into tabs:
+### General Settings (gear icon)
 
-### RIGCTLD Tab
-- **Rig Number**: Hamlib model ID for your radio.
-- **Serial Port**: Device path (e.g. `/dev/ttyUSB0` or `COM3`).
-- **Baud Rate**: Serial speed for your radio.
-- **Network Settings**: Host and port for the `rigctld` server.
-- **Video Settings**: Capture device selection and stream quality.
-- **Audio Settings**: Backend input/output device (server-side, for the radio), local input/output device (browser-side, for the operator), and enable/disable inbound and outbound audio independently.
-  - **Local Speaker Volume**: A slider (0–200%) below the Local Output dropdown controls the volume of received audio in your browser. 100% is unity gain (system volume unchanged). Above 100% amplifies the signal — useful when your system volume is already at maximum.
+Open the **General Settings** panel (gear icon) to configure. Settings are organized into two tabs:
 
-### SPOTS Tab
-Enable POTA and/or SOTA spot displays independently. Each has identical controls:
-- **Poll Frequency**: How often to fetch new spots (1–5 minutes).
-- **Max Spot Age**: Discard spots older than this threshold.
-- **Band Filter**: Multi-select checkbox grid. No selection = all bands shown.
-- **Mode Filter**: Limit spots to SSB, CW, FT8, FT4, or ALL.
+#### RIGCTLD Tab
 
-### Display Tab
-Option to display the Command Console, which allows inputting raw hamlib commands that bypass the UI.  See [here](https://hamlib.sourceforge.net/html/rigctld.1.html) for a list of commands.
+**Client Side Settings (Connection to rigctld)**
+- **Host Address**: IP address of the machine running `rigctld` (default `127.0.0.1`).
+- **Port**: TCP port `rigctld` is listening on (default `4532`).
+- **Poll Rate**: How often the rig state is polled (250 ms – 5000 ms).
 
-### CW Tab
-Configure the CW decoder and keyer:
+**Server Side / Backend Settings**
+- **Rig Model**: Hamlib model ID for your radio (searchable dropdown).
+- **Serial Port**: Device path for the rig's control port (e.g. `/dev/ttyUSB0` or `COM3`).
+- **Server Port**: Port that `rigctld` will listen on.
+- **Serial Speed**: Baud rate for the rig's control port.
+- **Listen Address**: IP address `rigctld` will bind to (default `127.0.0.1`).
 
-**CW Decoder**
-- **Enable CW Decoder**: Decodes received audio to text in real time using GGMorse WASM. Works independently of the keyer and does not require audio to be unmuted.
+The tab also includes **Start / Stop / Test** controls for the `rigctld` process and a live process log view.
 
-**CW Keyer**
+#### CW Tab
+
 - **Enable CW Keyer**: Activates keyboard keying and sidetone. The keyer becomes active as soon as the rig is connected — no audio session required.
 - **Keying Method**: How the key output is delivered — **DTR** (default), **RTS**, or **CAT PTT** (uses the rig's PTT line via Hamlib — last resort; most radios process CAT commands too slowly for clean CW timing).
-- **Serial Port**: The port the keyer interface is connected to (may differ from the rig's control port).
-- **Key Mode**: **Iambic A**, **Iambic B**, or **Straight Key**.
-- **Speed (WPM)**: Words per minute — adjustable 5–40 WPM.
+- **Keyer Serial Port**: The port the keyer interface is connected to (may differ from the rig's control port).
+- **Key Polarity**: Whether line high or line low activates the key. Most interfaces use Active High.
+- **Keyer Mode**: **Iambic A**, **Iambic B**, or **Straight Key**.
+- **Speed (WPM)**: Words per minute — adjustable 5–30 WPM.
 - **Sidetone**: Enable/disable local audio feedback, set tone frequency (Hz), and volume. The sidetone plays instantly in the browser — it does not travel through the radio.
 - **Key Bindings**: Rebind the dit, dah, and straight key keyboard keys. Click the binding and press any key to rebind.
+
+### Video & Audio Settings (monitor icon in the Video/Audio panel)
+
+Open the **Video & Audio Settings** modal from the gear/monitor icon in the **Video & Audio** panel.
+
+**Video Settings**
+- **Video Device**: Capture device to stream (populated by the host Electron app).
+- **Resolution**: Width × height in pixels.
+- **Framerate**: 5, 10, 15, 24, or 30 fps.
+- Start / Stop video stream controls.
+
+**Audio Settings (Bi-Directional)**
+
+*Local Client Audio (Your System)*
+- **Local Input (Microphone)**: Browser-side mic device used to transmit your voice.
+- **Local Output (Speakers/Headphones)**: Browser-side output device for received audio.
+- **Local Speaker Volume**: A slider (0–200%) controls the volume of received audio in your browser. 100% is unity gain. Above 100% amplifies the signal — useful when your system volume is already at maximum.
+
+*Backend Audio Engine*
+- **Backend Input**: Server-side audio input device (the radio's audio output — e.g. USB Audio, Digirig).
+- **Backend Output**: Server-side audio output device (the radio's audio input).
+- Enable/disable inbound and outbound audio channels independently.
+- Start / Stop backend audio engine controls.
+
+### Spot Settings (gear icon in each Spots panel)
+
+Each POTA, SOTA, WWFF, and combined Spots panel has its own settings gear icon. Options are identical for each:
+- **Poll Frequency**: How often to fetch new spots (1–5 minutes).
+- **Max Spot Age**: Discard spots older than this threshold (1–15 minutes).
+- **Mode Filter**: Limit spots to SSB, CW, FT8, FT4, or All.
+- **Band Filter**: Multi-select checkbox grid. All bands shown when none are selected.
 
 ## License
 
