@@ -22,6 +22,7 @@ Developers who want to run from source will find build instructions in the [Deve
 
 ## Features
 
+- **User Authentication**: Every browser client must log in before accessing any controls. JWT-based, bcrypt-hashed passwords, per-user layout namespacing, and a full admin panel for user management, session monitoring, and an audit log.
 - **Real-time Dashboard**: Frequency, mode, and meter displays (S-Meter, SWR, ALC, Power, VDD) polled live from the rig.
 - **Bidirectional Audio**: Full transmit and receive audio over the network using the Opus 1.5 codec. Works for remote SSB, AM, and FM contacts.
   - Multi-client support.
@@ -171,6 +172,32 @@ npm run dev -- -v
 The verbose flag is also forwarded to connected browser clients, which will print matching diagnostic output to their DevTools console.
 
 ## Configuration
+
+### Authentication
+
+RigControl Web requires a login before any controls are accessible.
+
+**First launch:** The server creates a default `ADMIN` account with password `admin`. You will be forced to change this password before the dashboard loads. Change it immediately — the default credential is public.
+
+**Roles:** Users are either `admin` (full access including the Admin panel) or `regular` (full rig control access, no Admin panel).
+
+**Login:** Enter your callsign and password on the login screen. On success, a JWT token valid for 7 days is stored in `localStorage` and reused on subsequent page loads. Callsigns are normalized to upper-case.
+
+**Logout:** Click the **Logout** button in the app header.
+
+**Change password:** Any user can change their own password from the password-change dialog, accessible via the link next to the Logout button. Minimum 8 characters, maximum 72.
+
+**Admin panel:** Admins access the **Admin** tab in General Settings. From there you can:
+- Create, delete, and modify user accounts
+- Reset passwords (forces re-entry on next login)
+- Promote/demote users between `admin` and `regular`
+- View and force-terminate active sessions
+- Browse a timestamped audit log of all auth events
+- View and clear callsign-level rate-limit lockouts
+- Clear a user's stored layout preferences
+- Perform a factory reset (deletes all accounts and rotates the JWT secret)
+
+**Rate limiting:** 5 failed login attempts per IP (15-minute window) and 10 per callsign (proxy-safe, admin-clearable). Password-change attempts are also rate-limited at 5 per callsign.
 
 ### General Settings (gear icon)
 
