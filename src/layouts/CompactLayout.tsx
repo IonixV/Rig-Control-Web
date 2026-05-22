@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from "react";
 import type { Socket } from "socket.io-client";
-import { Monitor, Radio, Settings, ChevronDown, ChevronUp, Sun, Map } from "lucide-react";
+import { Monitor, Radio, Settings, ChevronDown, ChevronUp, Sun, Map, MapPin } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -182,6 +182,16 @@ export interface CompactLayoutProps {
   wwffBandFilter: string[];
   setWwffBandFilter: (v: string[]) => void;
   renderWwffSpotsTable: () => React.ReactElement;
+  potaSpotsCollapsed: boolean;
+  setPotaSpotsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  sotaSpotsCollapsed: boolean;
+  setSotaSpotsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  wwffSpotsCollapsed: boolean;
+  setWwffSpotsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  isComboSpotsCollapsed: boolean;
+  setIsComboSpotsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  isCwDecodeCollapsed: boolean;
+  setIsCwDecodeCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
 
   // Command console
   isConsoleCollapsed: boolean;
@@ -320,6 +330,16 @@ function CompactLayout({
   wwffBandFilter,
   setWwffBandFilter,
   renderWwffSpotsTable,
+  potaSpotsCollapsed,
+  setPotaSpotsCollapsed,
+  sotaSpotsCollapsed,
+  setSotaSpotsCollapsed,
+  wwffSpotsCollapsed,
+  setWwffSpotsCollapsed,
+  isComboSpotsCollapsed,
+  setIsComboSpotsCollapsed,
+  isCwDecodeCollapsed,
+  setIsCwDecodeCollapsed,
   isConsoleCollapsed,
   consoleLogs,
   rawCommand,
@@ -655,6 +675,8 @@ function CompactLayout({
             setCwDecodedText={setCwDecodedText}
             cwStats={cwStats}
             cwScrollContainerRef={cwScrollContainerRef}
+            isCollapsed={isCwDecodeCollapsed}
+            setIsCollapsed={setIsCwDecodeCollapsed}
           />
         );
 
@@ -682,46 +704,69 @@ function CompactLayout({
 
       case 'spots_pota':
         return (
-          <div className="bg-[#151619] rounded-xl border border-[#2a2b2e] overflow-hidden shadow-lg">
-            <div className="p-2 border-b border-[#2a2b2e] bg-[#1a1b1e] flex items-center justify-between">
-              <span className="text-[0.5625rem] uppercase tracking-widest font-bold text-[#8e9299]">POTA Spots</span>
-              <SpotSettingsGear accent="emerald" onClick={() => setShowPotaSettings(true)} />
-            </div>
+          <PanelChrome
+            title="POTA Spots"
+            icon={<MapPin size={12} />}
+            isCollapsed={potaSpotsCollapsed}
+            setIsCollapsed={setPotaSpotsCollapsed}
+            headerActions={<SpotSettingsGear accent="emerald" onClick={() => setShowPotaSettings(true)} />}
+            className="shadow-lg"
+            bodyClassName="p-0"
+            headerSize="sm"
+          >
             <div className="max-h-64 overflow-y-auto overflow-x-hidden custom-scrollbar">
               {renderSpotsTable(false)}
             </div>
-          </div>
+          </PanelChrome>
         );
 
       case 'spots_sota':
         return (
-          <div className="bg-[#151619] rounded-xl border border-[#2a2b2e] overflow-hidden shadow-lg">
-            <div className="p-2 border-b border-[#2a2b2e] bg-[#1a1b1e] flex items-center justify-between">
-              <span className="text-[0.5625rem] uppercase tracking-widest font-bold text-[#8e9299]">SOTA Spots</span>
-              <SpotSettingsGear accent="amber" onClick={() => setShowSotaSettings(true)} />
-            </div>
+          <PanelChrome
+            title="SOTA Spots"
+            icon={<MapPin size={12} />}
+            isCollapsed={sotaSpotsCollapsed}
+            setIsCollapsed={setSotaSpotsCollapsed}
+            headerActions={<SpotSettingsGear accent="amber" onClick={() => setShowSotaSettings(true)} />}
+            className="shadow-lg"
+            bodyClassName="p-0"
+            headerSize="sm"
+          >
             <div className="max-h-64 overflow-y-auto overflow-x-hidden custom-scrollbar">
               {renderSotaSpotsTable()}
             </div>
-          </div>
+          </PanelChrome>
         );
 
       case 'spots_wwff':
         return (
-          <div className="bg-[#151619] rounded-xl border border-[#2a2b2e] overflow-hidden shadow-lg">
-            <div className="p-2 border-b border-[#2a2b2e] bg-[#1a1b1e] flex items-center justify-between">
-              <span className="text-[0.5625rem] uppercase tracking-widest font-bold text-[#8e9299]">WWFF Spots</span>
-              <SpotSettingsGear accent="sky" onClick={() => setShowWwffSettings(true)} />
-            </div>
+          <PanelChrome
+            title="WWFF Spots"
+            icon={<MapPin size={12} />}
+            isCollapsed={wwffSpotsCollapsed}
+            setIsCollapsed={setWwffSpotsCollapsed}
+            headerActions={<SpotSettingsGear accent="sky" onClick={() => setShowWwffSettings(true)} />}
+            className="shadow-lg"
+            bodyClassName="p-0"
+            headerSize="sm"
+          >
             <div className="max-h-64 overflow-y-auto overflow-x-hidden custom-scrollbar">
               {renderWwffSpotsTable()}
             </div>
-          </div>
+          </PanelChrome>
         );
 
       case 'spots_combo':
         return (
-          <div className="bg-[#151619] rounded-xl border border-[#2a2b2e] overflow-hidden shadow-lg">
+          <PanelChrome
+            title="All Spots"
+            icon={<MapPin size={12} />}
+            isCollapsed={isComboSpotsCollapsed}
+            setIsCollapsed={setIsComboSpotsCollapsed}
+            className="shadow-lg"
+            bodyClassName="p-0"
+            headerSize="sm"
+          >
             <SpotComboPanel
               renderPotaTable={renderSpotsTable}
               renderSotaTable={renderSotaSpotsTable}
@@ -729,7 +774,7 @@ function CompactLayout({
               onOpenSettings={() => setShowComboSettings(true)}
               callsign={callsign}
             />
-          </div>
+          </PanelChrome>
         );
 
       case 'solar':
@@ -818,6 +863,7 @@ function CompactLayout({
     potaPollRate, potaMaxAge, potaModeFilter, potaBandFilter,
     sotaPollRate, sotaMaxAge, sotaModeFilter, sotaBandFilter,
     wwffPollRate, wwffMaxAge, wwffModeFilter, wwffBandFilter,
+    potaSpotsCollapsed, sotaSpotsCollapsed, wwffSpotsCollapsed, isComboSpotsCollapsed, isCwDecodeCollapsed,
     isConsoleCollapsed, consoleLogs, rawCommand,
     solarData, requestSolarData, isSolarCollapsed, isMufMapCollapsed,
     compactLayout, isEditMode, gridCallbacks,

@@ -141,6 +141,8 @@ export default function App() {
     isConsoleCollapsed, setIsConsoleCollapsed,
     isSolarCollapsed, setIsSolarCollapsed,
     isMufMapCollapsed, setIsMufMapCollapsed,
+    isCwDecodeCollapsed, setIsCwDecodeCollapsed,
+    isComboSpotsCollapsed, setIsComboSpotsCollapsed,
   } = usePanelState(currentUser?.callsign ?? "");
 
   const {
@@ -813,6 +815,16 @@ export default function App() {
             wwffBandFilter={wwffBandFilter}
             setWwffBandFilter={setWwffBandFilter}
             renderWwffSpotsTable={renderWwffSpotsTable}
+            potaSpotsCollapsed={potaSpotsCollapsed}
+            setPotaSpotsCollapsed={setPotaSpotsCollapsed}
+            sotaSpotsCollapsed={sotaSpotsCollapsed}
+            setSotaSpotsCollapsed={setSotaSpotsCollapsed}
+            wwffSpotsCollapsed={wwffSpotsCollapsed}
+            setWwffSpotsCollapsed={setWwffSpotsCollapsed}
+            isComboSpotsCollapsed={isComboSpotsCollapsed}
+            setIsComboSpotsCollapsed={setIsComboSpotsCollapsed}
+            isCwDecodeCollapsed={isCwDecodeCollapsed}
+            setIsCwDecodeCollapsed={setIsCwDecodeCollapsed}
             isConsoleCollapsed={isConsoleCollapsed}
             consoleLogs={consoleLogs}
             rawCommand={rawCommand}

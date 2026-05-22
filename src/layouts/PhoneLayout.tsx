@@ -344,6 +344,7 @@ function PhoneLayout({
   const [spotsComboCollapsed, setSpotsComboCollapsed] = useState(false);
   const [isSolarCollapsed, setIsSolarCollapsed] = useState(false);
   const [isMufMapCollapsed, setIsMufMapCollapsed] = useState(false);
+  const [isCwDecodeCollapsed, setIsCwDecodeCollapsed] = useState(false);
 
   const existingPhonePanelTypes = useMemo(() => {
     const types = new Set<PanelType>();
@@ -652,6 +653,8 @@ function PhoneLayout({
             setCwDecodedText={setCwDecodedText}
             cwStats={cwStats}
             cwScrollContainerRef={cwScrollContainerRef}
+            isCollapsed={isCwDecodeCollapsed}
+            setIsCollapsed={setIsCwDecodeCollapsed}
           />
         );
 

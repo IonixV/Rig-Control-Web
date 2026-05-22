@@ -18,6 +18,8 @@ export function usePanelState(callsign = "") {
   const [isConsoleCollapsed, setIsConsoleCollapsed] = useState(() => localStorage.getItem(ns("console-collapsed")) === "true");
   const [isSolarCollapsed, setIsSolarCollapsed] = useState(() => localStorage.getItem(ns("solar-collapsed")) === "true");
   const [isMufMapCollapsed, setIsMufMapCollapsed] = useState(() => localStorage.getItem(ns("mufmap-collapsed")) === "true");
+  const [isCwDecodeCollapsed, setIsCwDecodeCollapsed] = useState(() => localStorage.getItem(ns("cwdecode-collapsed")) === "true");
+  const [isComboSpotsCollapsed, setIsComboSpotsCollapsed] = useState(() => localStorage.getItem(ns("combospots-collapsed")) === "true");
 
   useEffect(() => {
     localStorage.setItem(ns("console-collapsed"), isConsoleCollapsed.toString());
@@ -26,7 +28,9 @@ export function usePanelState(callsign = "") {
   useEffect(() => {
     localStorage.setItem(ns("solar-collapsed"), isSolarCollapsed.toString());
     localStorage.setItem(ns("mufmap-collapsed"), isMufMapCollapsed.toString());
-  }, [isSolarCollapsed, isMufMapCollapsed]);
+    localStorage.setItem(ns("cwdecode-collapsed"), isCwDecodeCollapsed.toString());
+    localStorage.setItem(ns("combospots-collapsed"), isComboSpotsCollapsed.toString());
+  }, [isSolarCollapsed, isMufMapCollapsed, isCwDecodeCollapsed, isComboSpotsCollapsed]);
 
   useEffect(() => {
     localStorage.setItem(ns("is-compact-smeter-collapsed"), isCompactSMeterCollapsed.toString());
@@ -47,5 +51,7 @@ export function usePanelState(callsign = "") {
     isConsoleCollapsed, setIsConsoleCollapsed,
     isSolarCollapsed, setIsSolarCollapsed,
     isMufMapCollapsed, setIsMufMapCollapsed,
+    isCwDecodeCollapsed, setIsCwDecodeCollapsed,
+    isComboSpotsCollapsed, setIsComboSpotsCollapsed,
   };
 }
