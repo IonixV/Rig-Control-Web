@@ -1,4 +1,4 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import type { Socket } from "socket.io-client";
 import {
   AlertCircle,
@@ -10,15 +10,19 @@ import {
 import { cn } from "../utils";
 import type { CwSettings, RigctldSettings } from "../types";
 
+const AdminTab = lazy(() => import("./AdminTab"));
+
 export interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   socket: Socket | null;
+  callsign?: string;
+  role?: "admin" | "regular";
 
   // Tab state
-  activeSettingsTab: "rigctld" | "cw";
+  activeSettingsTab: "rigctld" | "cw" | "admin";
   setActiveSettingsTab: React.Dispatch<
-    React.SetStateAction<"rigctld" | "cw">
+    React.SetStateAction<"rigctld" | "cw" | "admin">
   >;
 
   // Rigctld tab
@@ -55,6 +59,8 @@ function SettingsModal({
   isOpen,
   onClose,
   socket,
+  callsign = "",
+  role = "regular",
   activeSettingsTab,
   setActiveSettingsTab,
   rigctldSettings,
@@ -101,7 +107,10 @@ function SettingsModal({
 
     {/* Tab Bar */}
     <div className="flex border-b border-[#2a2b2e] bg-[#1a1b1e]">
-      {(['rigctld', 'cw'] as const).map((tab) => (
+      {(role === "admin"
+        ? (["rigctld", "cw", "admin"] as const)
+        : (["rigctld", "cw"] as const)
+      ).map((tab) => (
         <button
           key={tab}
           onClick={() => setActiveSettingsTab(tab)}
@@ -585,6 +594,12 @@ function SettingsModal({
       </div>
 
     </div>
+    )}
+
+    {activeSettingsTab === 'admin' && role === 'admin' && (
+      <Suspense fallback={<div className="p-6 text-xs text-[#8e9299]">Loading…</div>}>
+        <AdminTab socket={socket} callsign={callsign} />
+      </Suspense>
     )}
 
   </div>

@@ -16,6 +16,7 @@ interface UsePotaSpotsOptions {
   potaEnabled: boolean;
   sotaEnabled: boolean;
   wwffEnabled: boolean;
+  callsign?: string;
 }
 
 const ALL_SPOT_MODES = ['SSB', 'CW', 'FT8', 'FT4'];
@@ -32,7 +33,10 @@ export function usePotaSpots({
   potaEnabled,
   sotaEnabled,
   wwffEnabled,
+  callsign = "",
 }: UsePotaSpotsOptions) {
+  const ns = (key: string) =>
+    callsign ? `${callsign.toUpperCase()}:${key}` : key;
   // ── POTA state ────────────────────────────────────────────────────────────
   const [potaPollRate, setPotaPollRate] = useState(5);
   const [potaMaxAge, setPotaMaxAge] = useState(15);
@@ -42,7 +46,7 @@ export function usePotaSpots({
   const [potaSortCol, setPotaSortCol] = useState<string | null>('spotTime');
   const [potaSortDir, setPotaSortDir] = useState<'asc' | 'desc' | 'api'>('desc');
   const [potaSpotsCollapsed, setPotaSpotsCollapsed] = useState(
-    () => localStorage.getItem("pota-spots-collapsed") === "true"
+    () => localStorage.getItem(ns("pota-spots-collapsed")) === "true"
   );
 
   // ── SOTA state ────────────────────────────────────────────────────────────
@@ -54,7 +58,7 @@ export function usePotaSpots({
   const [sotaSortCol, setSotaSortCol] = useState<string | null>('timeStamp');
   const [sotaSortDir, setSotaSortDir] = useState<'asc' | 'desc' | 'api'>('desc');
   const [sotaSpotsCollapsed, setSotaSpotsCollapsed] = useState(
-    () => localStorage.getItem("sota-spots-collapsed") === "true"
+    () => localStorage.getItem(ns("sota-spots-collapsed")) === "true"
   );
 
   // ── WWFF state ────────────────────────────────────────────────────────────
@@ -66,20 +70,20 @@ export function usePotaSpots({
   const [wwffSortCol, setWwffSortCol] = useState<string | null>('spot_time');
   const [wwffSortDir, setWwffSortDir] = useState<'asc' | 'desc' | 'api'>('desc');
   const [wwffSpotsCollapsed, setWwffSpotsCollapsed] = useState(
-    () => localStorage.getItem("wwff-spots-collapsed") === "true"
+    () => localStorage.getItem(ns("wwff-spots-collapsed")) === "true"
   );
 
   // ── LocalStorage sync ─────────────────────────────────────────────────────
   useEffect(() => {
-    localStorage.setItem("pota-spots-collapsed", potaSpotsCollapsed.toString());
+    localStorage.setItem(ns("pota-spots-collapsed"), potaSpotsCollapsed.toString());
   }, [potaSpotsCollapsed]);
 
   useEffect(() => {
-    localStorage.setItem("sota-spots-collapsed", sotaSpotsCollapsed.toString());
+    localStorage.setItem(ns("sota-spots-collapsed"), sotaSpotsCollapsed.toString());
   }, [sotaSpotsCollapsed]);
 
   useEffect(() => {
-    localStorage.setItem("wwff-spots-collapsed", wwffSpotsCollapsed.toString());
+    localStorage.setItem(ns("wwff-spots-collapsed"), wwffSpotsCollapsed.toString());
   }, [wwffSpotsCollapsed]);
 
   // ── Settings loading from server ─────────────────────────────────────────

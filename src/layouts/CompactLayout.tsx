@@ -54,6 +54,7 @@ export interface CompactLayoutProps {
   status: RigStatus;
   connected: boolean;
   availableModes: string[];
+  callsign?: string;
   socket: Socket | null;
   vfoSupported: boolean;
 
@@ -207,6 +208,7 @@ function CompactLayout({
   availableModes,
   socket,
   vfoSupported,
+  callsign = "",
   isPhoneVFOCollapsed,
   setIsPhoneVFOCollapsed,
   vfoStep,
@@ -694,6 +696,7 @@ function CompactLayout({
               renderSotaTable={renderSotaSpotsTable}
               renderWwffTable={renderWwffSpotsTable}
               onOpenSettings={() => setShowComboSettings(true)}
+              callsign={callsign}
             />
           </div>
         );

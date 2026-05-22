@@ -1,6 +1,7 @@
 import net from "net";
 import { Server } from "socket.io";
 import { ChildProcess } from "child_process";
+import type { AuthenticatedSocket } from "./authTypes.ts";
 
 export interface HfBandCondition {
   name: string;
@@ -53,6 +54,11 @@ export interface ServerContext {
   io: Server;
   baseDir: string;
   dataDir: string;
+
+  // Auth
+  jwtSecret: string;
+  authenticatedSockets: Map<string, AuthenticatedSocket>;
+  serverStartTime: number;
 
   // Settings sub-objects
   rigctldSettings: {
@@ -206,6 +212,10 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
     io,
     baseDir,
     dataDir,
+
+    jwtSecret: "",
+    authenticatedSockets: new Map(),
+    serverStartTime: Date.now(),
 
     rigctldSettings: {
       rigNumber: "",

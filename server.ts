@@ -14,6 +14,13 @@ import { initAudioEngine, stopAudio, registerAudioHandlers } from "./server/audi
 import { syncKeyerPort, closeKeyerPort, cwSetKey, stopCwTick, registerCwHandlers } from "./server/cw.ts";
 import { registerVideoHandlers } from "./server/video.ts";
 import { registerSolarHandlers } from "./server/solar.ts";
+import {
+  initAuth,
+  issueToken,
+  resolveToken,
+  registerAuthHandlers,
+  registerAdminHandlers,
+} from "./server/auth.ts";
 
 let electronWin: any = null;
 export function setElectronWindow(win: any) {
@@ -71,26 +78,100 @@ export async function startServer(appPath?: string, userDataPath?: string) {
   // Open CW keyer serial port if needed
   await syncKeyerPort(ctx);
 
+  // Initialize auth (loads/generates JWT secret, seeds default ADMIN user)
+  await initAuth(ctx);
+
   // Signal handlers for clean shutdown
   process.on("exit", () => stopRigctld(ctx));
   process.on("SIGINT", () => { closeKeyerPort(ctx); stopRigctld(ctx); process.exit(); });
   process.on("SIGTERM", () => { closeKeyerPort(ctx); stopRigctld(ctx); process.exit(); });
 
-  io.on("connection", (socket) => {
-    const clientId = socket.handshake.auth.clientId || socket.id;
-    console.log(`Client connected (Socket ID: ${socket.id}, Client ID: ${clientId})`);
-    ctx.socketConnectTimes.set(socket.id, Date.now());
+  // Pushes all initial state to a newly-authenticated socket. Called both from
+  // registerFunctionalHandlers (on auth) and from the get-settings handler
+  // (explicit client re-request). Using targeted socket.emit throughout so we
+  // don't accidentally broadcast to all clients.
+  const pushInitialState = async (socket: import("socket.io").Socket) => {
+    const { checkExistingRigctld } = await import("./server/rigctld.ts");
+    if (ctx.rigctldStatus === "stopped" || ctx.rigctldStatus === "error") {
+      const isRunning = await checkExistingRigctld();
+      if (isRunning) ctx.rigctldStatus = "already_running";
+    }
 
+    socket.emit("settings-data", {
+      settings: ctx.rigctldSettings,
+      autoStart: ctx.autoStartEnabled,
+      videoAutoStart: ctx.videoAutoStart,
+      videoSettings: ctx.videoSettings,
+      audioSettings: ctx.audioSettings,
+      pollRate: ctx.pollRate,
+      autoconnectEligible: ctx.autoconnectEligible,
+      clientHost: ctx.clientHost,
+      clientPort: ctx.clientPort,
+      isConnected: ctx.isConnected,
+      potaSettings: ctx.potaSettings,
+      sotaSettings: ctx.sotaSettings,
+      cwSettings: ctx.cwSettings,
+      cwPortStatus: (ctx.cwKeyerProcess && !ctx.cwKeyerProcess.killed)
+        ? { open: true, port: ctx.cwSettings.keyerPort }
+        : { open: false, port: ctx.cwSettings.keyerPort },
+    });
+    socket.emit("rigctld-status", {
+      status: ctx.rigctldStatus,
+      logs: ctx.rigctldLogs,
+      version: ctx.rigctldVersion,
+      isVersionSupported: ctx.isRigctldVersionSupported,
+    });
+    socket.emit("rigctld-log", ctx.rigctldLogs);
+
+    vlog(`[VIDEO] New client ${socket.id} connected. videoStatus=${ctx.videoStatus} hasKeyframe=${!!ctx.lastKeyframe}`);
+    socket.emit("video-source-status", {
+      status: ctx.videoStatus,
+      videoWidth: ctx.videoSettings.videoWidth,
+      videoHeight: ctx.videoSettings.videoHeight,
+      framerate: ctx.videoSettings.framerate,
+    });
+    socket.emit("video-devices-list", ctx.videoDeviceList);
+    if (ctx.videoStatus === "streaming" && ctx.lastKeyframe) {
+      vlog(`[VIDEO] Sending buffered keyframe to ${socket.id}: type=${ctx.lastKeyframe.type} dataBytes=${ctx.lastKeyframe.data.byteLength} hasDescription=${!!ctx.lastKeyframe.description}`);
+      socket.emit("video-frame", ctx.lastKeyframe);
+    }
+
+    socket.emit("audio-status", ctx.audioStatus);
+    socket.emit("preamp-capabilities", ctx.rigctldSettings.preampCapabilities);
+    socket.emit("nb-capabilities", { supported: ctx.rigctldSettings.nbSupported, range: ctx.rigctldSettings.nbLevelRange });
+    socket.emit("nr-capabilities", { supported: ctx.rigctldSettings.nrSupported, range: ctx.rigctldSettings.nrLevelRange });
+    socket.emit("mic-active-client", ctx.activeMicClientId);
+    socket.emit("rfpower-capabilities", { range: ctx.rigctldSettings.rfPowerRange });
+    socket.emit("anf-capabilities", { supported: ctx.rigctldSettings.anfSupported });
+
+    if (ctx.isConnected) {
+      socket.emit("rig-connected", { host: ctx.rigConfig.host, port: ctx.rigConfig.port });
+    }
+
+    if (fs.existsSync(RADIOS_FILE)) {
+      try {
+        socket.emit("radios-list", JSON.parse(fs.readFileSync(RADIOS_FILE, "utf-8")));
+      } catch (e) {
+        console.error("Failed to load radios:", e);
+        socket.emit("radios-list", []);
+      }
+    } else {
+      socket.emit("radios-list", []);
+    }
+  };
+
+  // Registers all functional (post-auth) socket handlers for a given socket
+  const registerFunctionalHandlers = (socket: import("socket.io").Socket, clientId: string) => {
     socket.emit("audio-engine-state", { isReady: ctx.isAudioEngineReady, error: ctx.audioEngineError });
     socket.emit("verbose-mode", VERBOSE);
 
-    // Register per-subsystem socket handlers
     registerRigCommHandlers(socket, ctx);
     registerRigctldHandlers(socket, ctx);
     registerAudioHandlers(socket, ctx, clientId);
     registerCwHandlers(socket, ctx);
     registerVideoHandlers(socket, ctx);
     registerSolarHandlers(socket, ctx);
+    registerAdminHandlers(socket, ctx);
     registerSettingsHandlers(
       socket,
       ctx,
@@ -100,64 +181,57 @@ export async function startServer(appPath?: string, userDataPath?: string) {
       (forceReopen) => syncKeyerPort(ctx, forceReopen),
     );
 
-    // get-settings: initial state dump for newly connected client
-    socket.on("get-settings", async () => {
-      const { checkExistingRigctld } = await import("./server/rigctld.ts");
-      if (ctx.rigctldStatus === "stopped" || ctx.rigctldStatus === "error") {
-        const isRunning = await checkExistingRigctld();
-        if (isRunning) ctx.rigctldStatus = "already_running";
-      }
+    socket.on("get-settings", async () => { await pushInitialState(socket); });
 
-      socket.emit("settings-data", {
-        settings: ctx.rigctldSettings,
-        autoStart: ctx.autoStartEnabled,
-        videoAutoStart: ctx.videoAutoStart,
-        videoSettings: ctx.videoSettings,
-        audioSettings: ctx.audioSettings,
-        pollRate: ctx.pollRate,
-        autoconnectEligible: ctx.autoconnectEligible,
-        clientHost: ctx.clientHost,
-        clientPort: ctx.clientPort,
-        isConnected: ctx.isConnected,
-        potaSettings: ctx.potaSettings,
-        sotaSettings: ctx.sotaSettings,
-        cwSettings: ctx.cwSettings,
-        cwPortStatus: (ctx.cwKeyerProcess && !ctx.cwKeyerProcess.killed)
-          ? { open: true, port: ctx.cwSettings.keyerPort }
-          : { open: false, port: ctx.cwSettings.keyerPort },
+    pushInitialState(socket).catch(e => console.error("[INIT] pushInitialState error:", e));
+  };
+
+  io.on("connection", (socket) => {
+    const clientId = socket.handshake.auth.clientId || socket.id;
+    const token = socket.handshake.auth.token as string | undefined;
+    console.log(`Client connected (Socket ID: ${socket.id}, Client ID: ${clientId})`);
+    ctx.socketConnectTimes.set(socket.id, Date.now());
+
+    // Ensure functional handlers are only registered once per socket
+    let functionalHandlersRegistered = false;
+    const registerFunctionalOnce = () => {
+      if (functionalHandlersRegistered) return;
+      functionalHandlersRegistered = true;
+      registerFunctionalHandlers(socket, clientId);
+    };
+
+    // Auth handlers are always registered (login works pre-auth)
+    registerAuthHandlers(socket, ctx, registerFunctionalOnce);
+
+    // Attempt token verification on connect — resolveToken validates the signature
+    // AND confirms the user still exists in users.json with their current role.
+    const resolved = token ? resolveToken(token, ctx) : null;
+    if (resolved) {
+      ctx.authenticatedSockets.set(socket.id, {
+        callsign: resolved.callsign,
+        role: resolved.role,
+        connectedAt: Date.now(),
+        ip: socket.handshake.address,
       });
-      emitRigctldStatus(ctx);
-      socket.emit("rigctld-log", ctx.rigctldLogs);
-
-      vlog(`[VIDEO] New client ${socket.id} connected. videoStatus=${ctx.videoStatus} hasKeyframe=${!!ctx.lastKeyframe}`);
-      socket.emit("video-source-status", {
-        status: ctx.videoStatus,
-        videoWidth: ctx.videoSettings.videoWidth,
-        videoHeight: ctx.videoSettings.videoHeight,
-        framerate: ctx.videoSettings.framerate,
+      socket.emit("auth:token-refreshed", {
+        token: issueToken(resolved.callsign, resolved.role, ctx),
+        callsign: resolved.callsign,
+        role: resolved.role,
+        mustChangePassword: resolved.mustChangePassword,
       });
-      socket.emit("video-devices-list", ctx.videoDeviceList);
-      if (ctx.videoStatus === "streaming" && ctx.lastKeyframe) {
-        vlog(`[VIDEO] Sending buffered keyframe to ${socket.id}: type=${ctx.lastKeyframe.type} dataBytes=${ctx.lastKeyframe.data.byteLength} hasDescription=${!!ctx.lastKeyframe.description}`);
-        socket.emit("video-frame", ctx.lastKeyframe);
+      if (!resolved.mustChangePassword) {
+        registerFunctionalOnce();
       }
-
-      socket.emit("audio-status", ctx.audioStatus);
-      socket.emit("preamp-capabilities", ctx.rigctldSettings.preampCapabilities);
-      socket.emit("nb-capabilities", { supported: ctx.rigctldSettings.nbSupported, range: ctx.rigctldSettings.nbLevelRange });
-      socket.emit("nr-capabilities", { supported: ctx.rigctldSettings.nrSupported, range: ctx.rigctldSettings.nrLevelRange });
-      socket.emit("mic-active-client", ctx.activeMicClientId);
-      socket.emit("rfpower-capabilities", { range: ctx.rigctldSettings.rfPowerRange });
-      socket.emit("anf-capabilities", { supported: ctx.rigctldSettings.anfSupported });
-
-      if (ctx.isConnected) {
-        socket.emit("rig-connected", { host: ctx.rigConfig.host, port: ctx.rigConfig.port });
-      }
-    });
+      // If mustChangePassword, functional handlers are registered after
+      // auth:change-password succeeds (onAuthenticated closure in auth.ts).
+    } else {
+      socket.emit("auth:required");
+    }
 
     socket.on("disconnect", () => {
       console.log(`Client disconnected (Socket ID: ${socket.id}, Client ID: ${clientId})`);
       ctx.socketConnectTimes.delete(socket.id);
+      ctx.authenticatedSockets.delete(socket.id);
 
       if (ctx.activeCwClientId === socket.id) {
         stopCwTick(ctx);

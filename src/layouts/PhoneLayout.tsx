@@ -47,6 +47,7 @@ export interface PhoneLayoutProps {
   connected: boolean;
   availableModes: string[];
   socket: Socket | null;
+  callsign?: string;
 
   // VFO
   vfoStep: number;
@@ -207,6 +208,7 @@ function PhoneLayout({
   connected,
   availableModes,
   socket,
+  callsign = "",
   vfoStep,
   inputVfoA,
   inputVfoB,
@@ -636,6 +638,7 @@ function PhoneLayout({
               renderSotaTable={renderSotaSpotsTable}
               renderWwffTable={renderWwffSpotsTable}
               onOpenSettings={() => setShowComboSettings(true)}
+              callsign={callsign}
             />
           </PanelChrome>
         );

@@ -184,9 +184,9 @@ export async function pollRig(ctx: ServerContext): Promise<void> {
       }
     }
 
-    let frequency = ctx.lastStatus.frequency;
-    let mode = ctx.lastStatus.mode;
-    let bandwidth = ctx.lastStatus.bandwidth;
+    const frequency = await sendToRig(ctx, "f", true);
+    const modeBw = await sendToRig(ctx, "m", true);
+    const [mode, bandwidth] = modeBw.split("\n");
     let rfpower = ctx.lastStatus.rfpower;
     let rflevel = ctx.lastStatus.rfLevel;
     let agc = ctx.lastStatus.agc;
@@ -207,11 +207,6 @@ export async function pollRig(ctx: ServerContext): Promise<void> {
       if (ctx.visibleMeters.includes('vdd')) {
         vdd = parseFloat(await sendToRig(ctx, "l VD_METER", true).catch(() => "13.8"));
       }
-      frequency = await sendToRig(ctx, "f", true);
-      const modeBw = await sendToRig(ctx, "m", true);
-      const [m, b] = modeBw.split("\n");
-      mode = m;
-      bandwidth = b;
       rfpower = parseFloat(await sendToRig(ctx, "l RFPOWER", true));
       rflevel = parseFloat(await sendToRig(ctx, "l RF", true).catch(() => "0"));
       agc = parseInt(await sendToRig(ctx, "l AGC", true).catch(() => "6"));

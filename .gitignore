@@ -7,3 +7,6 @@ coverage/
 .env*
 !.env.example
 *.pem
+users.json
+auth.json
+audit.json

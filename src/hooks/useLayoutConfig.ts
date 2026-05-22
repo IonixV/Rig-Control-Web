@@ -3,7 +3,7 @@ import type { LayoutConfig, ViewLayout, GridItem, PanelType, PanelAddConfig } fr
 import { PANEL_MIN_SIZES } from '../types/layout';
 
 
-const STORAGE_KEY = 'grid-layout-v1';
+const BASE_STORAGE_KEY = 'grid-layout-v1';
 
 export const DEFAULT_COMPACT_LAYOUT: ViewLayout = {
   cols: 2,
@@ -37,9 +37,9 @@ const DEFAULT_LAYOUT: LayoutConfig = {
   phone: DEFAULT_PHONE_LAYOUT,
 };
 
-function loadFromStorage(): LayoutConfig | null {
+function loadFromStorage(storageKey: string): LayoutConfig | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey);
     if (!raw) return null;
     return JSON.parse(raw) as LayoutConfig;
   } catch {
@@ -47,21 +47,24 @@ function loadFromStorage(): LayoutConfig | null {
   }
 }
 
-function saveToStorage(config: LayoutConfig): void {
+function saveToStorage(storageKey: string, config: LayoutConfig): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+    localStorage.setItem(storageKey, JSON.stringify(config));
   } catch {
     // ignore
   }
 }
 
-export function useLayoutConfig() {
-  const [config, setConfig] = useState<LayoutConfig>(() => loadFromStorage() ?? DEFAULT_LAYOUT);
+export function useLayoutConfig(callsign = "") {
+  const storageKey = callsign
+    ? `${callsign.toUpperCase()}:${BASE_STORAGE_KEY}`
+    : BASE_STORAGE_KEY;
+  const [config, setConfig] = useState<LayoutConfig>(() => loadFromStorage(storageKey) ?? DEFAULT_LAYOUT);
 
   const setCompactLayout = useCallback((layout: ViewLayout) => {
     setConfig(prev => {
       const next = { ...prev, compact: layout };
-      saveToStorage(next);
+      saveToStorage(storageKey, next);
       return next;
     });
   }, []);
@@ -69,7 +72,7 @@ export function useLayoutConfig() {
   const setPhoneLayout = useCallback((layout: ViewLayout) => {
     setConfig(prev => {
       const next = { ...prev, phone: layout };
-      saveToStorage(next);
+      saveToStorage(storageKey, next);
       return next;
     });
   }, []);
@@ -92,7 +95,7 @@ export function useLayoutConfig() {
         ...(config?.fullWidth !== undefined && { fullWidth: config.fullWidth }),
       };
       const next = { ...prev, [view]: { ...viewLayout, items: [...viewLayout.items, newItem] } };
-      saveToStorage(next);
+      saveToStorage(storageKey, next);
       return next;
     });
   }, []);
@@ -101,7 +104,7 @@ export function useLayoutConfig() {
     setConfig(prev => {
       const viewLayout = prev[view];
       const next = { ...prev, [view]: { ...viewLayout, items: viewLayout.items.filter(i => i.i !== itemId) } };
-      saveToStorage(next);
+      saveToStorage(storageKey, next);
       return next;
     });
   }, []);
@@ -117,7 +120,7 @@ export function useLayoutConfig() {
           h: Math.min(item.h, rows - item.y),
         }));
       const next = { ...prev, [view]: { ...viewLayout, cols, rows, items: clampedItems } };
-      saveToStorage(next);
+      saveToStorage(storageKey, next);
       return next;
     });
   }, []);
@@ -131,7 +134,7 @@ export function useLayoutConfig() {
         return update ? { ...item, x: update.x, y: update.y, w: update.w, h: update.h } : item;
       });
       const next = { ...prev, [view]: { ...viewLayout, items: mergedItems } };
-      saveToStorage(next);
+      saveToStorage(storageKey, next);
       return next;
     });
   }, []);
@@ -139,7 +142,7 @@ export function useLayoutConfig() {
   const resetToDefault = useCallback((view?: 'compact' | 'phone') => {
     setConfig(() => {
       const next = view ? { ...DEFAULT_LAYOUT, [view]: DEFAULT_LAYOUT[view] } : DEFAULT_LAYOUT;
-      saveToStorage(next);
+      saveToStorage(storageKey, next);
       return next;
     });
   }, []);

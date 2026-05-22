@@ -10,6 +10,7 @@ import {
   Zap,
   X,
   LayoutGrid,
+  LogOut,
 } from "lucide-react";
 import { cn } from "./utils";
 import PhoneLayout from "./layouts/PhoneLayout";
@@ -17,6 +18,9 @@ import CompactLayout from "./layouts/CompactLayout";
 import PhoneStickyBar from "./layouts/PhoneStickyBar";
 import SettingsModal from "./modals/SettingsModal";
 import VideoSettingsModal from "./modals/VideoSettingsModal";
+import LoginScreen from "./components/LoginScreen";
+import ChangePasswordModal from "./components/ChangePasswordModal";
+import { useAuth } from "./hooks/useAuth";
 import { usePotaSpots } from "./hooks/usePotaSpots";
 import { useSolarData } from "./hooks/useSolarData";
 import { useRigctld } from "./hooks/useRigctld";
@@ -62,11 +66,26 @@ export default function App() {
 
   // ── Socket creation ───────────────────────────────────────────────────────
   useEffect(() => {
-    const newSocket = io(backendUrl, { transports: ['websocket'], auth: { clientId } });
+    const authToken = localStorage.getItem("auth-token");
+    const newSocket = io(backendUrl, {
+      transports: ['websocket'],
+      auth: { clientId, token: authToken },
+    });
     setSocket(newSocket);
     return () => { newSocket.disconnect(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const {
+    authState,
+    currentUser,
+    mustChangePassword,
+    loginError,
+    retryAfter,
+    login,
+    logout,
+    onPasswordChanged,
+  } = useAuth(socket);
 
   // ── Hooks ─────────────────────────────────────────────────────────────────
   const { isCompact, isPhone, stickyBarHeight, containerRef, stickyBarRef } = useLayoutState();
@@ -77,7 +96,7 @@ export default function App() {
     phoneLayout, setPhoneLayout,
     addPanel, removePanel, setGridSize,
     updateItemPositions, resetToDefault,
-  } = useLayoutConfig();
+  } = useLayoutConfig(currentUser?.callsign ?? "");
 
   const hasCwDecodePanel = useMemo(() =>
     compactLayout.items.some(i => i.panelType === 'cwdecode') ||
@@ -120,7 +139,7 @@ export default function App() {
     isCompactControlsCollapsed, setIsCompactControlsCollapsed,
     isCompactRFPowerCollapsed, setIsCompactRFPowerCollapsed,
     isConsoleCollapsed, setIsConsoleCollapsed,
-  } = usePanelState();
+  } = usePanelState(currentUser?.callsign ?? "");
 
   const {
     cwDecodedText, setCwDecodedText,
@@ -325,6 +344,7 @@ export default function App() {
     potaEnabled,
     sotaEnabled,
     wwffEnabled,
+    callsign: currentUser?.callsign ?? "",
   });
 
   // ── Effects ───────────────────────────────────────────────────────────────
@@ -403,6 +423,30 @@ export default function App() {
     await initLocalAudioPipeline();
   }, [socket, isElectronSource, enumerateVideoDevices, initLocalAudioPipeline, setIsVideoSettingsOpen]);
 
+  // ── Auth gates ────────────────────────────────────────────────────────────
+  if (authState === "unknown") {
+    return <div className="min-h-screen bg-[#0a0a0a]" />;
+  }
+  if (authState === "unauthenticated") {
+    return (
+      <LoginScreen
+        onLogin={login}
+        loginError={loginError}
+        retryAfter={retryAfter}
+      />
+    );
+  }
+  if (authState === "must-change-password") {
+    return (
+      <ChangePasswordModal
+        socket={socket}
+        callsign={currentUser?.callsign ?? ""}
+        forced={true}
+        onSuccess={onPasswordChanged}
+      />
+    );
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className={cn(
@@ -478,6 +522,13 @@ export default function App() {
                 <LayoutGrid size={18} />
               </button>
             )}
+            <button
+              onClick={logout}
+              className="p-1.5 sm:p-2 bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg text-[#8e9299] hover:text-red-400 hover:border-red-500/50 transition-all flex-shrink-0"
+              title={`Sign out (${currentUser?.callsign ?? ''})`}
+            >
+              <LogOut size={18} />
+            </button>
           </div>
         </header>
 
@@ -644,6 +695,7 @@ export default function App() {
             phoneLayout={phoneLayout}
             isEditMode={isPhoneEditMode}
             gridCallbacks={phoneGridCallbacks}
+            callsign={currentUser?.callsign ?? ""}
           />
         ) : (
           <CompactLayout
@@ -771,6 +823,7 @@ export default function App() {
             setCompactLayout={setCompactLayout}
             isEditMode={isCompactEditMode}
             gridCallbacks={compactGridCallbacks}
+            callsign={currentUser?.callsign ?? ""}
           />
         )}
 
@@ -913,6 +966,8 @@ export default function App() {
           isOpen={isSettingsOpen}
           onClose={() => setIsSettingsOpen(false)}
           socket={socket}
+          callsign={currentUser?.callsign ?? ""}
+          role={currentUser?.role ?? "regular"}
           activeSettingsTab={activeSettingsTab}
           setActiveSettingsTab={setActiveSettingsTab}
           rigctldSettings={rigctldSettings}

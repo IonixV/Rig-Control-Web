@@ -16,6 +16,7 @@ export interface SpotComboPanelProps {
   renderWwffTable: () => React.ReactElement;
   onOpenSettings: () => void;
   maxHeightClass?: string;
+  callsign?: string;
 }
 
 export default function SpotComboPanel({
@@ -24,15 +25,18 @@ export default function SpotComboPanel({
   renderWwffTable,
   onOpenSettings,
   maxHeightClass = 'max-h-64',
+  callsign = '',
 }: SpotComboPanelProps) {
+  const tabKey = callsign ? `${callsign.toUpperCase()}:spots-combo-tab` : 'spots-combo-tab';
+
   const [activeTab, setActiveTab] = useState<Tab>(() => {
-    const stored = localStorage.getItem('spots-combo-tab') as Tab | null;
+    const stored = localStorage.getItem(tabKey) as Tab | null;
     return stored ?? 'pota';
   });
 
   const handleTab = (tab: Tab) => {
     setActiveTab(tab);
-    localStorage.setItem('spots-combo-tab', tab);
+    localStorage.setItem(tabKey, tab);
   };
 
   return (
