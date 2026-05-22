@@ -77,12 +77,10 @@ export default function MufMapPanel({ heightPx = DEFAULT_HEIGHT }: Props) {
     return () => clearInterval(t);
   }, [refresh]);
 
-  // Reset zoom when metric or time slot changes
   useEffect(() => {
     setLoading(true);
     setError(false);
-    resetTransform();
-  }, [metric, timeSlot, resetTransform]);
+  }, [metric, timeSlot]);
 
   // Wheel zoom toward cursor
   useEffect(() => {
