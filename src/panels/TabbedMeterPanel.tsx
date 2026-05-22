@@ -71,7 +71,7 @@ export function TabbedMeterHeaderContent({
                   : "text-[#8e9299] hover:bg-white/5"
               )}
             >
-              {m === "signal" ? (status.ptt ? "POWER" : "SIGNAL") : m.toUpperCase()}
+              {m === "signal" ? "SIG/PWR" : m.toUpperCase()}
             </button>
           ))}
         </div>
@@ -135,47 +135,35 @@ export default function TabbedMeterPanel({
             opacity={0.3}
           />
           <XAxis dataKey="time" hide />
-          <YAxis
-            domain={
-              meterTab === "signal"
-                ? status.ptt
-                  ? [0, 1]
-                  : [-54, 0]
-                : meterTab === "swr"
-                ? [1, 4]
-                : [0, 1]
-            }
-            hide
-          />
+          {meterTab === "signal" ? (
+            <>
+              <YAxis yAxisId="rx" domain={[-54, 0]} hide />
+              <YAxis yAxisId="tx" domain={[0, 1]} orientation="right" hide />
+            </>
+          ) : (
+            <YAxis
+              domain={meterTab === "swr" ? [1, 4] : [0, 1]}
+              hide
+            />
+          )}
           <Tooltip
             contentStyle={{
               backgroundColor: "#151619",
               border: "1px solid #2a2b2e",
               fontSize: "12px",
             }}
-            itemStyle={{
-              color:
-                meterTab === "signal"
-                  ? status.ptt
-                    ? "#ef4444"
-                    : "#10b981"
-                  : meterTab === "swr"
-                  ? (status.swr ?? 1) > 3
-                    ? "#ef4444"
-                    : "#f59e0b"
-                  : "#3b82f6",
-            }}
-            formatter={(val: number, _name: string, props: any) => {
+            formatter={(val: number, name: string, props: any) => {
               if (meterTab === "signal") {
-                const rawVal = props.payload?.smeter ?? val;
-                return [
-                  status.ptt
-                    ? `${Math.round((val ?? 0) * 100)}W`
-                    : rawVal > 0
-                    ? `S9+${rawVal}dB`
-                    : `S${Math.round((rawVal + 54) / 6)}`,
-                  status.ptt ? "POWER" : "SIGNAL",
-                ];
+                if (name === "smeterGraph") {
+                  const rawVal = props.payload?.smeter ?? val;
+                  return [
+                    rawVal > 0
+                      ? `S9+${rawVal}dB`
+                      : `S${Math.round((rawVal + 54) / 6)}`,
+                    "SIGNAL",
+                  ];
+                }
+                return [`${Math.round((val ?? 0) * 100)}W`, "POWER"];
               }
               if (meterTab === "swr") {
                 return [(props.payload?.swr ?? 1).toFixed(2), "SWR"];
@@ -186,32 +174,43 @@ export default function TabbedMeterPanel({
               ];
             }}
           />
-          <Line
-            type="monotone"
-            dataKey={
-              meterTab === "signal"
-                ? status.ptt
-                  ? "powerMeter"
-                  : "smeterGraph"
-                : meterTab === "swr"
-                ? "swrGraph"
-                : "alc"
-            }
-            stroke={
-              meterTab === "signal"
-                ? status.ptt
-                  ? "#ef4444"
-                  : "#10b981"
-                : meterTab === "swr"
-                ? (status.swr ?? 1) > 3
-                  ? "#ef4444"
-                  : "#f59e0b"
-                : "#3b82f6"
-            }
-            strokeWidth={2}
-            dot={false}
-            isAnimationActive={false}
-          />
+          {meterTab === "signal" ? (
+            <>
+              <Line
+                yAxisId="rx"
+                type="monotone"
+                dataKey="smeterGraph"
+                stroke="#10b981"
+                strokeWidth={2}
+                dot={false}
+                isAnimationActive={false}
+              />
+              <Line
+                yAxisId="tx"
+                type="monotone"
+                dataKey="powerMeter"
+                stroke="#ef4444"
+                strokeWidth={2}
+                dot={false}
+                isAnimationActive={false}
+              />
+            </>
+          ) : (
+            <Line
+              type="monotone"
+              dataKey={meterTab === "swr" ? "swrGraph" : "alc"}
+              stroke={
+                meterTab === "swr"
+                  ? (status.swr ?? 1) > 3
+                    ? "#ef4444"
+                    : "#f59e0b"
+                  : "#3b82f6"
+              }
+              strokeWidth={2}
+              dot={false}
+              isAnimationActive={false}
+            />
+          )}
         </LineChart>
       </ResponsiveContainer>
     </div>

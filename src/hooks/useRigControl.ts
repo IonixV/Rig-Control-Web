@@ -479,7 +479,7 @@ export function useRigControl({
           swr: currentPtt ? (newStatus.swr ?? 1.0) : 1.0,
           swrGraph: Math.min(4, Math.max(1, currentPtt ? (newStatus.swr ?? 1.0) : 1.0)),
           alc: currentPtt ? (newStatus.alc ?? 0) : 0,
-          powerMeter: newStatus.powerMeter,
+          powerMeter: currentPtt ? (newStatus.powerMeter ?? 0) : 0,
           vdd: newStatus.vdd,
         }];
         return next.slice(-30);

@@ -409,7 +409,7 @@ function CompactLayout({
                         : (m === 'swr' && (status.swr ?? 1) > 3 ? "text-red-500 bg-red-500/10" : "text-[#8e9299] hover:bg-white/5")
                     )}
                   >
-                    {m === 'signal' ? (status.ptt ? 'power' : 'signal') : m}
+                    {m === 'signal' ? 'SIG/PWR' : m}
                   </button>
                 ))}
               </div>
@@ -445,51 +445,74 @@ function CompactLayout({
                   <LineChart data={history}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#2a2b2e" vertical={false} opacity={0.3} />
                     <XAxis dataKey="time" hide />
-                    <YAxis
-                      domain={
-                        activeMeter === 'signal' ? (status.ptt ? [0, 1] : [-54, 0]) :
-                        activeMeter === 'swr' ? [1, 4] :
-                        activeMeter === 'vdd' ? [11, 16] : [0, 1]
-                      }
-                      hide={activeMeter !== 'swr' && activeMeter !== 'vdd'}
-                      ticks={activeMeter === 'swr' ? [1, 2, 3, 4] : activeMeter === 'vdd' ? [11, 12, 13, 14, 15, 16] : undefined}
-                      width={15}
-                      style={{ fontSize: '6px', fill: '#4a4b4e' }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
+                    {activeMeter === 'signal' ? (
+                      <>
+                        <YAxis yAxisId="rx" domain={[-54, 0]} hide />
+                        <YAxis yAxisId="tx" domain={[0, 1]} orientation="right" hide />
+                      </>
+                    ) : (
+                      <YAxis
+                        domain={
+                          activeMeter === 'swr' ? [1, 4] :
+                          activeMeter === 'vdd' ? [11, 16] : [0, 1]
+                        }
+                        hide={activeMeter !== 'swr' && activeMeter !== 'vdd'}
+                        ticks={activeMeter === 'swr' ? [1, 2, 3, 4] : activeMeter === 'vdd' ? [11, 12, 13, 14, 15, 16] : undefined}
+                        width={15}
+                        style={{ fontSize: '6px', fill: '#4a4b4e' }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                    )}
                     <Tooltip
                       contentStyle={{ backgroundColor: '#151619', border: '1px solid #2a2b2e', fontSize: '8px' }}
-                      itemStyle={{
-                        color: activeMeter === 'signal' ? (status.ptt ? '#ef4444' : '#10b981') :
-                               activeMeter === 'swr' ? ((status.swr ?? 1) > 3 ? '#ef4444' : '#f59e0b') :
-                               activeMeter === 'alc' ? '#3b82f6' : '#10b981'
-                      }}
-                      formatter={(val: number, _name: string, props: any) => {
+                      formatter={(val: number, name: string, props: any) => {
                         if (activeMeter === 'signal') {
-                          const rawVal = props.payload?.smeter ?? val;
-                          return [status.ptt ? `${Math.round((val ?? 0) * 100)}W` : (rawVal > 0 ? `S9+${rawVal}dB` : `S${Math.round((rawVal + 54) / 6)}`), status.ptt ? "POWER" : "SIGNAL"];
+                          if (name === 'smeterGraph') {
+                            const rawVal = props.payload?.smeter ?? val;
+                            return [rawVal > 0 ? `S9+${rawVal}dB` : `S${Math.round((rawVal + 54) / 6)}`, 'SIGNAL'];
+                          }
+                          return [`${Math.round((val ?? 0) * 100)}W`, 'POWER'];
                         }
                         if (activeMeter === 'swr') return [(props.payload?.swr ?? 1).toFixed(2), 'SWR'];
                         if (activeMeter === 'vdd') return [`${(val ?? 0).toFixed(1)}V`, 'VDD'];
                         return [(val ?? 0).toFixed(activeMeter === 'alc' ? 5 : 2), activeMeter.toUpperCase()];
                       }}
                     />
-                    <Line
-                      type="monotone"
-                      dataKey={
-                        activeMeter === 'signal' ? (status.ptt ? "powerMeter" : "smeterGraph") :
-                        activeMeter === 'swr' ? 'swrGraph' : activeMeter
-                      }
-                      stroke={
-                        activeMeter === 'signal' ? (status.ptt ? "#ef4444" : "#10b981") :
-                        activeMeter === 'swr' ? ((status.swr ?? 1) > 3 ? '#ef4444' : '#f59e0b') :
-                        activeMeter === 'alc' ? '#3b82f6' : '#10b981'
-                      }
-                      strokeWidth={1.5}
-                      dot={false}
-                      isAnimationActive={false}
-                    />
+                    {activeMeter === 'signal' ? (
+                      <>
+                        <Line
+                          yAxisId="rx"
+                          type="monotone"
+                          dataKey="smeterGraph"
+                          stroke="#10b981"
+                          strokeWidth={1.5}
+                          dot={false}
+                          isAnimationActive={false}
+                        />
+                        <Line
+                          yAxisId="tx"
+                          type="monotone"
+                          dataKey="powerMeter"
+                          stroke="#ef4444"
+                          strokeWidth={1.5}
+                          dot={false}
+                          isAnimationActive={false}
+                        />
+                      </>
+                    ) : (
+                      <Line
+                        type="monotone"
+                        dataKey={activeMeter === 'swr' ? 'swrGraph' : activeMeter}
+                        stroke={
+                          activeMeter === 'swr' ? ((status.swr ?? 1) > 3 ? '#ef4444' : '#f59e0b') :
+                          activeMeter === 'alc' ? '#3b82f6' : '#10b981'
+                        }
+                        strokeWidth={1.5}
+                        dot={false}
+                        isAnimationActive={false}
+                      />
+                    )}
                   </LineChart>
                 </ResponsiveContainer>
               </div>

@@ -108,10 +108,10 @@ export default function SMeterPanel({ status, history, isCollapsed, setIsCollaps
                 <CartesianGrid strokeDasharray="3 3" stroke="#2a2b2e" vertical={false} opacity={0.3} />
                 <XAxis dataKey="time" hide />
                 <YAxis
-                  domain={status.ptt ? [0, 1] : [-54, 0]}
-                  ticks={status.ptt ? [0, 0.25, 0.5, 0.75, 1] : [-54, -24, 0]}
+                  yAxisId="rx"
+                  domain={[-54, 0]}
+                  ticks={[-54, -24, 0]}
                   tickFormatter={(val) => {
-                    if (status.ptt) return `${Math.round(val * 100)}W`;
                     if (val === -54) return "S0";
                     if (val === -24) return "S5";
                     if (val === 0) return "S9";
@@ -122,24 +122,45 @@ export default function SMeterPanel({ status, history, isCollapsed, setIsCollaps
                   axisLine={false}
                   tickLine={false}
                 />
+                <YAxis
+                  yAxisId="tx"
+                  domain={[0, 1]}
+                  ticks={[0, 0.25, 0.5, 0.75, 1]}
+                  tickFormatter={(val) => `${Math.round(val * 100)}W`}
+                  orientation="right"
+                  width={32}
+                  style={{ fontSize: '8px', fill: '#4a4b4e' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
                 <Tooltip
                   contentStyle={{ backgroundColor: '#151619', border: '1px solid #2a2b2e', fontSize: '10px' }}
-                  itemStyle={{ color: status.ptt ? '#ef4444' : '#10b981' }}
                   labelStyle={{ display: 'none' }}
                   formatter={(value: number, name: string, props: any) => {
-                    const rawVal = props.payload?.smeter ?? value;
-                    return [
-                      status.ptt
-                        ? `${Math.round(value * 100)} Watts`
-                        : rawVal > 0 ? `S9+${rawVal}dB` : `S${Math.round((rawVal + 54) / 6)}`,
-                      status.ptt ? 'Power' : 'Signal'
-                    ];
+                    if (name === "smeterGraph") {
+                      const rawVal = props.payload?.smeter ?? value;
+                      return [
+                        rawVal > 0 ? `S9+${rawVal}dB` : `S${Math.round((rawVal + 54) / 6)}`,
+                        "Signal",
+                      ];
+                    }
+                    return [`${Math.round(value * 100)} Watts`, "Power"];
                   }}
                 />
                 <Line
+                  yAxisId="rx"
                   type="monotone"
-                  dataKey={status.ptt ? "powerMeter" : "smeterGraph"}
-                  stroke={status.ptt ? "#ef4444" : "#10b981"}
+                  dataKey="smeterGraph"
+                  stroke="#10b981"
+                  strokeWidth={1.5}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+                <Line
+                  yAxisId="tx"
+                  type="monotone"
+                  dataKey="powerMeter"
+                  stroke="#ef4444"
                   strokeWidth={1.5}
                   dot={false}
                   isAnimationActive={false}
