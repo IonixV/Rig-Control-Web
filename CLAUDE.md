@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-RigControl Web (`v05.13.2026-Beta10`) is a full-stack web + Electron desktop application for controlling amateur radio equipment via Hamlib's `rigctld`. It provides a real-time dashboard with frequency/mode/meter display, bidirectional Opus audio, browser-native H.264 video streaming, POTA/SOTA/WWFF spot integration, a CW iambic keyer, a GGMorse-based CW decoder, solar/propagation data, and a user-configurable panel grid layout. All transport runs over HTTPS (self-signed EC P-256 certificate, auto-generated at startup).
+RigControl Web (`v05.21.2026-Beta11`) is a full-stack web + Electron desktop application for controlling amateur radio equipment via Hamlib's `rigctld`. It provides a real-time dashboard with frequency/mode/meter display, bidirectional Opus audio, browser-native H.264 video streaming, POTA/SOTA/WWFF spot integration, a CW iambic keyer, a GGMorse-based CW decoder, solar/propagation data, and a user-configurable panel grid layout. All transport runs over HTTPS (self-signed EC P-256 certificate, auto-generated at startup).
 
 ## Commands
 
