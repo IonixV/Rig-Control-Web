@@ -26,7 +26,7 @@ interface Props { heightPx?: number }
 export default function MufMapPanel({ heightPx = DEFAULT_HEIGHT }: Props) {
   const [metric, setMetric] = useState<Metric>("mufd");
   const [timeSlot, setTimeSlot] = useState<TimeSlot>("now");
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(() => Date.now());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<Date>(() => new Date());
