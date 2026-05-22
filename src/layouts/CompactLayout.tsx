@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from "react";
 import type { Socket } from "socket.io-client";
-import { Monitor, Radio, Settings, ChevronDown, ChevronUp } from "lucide-react";
+import { Monitor, Radio, Settings, ChevronDown, ChevronUp, Sun, Map } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -194,6 +194,10 @@ export interface CompactLayoutProps {
   // Solar conditions
   solarData: SolarData | null;
   requestSolarData: () => void;
+  isSolarCollapsed: boolean;
+  setIsSolarCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  isMufMapCollapsed: boolean;
+  setIsMufMapCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
 
   // Grid layout
   compactLayout: ViewLayout;
@@ -324,6 +328,10 @@ function CompactLayout({
   handleSendRaw,
   solarData,
   requestSolarData,
+  isSolarCollapsed,
+  setIsSolarCollapsed,
+  isMufMapCollapsed,
+  setIsMufMapCollapsed,
   compactLayout,
   setCompactLayout,
   isEditMode,
@@ -726,22 +734,32 @@ function CompactLayout({
 
       case 'solar':
         return (
-          <div className="bg-[#151619] rounded-xl border border-[#2a2b2e] overflow-hidden shadow-lg flex flex-col">
-            <div className="p-2 border-b border-[#2a2b2e] bg-[#1a1b1e]">
-              <span className="text-[0.5625rem] uppercase tracking-widest font-bold text-[#8e9299]">Solar Conditions</span>
-            </div>
+          <PanelChrome
+            title="Solar Conditions"
+            icon={<Sun size={12} />}
+            isCollapsed={isSolarCollapsed}
+            setIsCollapsed={setIsSolarCollapsed}
+            className="shadow-lg"
+            bodyClassName="p-0"
+            headerSize="sm"
+          >
             <SolarPanel solarData={solarData} onRefresh={requestSolarData} />
-          </div>
+          </PanelChrome>
         );
 
       case 'mufmap':
         return (
-          <div className="bg-[#151619] rounded-xl border border-[#2a2b2e] overflow-hidden shadow-lg flex flex-col">
-            <div className="p-2 border-b border-[#2a2b2e] bg-[#1a1b1e]">
-              <span className="text-[0.5625rem] uppercase tracking-widest font-bold text-[#8e9299]">MUF Map</span>
-            </div>
+          <PanelChrome
+            title="MUF Map"
+            icon={<Map size={12} />}
+            isCollapsed={isMufMapCollapsed}
+            setIsCollapsed={setIsMufMapCollapsed}
+            className="shadow-lg"
+            bodyClassName="p-0"
+            headerSize="sm"
+          >
             <MufMapPanel heightPx={_item.heightPx} />
-          </div>
+          </PanelChrome>
         );
 
       default:
@@ -801,7 +819,7 @@ function CompactLayout({
     sotaPollRate, sotaMaxAge, sotaModeFilter, sotaBandFilter,
     wwffPollRate, wwffMaxAge, wwffModeFilter, wwffBandFilter,
     isConsoleCollapsed, consoleLogs, rawCommand,
-    solarData, requestSolarData,
+    solarData, requestSolarData, isSolarCollapsed, isMufMapCollapsed,
     compactLayout, isEditMode, gridCallbacks,
   ]);
 

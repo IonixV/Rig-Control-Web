@@ -16,10 +16,17 @@ export function usePanelState(callsign = "") {
   const [isCompactRFPowerCollapsed, setIsCompactRFPowerCollapsed] = useState(() => localStorage.getItem(ns("is-compact-rfpower-collapsed")) === "true");
 
   const [isConsoleCollapsed, setIsConsoleCollapsed] = useState(() => localStorage.getItem(ns("console-collapsed")) === "true");
+  const [isSolarCollapsed, setIsSolarCollapsed] = useState(() => localStorage.getItem(ns("solar-collapsed")) === "true");
+  const [isMufMapCollapsed, setIsMufMapCollapsed] = useState(() => localStorage.getItem(ns("mufmap-collapsed")) === "true");
 
   useEffect(() => {
     localStorage.setItem(ns("console-collapsed"), isConsoleCollapsed.toString());
   }, [isConsoleCollapsed]);
+
+  useEffect(() => {
+    localStorage.setItem(ns("solar-collapsed"), isSolarCollapsed.toString());
+    localStorage.setItem(ns("mufmap-collapsed"), isMufMapCollapsed.toString());
+  }, [isSolarCollapsed, isMufMapCollapsed]);
 
   useEffect(() => {
     localStorage.setItem(ns("is-compact-smeter-collapsed"), isCompactSMeterCollapsed.toString());
@@ -38,5 +45,7 @@ export function usePanelState(callsign = "") {
     isCompactControlsCollapsed, setIsCompactControlsCollapsed,
     isCompactRFPowerCollapsed, setIsCompactRFPowerCollapsed,
     isConsoleCollapsed, setIsConsoleCollapsed,
+    isSolarCollapsed, setIsSolarCollapsed,
+    isMufMapCollapsed, setIsMufMapCollapsed,
   };
 }

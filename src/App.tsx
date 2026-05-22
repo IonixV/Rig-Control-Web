@@ -139,6 +139,8 @@ export default function App() {
     isCompactControlsCollapsed, setIsCompactControlsCollapsed,
     isCompactRFPowerCollapsed, setIsCompactRFPowerCollapsed,
     isConsoleCollapsed, setIsConsoleCollapsed,
+    isSolarCollapsed, setIsSolarCollapsed,
+    isMufMapCollapsed, setIsMufMapCollapsed,
   } = usePanelState(currentUser?.callsign ?? "");
 
   const {
@@ -819,6 +821,10 @@ export default function App() {
             handleSendRaw={handleSendRaw}
             solarData={solarData}
             requestSolarData={requestSolarData}
+            isSolarCollapsed={isSolarCollapsed}
+            setIsSolarCollapsed={setIsSolarCollapsed}
+            isMufMapCollapsed={isMufMapCollapsed}
+            setIsMufMapCollapsed={setIsMufMapCollapsed}
             compactLayout={compactLayout}
             setCompactLayout={setCompactLayout}
             isEditMode={isCompactEditMode}

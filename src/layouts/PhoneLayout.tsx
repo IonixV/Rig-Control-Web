@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import type { Socket } from "socket.io-client";
-import { Radio, Monitor, Zap, MapPin, Settings } from "lucide-react";
+import { Radio, Monitor, Zap, MapPin, Settings, Map } from "lucide-react";
 import { cn } from "../utils";
 import type {
   RigStatus,
@@ -343,6 +343,7 @@ function PhoneLayout({
   const [showComboSettings, setShowComboSettings] = useState(false);
   const [spotsComboCollapsed, setSpotsComboCollapsed] = useState(false);
   const [isSolarCollapsed, setIsSolarCollapsed] = useState(false);
+  const [isMufMapCollapsed, setIsMufMapCollapsed] = useState(false);
 
   const existingPhonePanelTypes = useMemo(() => {
     const types = new Set<PanelType>();
@@ -691,12 +692,16 @@ function PhoneLayout({
 
       case 'mufmap':
         return (
-          <div className="bg-[#151619] rounded-xl border border-[#2a2b2e] overflow-hidden shadow-lg flex flex-col">
-            <div className="p-2 border-b border-[#2a2b2e] bg-[#1a1b1e]">
-              <span className="text-[0.5625rem] uppercase tracking-widest font-bold text-[#8e9299]">MUF Map</span>
-            </div>
+          <PanelChrome
+            title="MUF Map"
+            icon={<Map size={12} />}
+            isCollapsed={isMufMapCollapsed}
+            setIsCollapsed={setIsMufMapCollapsed}
+            bodyClassName="p-0"
+            headerSize="md"
+          >
             <MufMapPanel heightPx={item.heightPx} />
-          </div>
+          </PanelChrome>
         );
 
       default:
