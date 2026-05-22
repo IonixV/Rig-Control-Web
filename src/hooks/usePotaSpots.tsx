@@ -239,7 +239,7 @@ export function usePotaSpots({
     const ids = new Set<number>();
     for (const spot of filteredSpots) {
       const spotHz = Math.round(spot.frequency * 1000);
-      if (spotHz === activeHz) ids.add(spot.spotId);
+      if (Math.abs(spotHz - activeHz) <= 100) ids.add(spot.spotId);
     }
     return ids;
   }, [filteredSpots, inputVfoA, inputVfoB, status.vfo]);
@@ -296,7 +296,7 @@ export function usePotaSpots({
     const ids = new Set<number>();
     for (const spot of filteredSotaSpots) {
       const spotHz = Math.round(parseFloat(spot.frequency) * 1_000_000);
-      if (spotHz === activeHz) ids.add(spot.id);
+      if (Math.abs(spotHz - activeHz) <= 100) ids.add(spot.id);
     }
     return ids;
   }, [filteredSotaSpots, inputVfoA, inputVfoB, status.vfo]);
@@ -352,7 +352,7 @@ export function usePotaSpots({
     const ids = new Set<number>();
     for (const spot of filteredWwffSpots) {
       const spotHz = Math.round(spot.frequency_khz * 1000);
-      if (spotHz === activeHz) ids.add(spot.id);
+      if (Math.abs(spotHz - activeHz) <= 100) ids.add(spot.id);
     }
     return ids;
   }, [filteredWwffSpots, inputVfoA, inputVfoB, status.vfo]);
