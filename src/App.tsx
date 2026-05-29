@@ -231,6 +231,7 @@ export default function App() {
     vfoA, setVfoA,
     vfoB, setVfoB,
     error,
+    opError,
     rawCommand, setRawCommand,
     consoleLogs,
     availableModes,
@@ -566,6 +567,12 @@ export default function App() {
           </div>
         )}
 
+        {opError && (
+          <div className="bg-amber-500/10 border border-amber-500/40 px-4 py-2.5 rounded-lg flex items-center gap-3 text-sm text-amber-400 animate-in fade-in slide-in-from-top-2">
+            <Zap size={14} className="shrink-0" />
+            <span className="flex-1">{opError}</span>
+          </div>
+        )}
 
         {/* Main Interface */}
         {isPhone ? (

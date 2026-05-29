@@ -47,6 +47,8 @@ export function useRigControl({
   const [vfoA, setVfoA] = useState(() => localStorage.getItem("last-vfoA") || "14074000");
   const [vfoB, setVfoB] = useState(() => localStorage.getItem("last-vfoB") || "7074000");
   const [error, setError] = useState<string | null>(null);
+  const [opError, setOpError] = useState<string | null>(null);
+  const opErrorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [rawCommand, setRawCommand] = useState("");
   const [consoleLogs, setConsoleLogs] = useState<{ cmd: string; resp: string; time: string }[]>([]);
   const [availableModes, setAvailableModes] = useState<string[]>(MODES_FALLBACK);
@@ -413,6 +415,13 @@ export function useRigControl({
       }
     };
 
+    const onRigOpError = (msg: string) => {
+      console.log("[RIG] Op error:", msg);
+      setOpError(msg);
+      if (opErrorTimer.current) clearTimeout(opErrorTimer.current);
+      opErrorTimer.current = setTimeout(() => setOpError(null), 4000);
+    };
+
     const onRawResponse = (data: { cmd: string; resp: string }) => {
       setConsoleLogs(prev => [{ cmd: data.cmd, resp: data.resp, time: new Date().toLocaleTimeString() }, ...prev].slice(0, 50));
     };
@@ -493,6 +502,7 @@ export function useRigControl({
     socket.on("available-modes", onAvailableModes);
     socket.on("rig-disconnected", onRigDisconnected);
     socket.on("rig-error", onRigError);
+    socket.on("rig-op-error", onRigOpError);
     socket.on("raw-response", onRawResponse);
     socket.on("rig-status", onRigStatus);
     socket.on("verbose-mode", onVerboseMode);
@@ -506,9 +516,11 @@ export function useRigControl({
       socket.off("available-modes", onAvailableModes);
       socket.off("rig-disconnected", onRigDisconnected);
       socket.off("rig-error", onRigError);
+      socket.off("rig-op-error", onRigOpError);
       socket.off("raw-response", onRawResponse);
       socket.off("rig-status", onRigStatus);
       socket.off("verbose-mode", onVerboseMode);
+      if (opErrorTimer.current) clearTimeout(opErrorTimer.current);
     };
   }, [socket]);
 
@@ -523,6 +535,7 @@ export function useRigControl({
     vfoA, setVfoA,
     vfoB, setVfoB,
     error,
+    opError,
     rawCommand, setRawCommand,
     consoleLogs,
     availableModes,

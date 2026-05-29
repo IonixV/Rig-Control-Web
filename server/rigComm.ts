@@ -503,20 +503,28 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
 
   socket.on("set-func", async ({ func, state }) => {
     try {
-      await sendToRig(ctx, `U ${func} ${state ? "1" : "0"}`, false, true);
-      const confirmedState = (await sendToRig(ctx, `u ${func}`, true, true)) === "1";
+      const resp = await sendToRig(ctx, `U ${func} ${state ? "1" : "0"}`, false, true);
+      const rprtMatch = resp.match(/RPRT (-?\d+)/);
+      if (rprtMatch && parseInt(rprtMatch[1], 10) !== 0) {
+        socket.emit("rig-op-error", `Failed to set ${func} (RPRT ${rprtMatch[1]})`);
+        return;
+      }
       const key = func.toLowerCase() as any;
-      ctx.lastStatus = { ...ctx.lastStatus, [key]: confirmedState };
+      ctx.lastStatus = { ...ctx.lastStatus, [key]: state };
       ctx.io.emit("rig-status", ctx.lastStatus);
     } catch (err) {
-      socket.emit("rig-error", `Failed to set ${func}`);
+      socket.emit("rig-op-error", `Failed to set ${func}`);
     }
   });
 
   socket.on("set-level", async ({ level, val }) => {
     try {
-      await sendToRig(ctx, `L ${level} ${val}`, false, true);
-      const confirmedVal = parseFloat(await sendToRig(ctx, `l ${level}`, true, true));
+      const resp = await sendToRig(ctx, `L ${level} ${val}`, false, true);
+      const rprtMatch = resp.match(/RPRT (-?\d+)/);
+      if (rprtMatch && parseInt(rprtMatch[1], 10) !== 0) {
+        socket.emit("rig-op-error", `Failed to set ${level} (RPRT ${rprtMatch[1]})`);
+        return;
+      }
       const key = level.toLowerCase() === "rfpower" ? "rfpower" :
                   level.toLowerCase() === "rf" ? "rfLevel" :
                   level.toLowerCase() === "agc" ? "agc" :
@@ -525,11 +533,11 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
                   level.toLowerCase() === "nr" ? "nrLevel" :
                   level.toLowerCase() === "nb" ? "nbLevel" : null;
       if (key) {
-        ctx.lastStatus = { ...ctx.lastStatus, [key]: confirmedVal };
+        ctx.lastStatus = { ...ctx.lastStatus, [key]: parseFloat(val) };
         ctx.io.emit("rig-status", ctx.lastStatus);
       }
     } catch (err) {
-      socket.emit("rig-error", `Failed to set ${level}`);
+      socket.emit("rig-op-error", `Failed to set ${level}`);
     }
   });
 
