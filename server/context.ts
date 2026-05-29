@@ -152,6 +152,7 @@ export interface ServerContext {
   pollingTimeout: NodeJS.Timeout | null;
   rigCommandQueue: RigCommandEntry[];
   isRigBusy: boolean;
+  pendingQuickPolls: Set<string>;
 
   // Rigctld process state
   rigctldProcess: ChildProcess | null;
@@ -305,6 +306,7 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
     pollingTimeout: null,
     rigCommandQueue: [],
     isRigBusy: false,
+    pendingQuickPolls: new Set(),
 
     rigctldProcess: null,
     rigctldStatus: "stopped",

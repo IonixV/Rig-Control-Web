@@ -362,6 +362,22 @@ export async function pollRig(ctx: ServerContext): Promise<void> {
       tuner = (await sendToRig(ctx, "u TUNER", true).catch(() => "0")) === "1";
     }
 
+    if (ctx.pendingQuickPolls.size > 0) {
+      const pending = new Set(ctx.pendingQuickPolls);
+      ctx.pendingQuickPolls.clear();
+      if (pending.has('attenuation')) att = parseInt(await sendToRig(ctx, "l ATT", true).catch(() => String(att))) || 0;
+      if (pending.has('preamp')) preamp = parseInt(await sendToRig(ctx, "l PREAMP", true).catch(() => String(preamp))) || 0;
+      if (pending.has('agc')) agc = parseInt(await sendToRig(ctx, "l AGC", true).catch(() => String(agc)));
+      if (pending.has('nb')) nb = (await sendToRig(ctx, "u NB", true).catch(() => nb ? "1" : "0")) === "1";
+      if (pending.has('nbLevel')) nbLevel = parseFloat(await sendToRig(ctx, "l NB", true).catch(() => String(nbLevel)));
+      if (pending.has('nr')) nr = (await sendToRig(ctx, "u NR", true).catch(() => nr ? "1" : "0")) === "1";
+      if (pending.has('nrLevel')) nrLevel = parseFloat(await sendToRig(ctx, "l NR", true).catch(() => String(nrLevel)));
+      if (pending.has('anf')) anf = (await sendToRig(ctx, "u ANF", true).catch(() => anf ? "1" : "0")) === "1";
+      if (pending.has('rfpower')) rfpower = parseFloat(await sendToRig(ctx, "l RFPOWER", true).catch(() => String(rfpower)));
+      if (pending.has('rfLevel')) rflevel = parseFloat(await sendToRig(ctx, "l RF", true).catch(() => String(rflevel)));
+      if (pending.has('tuner')) tuner = (await sendToRig(ctx, "u TUNER", true).catch(() => tuner ? "1" : "0")) === "1";
+    }
+
     ctx.lastStatus = {
       frequency,
       mode,
@@ -512,6 +528,7 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
       const key = func.toLowerCase() as any;
       ctx.lastStatus = { ...ctx.lastStatus, [key]: state };
       ctx.io.emit("rig-status", ctx.lastStatus);
+      ctx.pendingQuickPolls.add(key);
     } catch (err) {
       socket.emit("rig-op-error", `Failed to set ${func}`);
     }
@@ -535,6 +552,7 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
       if (key) {
         ctx.lastStatus = { ...ctx.lastStatus, [key]: parseFloat(val) };
         ctx.io.emit("rig-status", ctx.lastStatus);
+        ctx.pendingQuickPolls.add(key);
       }
     } catch (err) {
       socket.emit("rig-op-error", `Failed to set ${level}`);
