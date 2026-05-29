@@ -4,7 +4,12 @@ on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch: # Allows manual triggering from the GitHub Actions UI
+  workflow_dispatch:
+    inputs:
+      platforms:
+        description: 'Platforms to build: linux, win, mac, or all'
+        required: false
+        default: 'all'
 
 # Required for softprops/action-gh-release to create a release and upload assets
 permissions:
@@ -26,6 +31,7 @@ jobs:
             platform: mac
             artifact: '*.dmg'
 
+    if: github.event_name == 'push' || inputs.platforms == 'all' || inputs.platforms == '' || contains(inputs.platforms, matrix.platform)
     runs-on: ${{ matrix.os }}
 
     steps:
