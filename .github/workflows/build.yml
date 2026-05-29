@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       platforms:
-        description: 'Platforms to build: linux, win, mac, or all'
+        description: 'Platforms to build: linux, win, mac (or all)'
         required: false
         default: 'all'
 
@@ -16,22 +16,34 @@ permissions:
   contents: write
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          P="${{ github.event.inputs.platforms }}"
+          if [ -z "$P" ]; then P="all"; fi
+          ITEMS=()
+          if [ "$P" = "all" ] || [[ "$P" == *"linux"* ]]; then
+            ITEMS+=('{"os":"ubuntu-latest","platform":"linux","artifact":"*.AppImage"}')
+          fi
+          if [ "$P" = "all" ] || [[ "$P" == *"win"* ]]; then
+            ITEMS+=('{"os":"windows-latest","platform":"win","artifact":"*.exe"}')
+          fi
+          if [ "$P" = "all" ] || [[ "$P" == *"mac"* ]]; then
+            ITEMS+=('{"os":"macos-latest","platform":"mac","artifact":"*.dmg"}')
+          fi
+          JOINED=$(IFS=,; echo "${ITEMS[*]}")
+          echo "matrix={\"include\":[$JOINED]}" >> $GITHUB_OUTPUT
+
   build:
+    needs: prepare
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            platform: linux
-            artifact: '*.AppImage'
-          - os: windows-latest
-            platform: win
-            artifact: '*.exe'
-          - os: macos-latest
-            platform: mac
-            artifact: '*.dmg'
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
 
-    if: github.event_name == 'push' || inputs.platforms == 'all' || inputs.platforms == '' || contains(inputs.platforms, matrix.platform)
     runs-on: ${{ matrix.os }}
 
     steps:
