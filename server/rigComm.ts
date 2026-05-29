@@ -126,6 +126,141 @@ export function sendToRig(ctx: ServerContext, cmd: string, useExtended = false, 
   });
 }
 
+async function probeDumpCaps(ctx: ServerContext): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (!ctx.rigSocket || ctx.rigSocket.destroyed) {
+      return reject("Not connected");
+    }
+
+    let buffer = "";
+    const timeout = setTimeout(() => {
+      ctx.rigSocket?.removeListener("data", onData);
+      ctx.rigSocket?.removeListener("error", onError);
+      reject("dump_caps timed out");
+    }, 10000);
+
+    const onData = (data: Buffer) => {
+      buffer += data.toString();
+      if (/RPRT -?\d+/.test(buffer)) {
+        clearTimeout(timeout);
+        ctx.rigSocket?.removeListener("data", onData);
+        ctx.rigSocket?.removeListener("error", onError);
+        resolve(buffer);
+      }
+    };
+
+    const onError = (err: Error) => {
+      clearTimeout(timeout);
+      ctx.rigSocket?.removeListener("data", onData);
+      reject(`dump_caps error: ${err.message}`);
+    };
+
+    ctx.rigSocket.on("data", onData);
+    ctx.rigSocket.once("error", onError);
+    ctx.rigSocket.write("+\\dump_caps\n");
+  });
+}
+
+function parseDumpCapsIntoContext(dump: string, ctx: ServerContext): void {
+  const lines = dump.split('\n');
+
+  const preampLine = lines.find(l => l.trim().startsWith('Preamp:'));
+  ctx.rigctldSettings.preampCapabilities = preampLine
+    ? preampLine.replace('Preamp:', '').trim().split(/\s+/).filter(Boolean)
+    : [];
+
+  const attenuatorLine = lines.find(l => l.trim().startsWith('Attenuator:'));
+  ctx.rigctldSettings.attenuatorCapabilities = attenuatorLine
+    ? attenuatorLine.replace('Attenuator:', '').trim().split(/\s+/).filter(Boolean)
+    : [];
+
+  const agcLine = lines.find(l => l.trim().startsWith('AGC levels:'));
+  ctx.rigctldSettings.agcCapabilities = agcLine
+    ? agcLine.replace('AGC levels:', '').trim().split(/\s+/).filter(Boolean)
+    : [];
+
+  const setFunctionsLine = lines.find(l => l.trim().startsWith('Set functions:'));
+  if (setFunctionsLine) {
+    const funcs = setFunctionsLine.replace('Set functions:', '').trim().split(/\s+/);
+    ctx.rigctldSettings.nbSupported = funcs.includes('NB');
+    ctx.rigctldSettings.nrSupported = funcs.includes('NR');
+    ctx.rigctldSettings.anfSupported = funcs.includes('ANF');
+  } else {
+    ctx.rigctldSettings.nbSupported = false;
+    ctx.rigctldSettings.nrSupported = false;
+    ctx.rigctldSettings.anfSupported = false;
+  }
+
+  const getLevelLine = lines.find(l => l.trim().startsWith('Get level:'));
+  if (getLevelLine) {
+    const nbMatch = getLevelLine.match(/NB\(([\d.-]+)\.\.([\d.-]+)\/([\d.-]+)\)/);
+    ctx.rigctldSettings.nbLevelRange = nbMatch
+      ? { min: parseFloat(nbMatch[1]), max: parseFloat(nbMatch[2]), step: parseFloat(nbMatch[3]) }
+      : { min: 0, max: 1, step: 0.1 };
+
+    const nrMatch = getLevelLine.match(/NR\(([\d.-]+)\.\.([\d.-]+)\/([\d.-]+)\)/);
+    ctx.rigctldSettings.nrLevelRange = nrMatch
+      ? { min: parseFloat(nrMatch[1]), max: parseFloat(nrMatch[2]), step: parseFloat(nrMatch[3]) }
+      : { min: 0, max: 1, step: 0.066667 };
+
+    const rfPowerMatch = getLevelLine.match(/RFPOWER\(([\d.-]+)\.\.([\d.-]+)\/([\d.-]+)\)/);
+    ctx.rigctldSettings.rfPowerRange = rfPowerMatch
+      ? { min: parseFloat(rfPowerMatch[1]), max: parseFloat(rfPowerMatch[2]), step: parseFloat(rfPowerMatch[3]) }
+      : { min: 0, max: 1, step: 0.01 };
+  }
+}
+
+function emitCapabilities(ctx: ServerContext): void {
+  ctx.io.emit("preamp-capabilities", ctx.rigctldSettings.preampCapabilities);
+  ctx.io.emit("attenuator-capabilities", ctx.rigctldSettings.attenuatorCapabilities);
+  ctx.io.emit("agc-capabilities", ctx.rigctldSettings.agcCapabilities);
+  ctx.io.emit("nb-capabilities", { supported: ctx.rigctldSettings.nbSupported, range: ctx.rigctldSettings.nbLevelRange });
+  ctx.io.emit("nr-capabilities", { supported: ctx.rigctldSettings.nrSupported, range: ctx.rigctldSettings.nrLevelRange });
+  ctx.io.emit("rfpower-capabilities", { range: ctx.rigctldSettings.rfPowerRange });
+  ctx.io.emit("anf-capabilities", { supported: ctx.rigctldSettings.anfSupported });
+}
+
+async function probeCapabilitiesIfNeeded(ctx: ServerContext, host: string, port: number): Promise<void> {
+  const fp = ctx.rigctldSettings.capabilityFingerprint;
+  const rigNumber = ctx.rigctldSettings.rigNumber;
+
+  if (fp && fp.host === host && fp.port === port && fp.rigNumber === rigNumber) {
+    console.log("[RIG] Capability fingerprint matches; using cached data");
+    emitCapabilities(ctx);
+    return;
+  }
+
+  console.log("[RIG] Probing rig capabilities via dump_caps...");
+  let success = false;
+
+  try {
+    const dump = await probeDumpCaps(ctx);
+    parseDumpCapsIntoContext(dump, ctx);
+    success = true;
+    console.log("[RIG] Capabilities probed via dump_caps");
+  } catch (err) {
+    console.warn("[RIG] dump_caps probe failed; trying local rigctld database:", err);
+    try {
+      const { fetchRadioCapabilities } = await import("./rigctld.ts");
+      success = await fetchRadioCapabilities(ctx, rigNumber);
+      if (success) {
+        console.log("[RIG] Capabilities probed via local rigctld database");
+      } else {
+        console.warn("[RIG] Local capability probe also failed; capabilities may be unavailable");
+      }
+    } catch (importErr) {
+      console.warn("[RIG] Could not load local capability fallback:", importErr);
+    }
+  }
+
+  if (success) {
+    ctx.rigctldSettings.capabilityFingerprint = { host, port, rigNumber };
+    ctx.saveSettings();
+  }
+
+  emitCapabilities(ctx);
+}
+
 export async function probeVfoCapability(ctx: ServerContext): Promise<void> {
   try {
     const result = await sendToRig(ctx, "v", false);
@@ -329,6 +464,7 @@ export function connectToRig(ctx: ServerContext, host: string, port: number, soc
     console.log(`Connected to rigctld at ${host}:${port}`);
     ctx.isConnected = true;
     await probeVfoCapability(ctx);
+    await probeCapabilitiesIfNeeded(ctx, host, port);
     ctx.io.emit("rig-connected", { host, port, vfoSupported: ctx.vfoSupported });
     startPolling(ctx);
   });

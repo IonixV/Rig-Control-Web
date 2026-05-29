@@ -8,7 +8,7 @@ import { loadOrGenerateCert } from "./server/tls.ts";
 import { VERBOSE, vlog } from "./server/vlog.ts";
 import { createInitialContext } from "./server/context.ts";
 import { loadSettings, saveSettings, registerSettingsHandlers } from "./server/settings.ts";
-import { getRigctldVersion, checkVersionSupported, emitRigctldStatus, startRigctld, stopRigctld, fetchRadioCapabilities, registerRigctldHandlers } from "./server/rigctld.ts";
+import { getRigctldVersion, checkVersionSupported, emitRigctldStatus, startRigctld, stopRigctld, registerRigctldHandlers } from "./server/rigctld.ts";
 import { sendToRig, startPolling, stopPolling, registerRigCommHandlers } from "./server/rigComm.ts";
 import { initAudioEngine, stopAudio, registerAudioHandlers } from "./server/audio.ts";
 import { syncKeyerPort, closeKeyerPort, cwSetKey, stopCwTick, registerCwHandlers } from "./server/cw.ts";
@@ -138,6 +138,8 @@ export async function startServer(appPath?: string, userDataPath?: string) {
 
     socket.emit("audio-status", ctx.audioStatus);
     socket.emit("preamp-capabilities", ctx.rigctldSettings.preampCapabilities);
+    socket.emit("attenuator-capabilities", ctx.rigctldSettings.attenuatorCapabilities);
+    socket.emit("agc-capabilities", ctx.rigctldSettings.agcCapabilities);
     socket.emit("nb-capabilities", { supported: ctx.rigctldSettings.nbSupported, range: ctx.rigctldSettings.nbLevelRange });
     socket.emit("nr-capabilities", { supported: ctx.rigctldSettings.nrSupported, range: ctx.rigctldSettings.nrLevelRange });
     socket.emit("mic-active-client", ctx.activeMicClientId);
@@ -176,7 +178,6 @@ export async function startServer(appPath?: string, userDataPath?: string) {
       socket,
       ctx,
       RADIOS_FILE,
-      (rigNumber) => fetchRadioCapabilities(ctx, rigNumber),
       () => startPolling(ctx),
       (forceReopen) => syncKeyerPort(ctx, forceReopen),
     );

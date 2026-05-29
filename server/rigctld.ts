@@ -101,60 +101,39 @@ export function killExistingRigctld(): Promise<void> {
   });
 }
 
-export async function fetchRadioCapabilities(ctx: ServerContext, rigNumber: string): Promise<void> {
-  if (!rigNumber || rigNumber === "" || rigNumber === "1") {
-    ctx.rigctldSettings.preampCapabilities = [];
-    ctx.rigctldSettings.attenuatorCapabilities = [];
-    ctx.rigctldSettings.agcCapabilities = [];
-    ctx.saveSettings();
-    ctx.io.emit("preamp-capabilities", ctx.rigctldSettings.preampCapabilities);
-    ctx.io.emit("attenuator-capabilities", ctx.rigctldSettings.attenuatorCapabilities);
-    ctx.io.emit("agc-capabilities", ctx.rigctldSettings.agcCapabilities);
-    ctx.io.emit("anf-capabilities", ctx.rigctldSettings.anfSupported);
-    return;
-  }
+export function fetchRadioCapabilities(ctx: ServerContext, rigNumber: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (!rigNumber || rigNumber === "" || rigNumber === "1") {
+      resolve(false);
+      return;
+    }
 
-  const rigctldPath = getRigctldPath(ctx.baseDir);
-  vlog(`[HAMLIB] Fetching radio capabilities for rig ${rigNumber}...`);
+    const rigctldPath = getRigctldPath(ctx.baseDir);
+    vlog(`[HAMLIB] Fetching radio capabilities for rig ${rigNumber}...`);
 
-  exec(`"${rigctldPath}" -m ${rigNumber} -u`, (error, stdout) => {
-    if (error) {
-      console.error(`[HAMLIB] Error getting radio capabilities: ${error.message}`);
-      ctx.rigctldSettings.preampCapabilities = [];
-      ctx.rigctldSettings.attenuatorCapabilities = [];
-      ctx.rigctldSettings.agcCapabilities = [];
-      ctx.rigctldSettings.nbSupported = false;
-      ctx.rigctldSettings.nrSupported = false;
-      ctx.rigctldSettings.anfSupported = false;
-    } else {
+    exec(`"${rigctldPath}" -m ${rigNumber} -u`, (error, stdout) => {
+      if (error) {
+        console.error(`[HAMLIB] Error getting radio capabilities: ${error.message}`);
+        resolve(false);
+        return;
+      }
+
       const lines = stdout.split('\n');
 
       const preampLine = lines.find(line => line.trim().startsWith('Preamp:'));
-      if (preampLine) {
-        ctx.rigctldSettings.preampCapabilities = preampLine.replace('Preamp:', '').trim().split(/\s+/).filter(Boolean);
-        vlog(`[HAMLIB] Found preamp capabilities for rig ${rigNumber}: ${ctx.rigctldSettings.preampCapabilities.join(", ")}`);
-      } else {
-        ctx.rigctldSettings.preampCapabilities = [];
-        vlog(`[HAMLIB] No preamp capabilities found for rig ${rigNumber}`);
-      }
+      ctx.rigctldSettings.preampCapabilities = preampLine
+        ? preampLine.replace('Preamp:', '').trim().split(/\s+/).filter(Boolean)
+        : [];
 
       const attenuatorLine = lines.find(line => line.trim().startsWith('Attenuator:'));
-      if (attenuatorLine) {
-        ctx.rigctldSettings.attenuatorCapabilities = attenuatorLine.replace('Attenuator:', '').trim().split(/\s+/).filter(Boolean);
-        vlog(`[HAMLIB] Found attenuator capabilities for rig ${rigNumber}: ${ctx.rigctldSettings.attenuatorCapabilities.join(", ")}`);
-      } else {
-        ctx.rigctldSettings.attenuatorCapabilities = [];
-        vlog(`[HAMLIB] No attenuator capabilities found for rig ${rigNumber}`);
-      }
+      ctx.rigctldSettings.attenuatorCapabilities = attenuatorLine
+        ? attenuatorLine.replace('Attenuator:', '').trim().split(/\s+/).filter(Boolean)
+        : [];
 
       const agcLine = lines.find(line => line.trim().startsWith('AGC levels:'));
-      if (agcLine) {
-        ctx.rigctldSettings.agcCapabilities = agcLine.replace('AGC levels:', '').trim().split(/\s+/).filter(Boolean);
-        vlog(`[HAMLIB] Found AGC capabilities for rig ${rigNumber}: ${ctx.rigctldSettings.agcCapabilities.join(", ")}`);
-      } else {
-        ctx.rigctldSettings.agcCapabilities = [];
-        vlog(`[HAMLIB] No AGC capabilities found for rig ${rigNumber}`);
-      }
+      ctx.rigctldSettings.agcCapabilities = agcLine
+        ? agcLine.replace('AGC levels:', '').trim().split(/\s+/).filter(Boolean)
+        : [];
 
       const setFunctionsLine = lines.find(line => line.trim().startsWith('Set functions:'));
       if (setFunctionsLine) {
@@ -162,64 +141,32 @@ export async function fetchRadioCapabilities(ctx: ServerContext, rigNumber: stri
         ctx.rigctldSettings.nbSupported = functions.includes('NB');
         ctx.rigctldSettings.nrSupported = functions.includes('NR');
         ctx.rigctldSettings.anfSupported = functions.includes('ANF');
-        vlog(`[HAMLIB] NB supported for rig ${rigNumber}: ${ctx.rigctldSettings.nbSupported}`);
-        vlog(`[HAMLIB] NR supported for rig ${rigNumber}: ${ctx.rigctldSettings.nrSupported}`);
-        vlog(`[HAMLIB] ANF supported for rig ${rigNumber}: ${ctx.rigctldSettings.anfSupported}`);
       } else {
         ctx.rigctldSettings.nbSupported = false;
         ctx.rigctldSettings.nrSupported = false;
         ctx.rigctldSettings.anfSupported = false;
-        vlog(`[HAMLIB] NB/NR/ANF not supported for rig ${rigNumber}`);
       }
 
       const getLevelLine = lines.find(line => line.trim().startsWith('Get level:'));
       if (getLevelLine) {
         const nbMatch = getLevelLine.match(/NB\(([\d.-]+)\.\.([\d.-]+)\/([\d.-]+)\)/);
-        if (nbMatch) {
-          ctx.rigctldSettings.nbLevelRange = {
-            min: parseFloat(nbMatch[1]),
-            max: parseFloat(nbMatch[2]),
-            step: parseFloat(nbMatch[3]),
-          };
-          vlog(`[HAMLIB] NB level range for rig ${rigNumber}: min=${ctx.rigctldSettings.nbLevelRange.min}, max=${ctx.rigctldSettings.nbLevelRange.max}, step=${ctx.rigctldSettings.nbLevelRange.step}`);
-        } else {
-          ctx.rigctldSettings.nbLevelRange = { min: 0, max: 1, step: 0.1 };
-        }
+        ctx.rigctldSettings.nbLevelRange = nbMatch
+          ? { min: parseFloat(nbMatch[1]), max: parseFloat(nbMatch[2]), step: parseFloat(nbMatch[3]) }
+          : { min: 0, max: 1, step: 0.1 };
 
         const nrMatch = getLevelLine.match(/NR\(([\d.-]+)\.\.([\d.-]+)\/([\d.-]+)\)/);
-        if (nrMatch) {
-          ctx.rigctldSettings.nrLevelRange = {
-            min: parseFloat(nrMatch[1]),
-            max: parseFloat(nrMatch[2]),
-            step: parseFloat(nrMatch[3]),
-          };
-          vlog(`[HAMLIB] NR level range for rig ${rigNumber}: min=${ctx.rigctldSettings.nrLevelRange.min}, max=${ctx.rigctldSettings.nrLevelRange.max}, step=${ctx.rigctldSettings.nrLevelRange.step}`);
-        } else {
-          ctx.rigctldSettings.nrLevelRange = { min: 0, max: 1, step: 0.1 };
-        }
+        ctx.rigctldSettings.nrLevelRange = nrMatch
+          ? { min: parseFloat(nrMatch[1]), max: parseFloat(nrMatch[2]), step: parseFloat(nrMatch[3]) }
+          : { min: 0, max: 1, step: 0.066667 };
 
         const rfPowerMatch = getLevelLine.match(/RFPOWER\(([\d.-]+)\.\.([\d.-]+)\/([\d.-]+)\)/);
-        if (rfPowerMatch) {
-          ctx.rigctldSettings.rfPowerRange = {
-            min: parseFloat(rfPowerMatch[1]),
-            max: parseFloat(rfPowerMatch[2]),
-            step: parseFloat(rfPowerMatch[3]),
-          };
-          vlog(`[HAMLIB] RF Power range for rig ${rigNumber}: min=${ctx.rigctldSettings.rfPowerRange.min}, max=${ctx.rigctldSettings.rfPowerRange.max}, step=${ctx.rigctldSettings.rfPowerRange.step}`);
-        } else {
-          ctx.rigctldSettings.rfPowerRange = { min: 0, max: 1, step: 0.01 };
-        }
+        ctx.rigctldSettings.rfPowerRange = rfPowerMatch
+          ? { min: parseFloat(rfPowerMatch[1]), max: parseFloat(rfPowerMatch[2]), step: parseFloat(rfPowerMatch[3]) }
+          : { min: 0, max: 1, step: 0.01 };
       }
-    }
 
-    ctx.saveSettings();
-    ctx.io.emit("preamp-capabilities", ctx.rigctldSettings.preampCapabilities);
-    ctx.io.emit("attenuator-capabilities", ctx.rigctldSettings.attenuatorCapabilities);
-    ctx.io.emit("agc-capabilities", ctx.rigctldSettings.agcCapabilities);
-    ctx.io.emit("nb-capabilities", { supported: ctx.rigctldSettings.nbSupported, range: ctx.rigctldSettings.nbLevelRange });
-    ctx.io.emit("nr-capabilities", { supported: ctx.rigctldSettings.nrSupported, range: ctx.rigctldSettings.nrLevelRange });
-    ctx.io.emit("rfpower-capabilities", { range: ctx.rigctldSettings.rfPowerRange });
-    ctx.io.emit("anf-capabilities", { supported: ctx.rigctldSettings.anfSupported });
+      resolve(true);
+    });
   });
 }
 

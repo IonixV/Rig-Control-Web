@@ -66,7 +66,6 @@ export function registerSettingsHandlers(
   socket: Socket,
   ctx: ServerContext,
   radiosFile: string,
-  onRigNumberChanged: (rigNumber: string) => void,
   startPolling: () => void,
   syncKeyerPort: (forceReopen?: boolean) => Promise<void>,
 ): void {
@@ -95,10 +94,11 @@ export function registerSettingsHandlers(
       syncKeyerPort(polarityChanged);
     }
 
-    ctx.saveSettings();
     if (oldRigNumber !== ctx.rigctldSettings.rigNumber) {
-      onRigNumberChanged(ctx.rigctldSettings.rigNumber);
+      ctx.rigctldSettings.capabilityFingerprint = undefined;
     }
+
+    ctx.saveSettings();
   });
 
   socket.on("get-radios", () => {
