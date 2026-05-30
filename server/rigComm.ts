@@ -263,21 +263,17 @@ async function probeCapabilitiesIfNeeded(ctx: ServerContext, host: string, port:
 
 export async function probeVfoCapability(ctx: ServerContext): Promise<void> {
   try {
-    const result = await sendToRig(ctx, "v", false);
-    if (result.includes("RPRT -11")) {
-      ctx.vfoSupported = false;
-      console.log("VFO not supported by this radio (RPRT -11); disabling VFO B and split");
-      const freq = await sendToRig(ctx, "f", false);
-      if (!freq || freq.includes("RPRT")) {
-        console.warn("get_freq also failed after VFO probe — rig may not be responding");
-      }
-    } else {
-      ctx.vfoSupported = true;
-      console.log(`VFO supported (reported: ${result})`);
-    }
+    const result = await sendToRig(ctx, "v", true);
+    ctx.vfoSupported = true;
+    console.log(`VFO supported (reported: ${result})`);
   } catch (err) {
     ctx.vfoSupported = false;
-    console.log("VFO probe failed; disabling VFO B and split:", err);
+    console.log("VFO not supported or probe failed; disabling VFO B and split:", err);
+    try {
+      await sendToRig(ctx, "f", true);
+    } catch {
+      console.warn("get_freq also failed after VFO probe — rig may not be responding");
+    }
   }
 }
 
@@ -519,12 +515,7 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
 
   socket.on("set-func", async ({ func, state }) => {
     try {
-      const resp = await sendToRig(ctx, `U ${func} ${state ? "1" : "0"}`, false, true);
-      const rprtMatch = resp.match(/RPRT (-?\d+)/);
-      if (rprtMatch && parseInt(rprtMatch[1], 10) !== 0) {
-        socket.emit("rig-op-error", `Failed to set ${func} (RPRT ${rprtMatch[1]})`);
-        return;
-      }
+      await sendToRig(ctx, `U ${func} ${state ? "1" : "0"}`, true, true);
       const key = func.toLowerCase() as any;
       ctx.lastStatus = { ...ctx.lastStatus, [key]: state };
       ctx.io.emit("rig-status", ctx.lastStatus);
@@ -536,12 +527,7 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
 
   socket.on("set-level", async ({ level, val }) => {
     try {
-      const resp = await sendToRig(ctx, `L ${level} ${val}`, false, true);
-      const rprtMatch = resp.match(/RPRT (-?\d+)/);
-      if (rprtMatch && parseInt(rprtMatch[1], 10) !== 0) {
-        socket.emit("rig-op-error", `Failed to set ${level} (RPRT ${rprtMatch[1]})`);
-        return;
-      }
+      await sendToRig(ctx, `L ${level} ${val}`, true, true);
       const key = level.toLowerCase() === "rfpower" ? "rfpower" :
                   level.toLowerCase() === "rf" ? "rfLevel" :
                   level.toLowerCase() === "agc" ? "agc" :
@@ -561,14 +547,14 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
 
   socket.on("tune-to-spot", async ({ freqHz, mode, modeChanged }: { freqHz: string; mode: string; modeChanged: boolean }) => {
     try {
-      await sendToRig(ctx, `F ${freqHz}`, false, true);
+      await sendToRig(ctx, `F ${freqHz}`, true, true);
       if (modeChanged) {
-        await sendToRig(ctx, `M ${mode} -1`, false, true);
+        await sendToRig(ctx, `M ${mode} -1`, true, true);
         const modeBw = await sendToRig(ctx, "m", true, true);
         const [confirmedMode, confirmedBw] = modeBw.split("\n");
         ctx.lastStatus = { ...ctx.lastStatus, mode: confirmedMode, bandwidth: confirmedBw };
         await new Promise(resolve => setTimeout(resolve, 200));
-        await sendToRig(ctx, `F ${freqHz}`, false, true);
+        await sendToRig(ctx, `F ${freqHz}`, true, true);
       }
       const confirmedFreq = await sendToRig(ctx, "f", true, true);
       ctx.lastStatus = { ...ctx.lastStatus, frequency: confirmedFreq };
@@ -580,7 +566,7 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
 
   socket.on("set-frequency", async (freq) => {
     try {
-      await sendToRig(ctx, `F ${freq}`, false, true);
+      await sendToRig(ctx, `F ${freq}`, true, true);
       const confirmedFreq = await sendToRig(ctx, "f", true, true);
       ctx.lastStatus = { ...ctx.lastStatus, frequency: confirmedFreq };
       ctx.io.emit("rig-status", ctx.lastStatus);
@@ -591,7 +577,7 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
 
   socket.on("set-mode", async ({ mode, bandwidth }) => {
     try {
-      await sendToRig(ctx, `M ${mode} ${bandwidth}`, false, true);
+      await sendToRig(ctx, `M ${mode} ${bandwidth}`, true, true);
       const modeBw = await sendToRig(ctx, "m", true, true);
       const [confirmedMode, confirmedBw] = modeBw.split("\n");
       ctx.lastStatus = { ...ctx.lastStatus, mode: confirmedMode, bandwidth: confirmedBw };
@@ -603,7 +589,7 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
 
   socket.on("get-modes", async () => {
     try {
-      const modes = await sendToRig(ctx, "M ?", false, true);
+      const modes = await sendToRig(ctx, "M ?", true, true);
       const modeList = modes.split(/[\s\n]+/).filter(m => Boolean(m) && m !== "RPRT" && !/^\d+$/.test(m));
       socket.emit("available-modes", modeList);
     } catch (err) {
@@ -613,7 +599,7 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
 
   socket.on("set-ptt", async (ptt) => {
     try {
-      await sendToRig(ctx, `T ${ptt ? "1" : "0"}`, false, true);
+      await sendToRig(ctx, `T ${ptt ? "1" : "0"}`, true, true);
       const confirmedPtt = (await sendToRig(ctx, "t", true, true)) === "1";
       ctx.lastStatus = { ...ctx.lastStatus, ptt: confirmedPtt };
       ctx.io.emit("rig-status", ctx.lastStatus);
@@ -625,7 +611,7 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
   socket.on("set-vfo", async (vfo) => {
     if (!ctx.vfoSupported) return;
     try {
-      await sendToRig(ctx, `V ${vfo}`, false, true);
+      await sendToRig(ctx, `V ${vfo}`, true, true);
       const confirmedVfo = await sendToRig(ctx, "v", true, true);
       ctx.lastStatus = { ...ctx.lastStatus, vfo: confirmedVfo };
       ctx.io.emit("rig-status", ctx.lastStatus);
@@ -637,7 +623,7 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
   socket.on("set-split-vfo", async ({ split, txVFO }) => {
     if (!ctx.vfoSupported) return;
     try {
-      await sendToRig(ctx, `S ${split} ${txVFO}`, false, true);
+      await sendToRig(ctx, `S ${split} ${txVFO}`, true, true);
       const splitInfo = await sendToRig(ctx, "s", true, true);
       const [isSplitStr, confirmedTxVFO] = splitInfo.split("\n");
       ctx.lastStatus = { ...ctx.lastStatus, isSplit: isSplitStr === "1", txVFO: confirmedTxVFO || "VFOB" };
@@ -649,7 +635,7 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
 
   socket.on("vfo-op", async (op) => {
     try {
-      await sendToRig(ctx, `G ${op}`, false, true);
+      await sendToRig(ctx, `G ${op}`, true, true);
       const frequency = await sendToRig(ctx, "f", true, true);
       const modeBw = await sendToRig(ctx, "m", true, true);
       const [mode, bandwidth] = modeBw.split("\n");
