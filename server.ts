@@ -50,6 +50,15 @@ export async function startServer(appPath?: string, userDataPath?: string) {
   const httpServer = https.createServer({ key: tlsKey, cert: tlsCert }, app);
   const io = new Server(httpServer, { perMessageDeflate: false });
 
+  // Track every raw TCP socket so we can destroy them during shutdown.
+  // closeAllConnections() (Node 18.2+) does not destroy upgraded WebSocket
+  // connections (Node.js bug #53536), so we handle it manually.
+  const openSockets = new Set<import("net").Socket>();
+  httpServer.on("connection", (socket) => {
+    openSockets.add(socket);
+    socket.on("close", () => openSockets.delete(socket));
+  });
+
   const ctx = createInitialContext(io, baseDir, dataDir);
 
   // Wire cross-module callbacks
@@ -321,11 +330,16 @@ export async function startServer(appPath?: string, userDataPath?: string) {
   // Ordered shutdown: keyer → audio → rigctld → polling → sockets → HTTP
   _shutdown = async () => {
     await closeKeyerPort(ctx);
-    await stopAudio(ctx);
+    // stopAudio can deadlock on Windows WASAPI; cap it so shutdown always proceeds.
+    await Promise.race([stopAudio(ctx), new Promise<void>(r => setTimeout(r, 3000))]);
     stopRigctld(ctx);
     stopPolling(ctx);
     if (ctx.rigSocket) { ctx.rigSocket.destroy(); ctx.rigSocket = null; }
     ctx.io.disconnectSockets(true);
+    // Destroy all tracked TCP sockets (including WebSocket-upgraded ones that
+    // closeAllConnections() misses per Node.js bug #53536) so httpServer.close()
+    // fires immediately rather than waiting for connections to drain.
+    openSockets.forEach(s => s.destroy());
     await new Promise<void>((resolve) => httpServer.close(() => resolve()));
   };
 

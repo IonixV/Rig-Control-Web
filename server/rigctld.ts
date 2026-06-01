@@ -74,7 +74,15 @@ export function addLog(ctx: ServerContext, data: string): void {
 export function stopRigctld(ctx: ServerContext): void {
   if (ctx.rigctldProcess) {
     console.log("Stopping rigctld...");
-    ctx.rigctldProcess.kill();
+    const pid = ctx.rigctldProcess.pid;
+    // On Windows, kill() doesn't terminate child process trees. Use taskkill
+    // with /T (tree) and /F (force) to ensure rigctld and any spawned children
+    // are fully terminated.
+    if (process.platform === "win32" && pid) {
+      exec(`taskkill /PID ${pid} /T /F`, () => {});
+    } else {
+      ctx.rigctldProcess.kill();
+    }
     ctx.rigctldProcess = null;
     ctx.rigctldStatus = "stopped";
     emitRigctldStatus(ctx);

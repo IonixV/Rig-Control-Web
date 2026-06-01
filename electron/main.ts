@@ -223,7 +223,13 @@ app.on('will-quit', (event) => {
   if (isShuttingDown) return;
   event.preventDefault();
   isShuttingDown = true;
-  shutdown().then(() => app.quit()).catch(() => app.quit());
+  // Hard timeout: if shutdown hangs (e.g. naudiodon WASAPI deadlock on Windows),
+  // force-exit after 5 s rather than leaving the process alive.
+  const forceExit = setTimeout(() => process.exit(0), 5000);
+  // setTimeout(0) works around Electron bug #33643 where calling app.quit()
+  // synchronously inside .then() after preventDefault() silently fails on Windows.
+  const done = () => { clearTimeout(forceExit); setTimeout(() => app.quit(), 0); };
+  shutdown().then(done).catch(done);
 });
 
 app.on('window-all-closed', () => {
