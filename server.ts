@@ -344,8 +344,24 @@ export async function startServer(appPath?: string, userDataPath?: string) {
     await Promise.race([stopAudio(ctx), new Promise<void>(r => setTimeout(r, 3000))]);
     done();
 
-    step("stopRigctld")(); stopRigctld(ctx);
-    step("stopPolling")(); stopPolling(ctx);
+    // Save ref before stopRigctld nullifies ctx.rigctldProcess, then await exit.
+    // On Windows, stopRigctld fires exec('taskkill') which itself spawns a child
+    // process — both rigctld and taskkill stay as active handles until the process
+    // fully exits. Awaiting 'close' ensures they're gone before we proceed.
+    const rigctldProc = ctx.rigctldProcess;
+    done = step("stopRigctld + await exit");
+    stopRigctld(ctx);
+    if (rigctldProc) {
+      await Promise.race([
+        new Promise<void>(r => rigctldProc.once("close", r)),
+        new Promise<void>(r => setTimeout(r, 3000)),
+      ]);
+    }
+    done();
+
+    done = step("stopPolling");
+    stopPolling(ctx);
+    done();
 
     done = step("destroy rigSocket");
     if (ctx.rigSocket) { ctx.rigSocket.destroy(); ctx.rigSocket = null; }

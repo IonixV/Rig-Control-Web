@@ -232,9 +232,9 @@ app.on('will-quit', (event) => {
   // setTimeout(0) works around Electron bug #33643 where calling app.quit()
   // synchronously inside .then() after preventDefault() silently fails on Windows.
   const done = () => {
-    console.log("[ELECTRON] Shutdown complete — clearing force-exit timer, calling app.quit()");
+    console.log("[ELECTRON] Shutdown complete — calling app.exit(0)");
     clearTimeout(forceExit);
-    setTimeout(() => app.quit(), 0);
+    app.exit(0);
   };
   shutdown().then(done).catch((err) => { console.error("[ELECTRON] Shutdown error:", err); done(); });
 });
