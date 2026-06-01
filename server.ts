@@ -331,8 +331,8 @@ export async function startServer(appPath?: string, userDataPath?: string) {
   _shutdown = async () => {
     const step = (label: string) => {
       const start = Date.now();
-      console.log(`[SHUTDOWN] ${label}`);
-      return () => console.log(`[SHUTDOWN] ${label} done (${Date.now() - start}ms)`);
+      vlog(`[SHUTDOWN] ${label}`);
+      return () => vlog(`[SHUTDOWN] ${label} done (${Date.now() - start}ms)`);
     };
 
     let done = step("closeKeyerPort");
@@ -381,22 +381,22 @@ export async function startServer(appPath?: string, userDataPath?: string) {
     done = step("httpServer.close()");
     await Promise.race([
       new Promise<void>((resolve) => httpServer.close(() => resolve())),
-      new Promise<void>((resolve) => setTimeout(() => { console.log("[SHUTDOWN] httpServer.close() timed out after 2s"); resolve(); }, 2000)),
+      new Promise<void>((resolve) => setTimeout(() => { vlog("[SHUTDOWN] httpServer.close() timed out after 2s"); resolve(); }, 2000)),
     ]);
     done();
 
     // Log any handles still keeping the event loop alive so we can identify blockers.
     if (typeof (process as any)._getActiveHandles === "function") {
       const handles: any[] = (process as any)._getActiveHandles();
-      console.log(`[SHUTDOWN] Active handles: ${handles.length}`);
-      handles.forEach(h => console.log(`[SHUTDOWN]   ${h?.constructor?.name ?? typeof h}`));
+      vlog(`[SHUTDOWN] Active handles: ${handles.length}`);
+      handles.forEach(h => vlog(`[SHUTDOWN]   ${h?.constructor?.name ?? typeof h}`));
     }
     if (typeof (process as any)._getActiveRequests === "function") {
       const reqs: any[] = (process as any)._getActiveRequests();
-      if (reqs.length) console.log(`[SHUTDOWN] Active requests: ${reqs.length}`);
+      if (reqs.length) vlog(`[SHUTDOWN] Active requests: ${reqs.length}`);
     }
 
-    console.log("[SHUTDOWN] Sequence complete");
+    vlog("[SHUTDOWN] Sequence complete");
   };
 
   return new Promise<void>((resolve) => {

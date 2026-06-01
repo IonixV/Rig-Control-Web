@@ -13,6 +13,7 @@ if (!isDev) {
 console.log(`Electron starting. isDev: ${isDev}, NODE_ENV: ${process.env.NODE_ENV}`);
 
 import { startServer, setElectronWindow, shutdown } from '../server.ts';
+import { vlog } from '../server/vlog.ts';
 
 const windowStatePath = path.join(app.getPath('userData'), 'window-state.json');
 
@@ -226,13 +227,11 @@ app.on('will-quit', (event) => {
   // Hard timeout: if shutdown hangs (e.g. naudiodon WASAPI deadlock on Windows),
   // force-exit after 5 s rather than leaving the process alive.
   const forceExit = setTimeout(() => {
-    console.log("[ELECTRON] Force exit fired — shutdown did not complete in 5s");
+    vlog("[ELECTRON] Force exit fired — shutdown did not complete in 5s");
     process.exit(0);
   }, 5000);
-  // setTimeout(0) works around Electron bug #33643 where calling app.quit()
-  // synchronously inside .then() after preventDefault() silently fails on Windows.
   const done = () => {
-    console.log("[ELECTRON] Shutdown complete — calling app.exit(0)");
+    vlog("[ELECTRON] Shutdown complete — calling app.exit(0)");
     clearTimeout(forceExit);
     app.exit(0);
   };
