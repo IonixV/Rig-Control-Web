@@ -220,29 +220,19 @@ function emitCapabilities(ctx: ServerContext): void {
   ctx.io.emit("anf-capabilities", { supported: ctx.rigctldSettings.anfSupported });
 }
 
-async function probeCapabilitiesIfNeeded(ctx: ServerContext, host: string, port: number): Promise<void> {
-  const fp = ctx.rigctldSettings.capabilityFingerprint;
+async function probeCapabilities(ctx: ServerContext): Promise<void> {
   const rigNumber = ctx.rigctldSettings.rigNumber;
-
-  if (fp && fp.host === host && fp.port === port && fp.rigNumber === rigNumber) {
-    console.log("[RIG] Capability fingerprint matches; using cached data");
-    emitCapabilities(ctx);
-    return;
-  }
-
   console.log("[RIG] Probing rig capabilities via dump_caps...");
-  let success = false;
 
   try {
     const dump = await probeDumpCaps(ctx);
     parseDumpCapsIntoContext(dump, ctx);
-    success = true;
     console.log("[RIG] Capabilities probed via dump_caps");
   } catch (err) {
     console.warn("[RIG] dump_caps probe failed; trying local rigctld database:", err);
     try {
       const { fetchRadioCapabilities } = await import("./rigctld.ts");
-      success = await fetchRadioCapabilities(ctx, rigNumber);
+      const success = await fetchRadioCapabilities(ctx, rigNumber);
       if (success) {
         console.log("[RIG] Capabilities probed via local rigctld database");
       } else {
@@ -251,11 +241,6 @@ async function probeCapabilitiesIfNeeded(ctx: ServerContext, host: string, port:
     } catch (importErr) {
       console.warn("[RIG] Could not load local capability fallback:", importErr);
     }
-  }
-
-  if (success) {
-    ctx.rigctldSettings.capabilityFingerprint = { host, port, rigNumber };
-    ctx.saveSettings();
   }
 
   emitCapabilities(ctx);
@@ -476,7 +461,7 @@ export function connectToRig(ctx: ServerContext, host: string, port: number, soc
     console.log(`Connected to rigctld at ${host}:${port}`);
     ctx.isConnected = true;
     await probeVfoCapability(ctx);
-    await probeCapabilitiesIfNeeded(ctx, host, port);
+    await probeCapabilities(ctx);
     ctx.io.emit("rig-connected", { host, port, vfoSupported: ctx.vfoSupported });
     startPolling(ctx);
   });

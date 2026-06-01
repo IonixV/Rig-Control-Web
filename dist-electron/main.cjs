@@ -57207,115 +57207,49 @@ function killExistingRigctld() {
     (0, import_child_process.exec)(cmd, () => resolve());
   });
 }
-async function fetchRadioCapabilities(ctx, rigNumber) {
-  if (!rigNumber || rigNumber === "" || rigNumber === "1") {
-    ctx.rigctldSettings.preampCapabilities = [];
-    ctx.rigctldSettings.attenuatorCapabilities = [];
-    ctx.rigctldSettings.agcCapabilities = [];
-    ctx.saveSettings();
-    ctx.io.emit("preamp-capabilities", ctx.rigctldSettings.preampCapabilities);
-    ctx.io.emit("attenuator-capabilities", ctx.rigctldSettings.attenuatorCapabilities);
-    ctx.io.emit("agc-capabilities", ctx.rigctldSettings.agcCapabilities);
-    ctx.io.emit("anf-capabilities", ctx.rigctldSettings.anfSupported);
-    return;
-  }
-  const rigctldPath = getRigctldPath(ctx.baseDir);
-  vlog(`[HAMLIB] Fetching radio capabilities for rig ${rigNumber}...`);
-  (0, import_child_process.exec)(`"${rigctldPath}" -m ${rigNumber} -u`, (error, stdout) => {
-    if (error) {
-      console.error(`[HAMLIB] Error getting radio capabilities: ${error.message}`);
-      ctx.rigctldSettings.preampCapabilities = [];
-      ctx.rigctldSettings.attenuatorCapabilities = [];
-      ctx.rigctldSettings.agcCapabilities = [];
-      ctx.rigctldSettings.nbSupported = false;
-      ctx.rigctldSettings.nrSupported = false;
-      ctx.rigctldSettings.anfSupported = false;
-    } else {
+function fetchRadioCapabilities(ctx, rigNumber) {
+  return new Promise((resolve) => {
+    if (!rigNumber || rigNumber === "" || rigNumber === "1") {
+      resolve(false);
+      return;
+    }
+    const rigctldPath = getRigctldPath(ctx.baseDir);
+    vlog(`[HAMLIB] Fetching radio capabilities for rig ${rigNumber}...`);
+    (0, import_child_process.exec)(`"${rigctldPath}" -m ${rigNumber} -u`, (error, stdout) => {
+      if (error) {
+        console.error(`[HAMLIB] Error getting radio capabilities: ${error.message}`);
+        resolve(false);
+        return;
+      }
       const lines = stdout.split("\n");
       const preampLine = lines.find((line) => line.trim().startsWith("Preamp:"));
-      if (preampLine) {
-        ctx.rigctldSettings.preampCapabilities = preampLine.replace("Preamp:", "").trim().split(/\s+/).filter(Boolean);
-        vlog(`[HAMLIB] Found preamp capabilities for rig ${rigNumber}: ${ctx.rigctldSettings.preampCapabilities.join(", ")}`);
-      } else {
-        ctx.rigctldSettings.preampCapabilities = [];
-        vlog(`[HAMLIB] No preamp capabilities found for rig ${rigNumber}`);
-      }
+      ctx.rigctldSettings.preampCapabilities = preampLine ? preampLine.replace("Preamp:", "").trim().split(/\s+/).filter(Boolean) : [];
       const attenuatorLine = lines.find((line) => line.trim().startsWith("Attenuator:"));
-      if (attenuatorLine) {
-        ctx.rigctldSettings.attenuatorCapabilities = attenuatorLine.replace("Attenuator:", "").trim().split(/\s+/).filter(Boolean);
-        vlog(`[HAMLIB] Found attenuator capabilities for rig ${rigNumber}: ${ctx.rigctldSettings.attenuatorCapabilities.join(", ")}`);
-      } else {
-        ctx.rigctldSettings.attenuatorCapabilities = [];
-        vlog(`[HAMLIB] No attenuator capabilities found for rig ${rigNumber}`);
-      }
+      ctx.rigctldSettings.attenuatorCapabilities = attenuatorLine ? attenuatorLine.replace("Attenuator:", "").trim().split(/\s+/).filter(Boolean) : [];
       const agcLine = lines.find((line) => line.trim().startsWith("AGC levels:"));
-      if (agcLine) {
-        ctx.rigctldSettings.agcCapabilities = agcLine.replace("AGC levels:", "").trim().split(/\s+/).filter(Boolean);
-        vlog(`[HAMLIB] Found AGC capabilities for rig ${rigNumber}: ${ctx.rigctldSettings.agcCapabilities.join(", ")}`);
-      } else {
-        ctx.rigctldSettings.agcCapabilities = [];
-        vlog(`[HAMLIB] No AGC capabilities found for rig ${rigNumber}`);
-      }
+      ctx.rigctldSettings.agcCapabilities = agcLine ? agcLine.replace("AGC levels:", "").trim().split(/\s+/).filter(Boolean) : [];
       const setFunctionsLine = lines.find((line) => line.trim().startsWith("Set functions:"));
       if (setFunctionsLine) {
         const functions = setFunctionsLine.replace("Set functions:", "").trim().split(/\s+/);
         ctx.rigctldSettings.nbSupported = functions.includes("NB");
         ctx.rigctldSettings.nrSupported = functions.includes("NR");
         ctx.rigctldSettings.anfSupported = functions.includes("ANF");
-        vlog(`[HAMLIB] NB supported for rig ${rigNumber}: ${ctx.rigctldSettings.nbSupported}`);
-        vlog(`[HAMLIB] NR supported for rig ${rigNumber}: ${ctx.rigctldSettings.nrSupported}`);
-        vlog(`[HAMLIB] ANF supported for rig ${rigNumber}: ${ctx.rigctldSettings.anfSupported}`);
       } else {
         ctx.rigctldSettings.nbSupported = false;
         ctx.rigctldSettings.nrSupported = false;
         ctx.rigctldSettings.anfSupported = false;
-        vlog(`[HAMLIB] NB/NR/ANF not supported for rig ${rigNumber}`);
       }
       const getLevelLine = lines.find((line) => line.trim().startsWith("Get level:"));
       if (getLevelLine) {
         const nbMatch = getLevelLine.match(/NB\(([\d.-]+)\.\.([\d.-]+)\/([\d.-]+)\)/);
-        if (nbMatch) {
-          ctx.rigctldSettings.nbLevelRange = {
-            min: parseFloat(nbMatch[1]),
-            max: parseFloat(nbMatch[2]),
-            step: parseFloat(nbMatch[3])
-          };
-          vlog(`[HAMLIB] NB level range for rig ${rigNumber}: min=${ctx.rigctldSettings.nbLevelRange.min}, max=${ctx.rigctldSettings.nbLevelRange.max}, step=${ctx.rigctldSettings.nbLevelRange.step}`);
-        } else {
-          ctx.rigctldSettings.nbLevelRange = { min: 0, max: 1, step: 0.1 };
-        }
+        ctx.rigctldSettings.nbLevelRange = nbMatch ? { min: parseFloat(nbMatch[1]), max: parseFloat(nbMatch[2]), step: parseFloat(nbMatch[3]) } : { min: 0, max: 1, step: 0.1 };
         const nrMatch = getLevelLine.match(/NR\(([\d.-]+)\.\.([\d.-]+)\/([\d.-]+)\)/);
-        if (nrMatch) {
-          ctx.rigctldSettings.nrLevelRange = {
-            min: parseFloat(nrMatch[1]),
-            max: parseFloat(nrMatch[2]),
-            step: parseFloat(nrMatch[3])
-          };
-          vlog(`[HAMLIB] NR level range for rig ${rigNumber}: min=${ctx.rigctldSettings.nrLevelRange.min}, max=${ctx.rigctldSettings.nrLevelRange.max}, step=${ctx.rigctldSettings.nrLevelRange.step}`);
-        } else {
-          ctx.rigctldSettings.nrLevelRange = { min: 0, max: 1, step: 0.1 };
-        }
+        ctx.rigctldSettings.nrLevelRange = nrMatch ? { min: parseFloat(nrMatch[1]), max: parseFloat(nrMatch[2]), step: parseFloat(nrMatch[3]) } : { min: 0, max: 1, step: 0.066667 };
         const rfPowerMatch = getLevelLine.match(/RFPOWER\(([\d.-]+)\.\.([\d.-]+)\/([\d.-]+)\)/);
-        if (rfPowerMatch) {
-          ctx.rigctldSettings.rfPowerRange = {
-            min: parseFloat(rfPowerMatch[1]),
-            max: parseFloat(rfPowerMatch[2]),
-            step: parseFloat(rfPowerMatch[3])
-          };
-          vlog(`[HAMLIB] RF Power range for rig ${rigNumber}: min=${ctx.rigctldSettings.rfPowerRange.min}, max=${ctx.rigctldSettings.rfPowerRange.max}, step=${ctx.rigctldSettings.rfPowerRange.step}`);
-        } else {
-          ctx.rigctldSettings.rfPowerRange = { min: 0, max: 1, step: 0.01 };
-        }
+        ctx.rigctldSettings.rfPowerRange = rfPowerMatch ? { min: parseFloat(rfPowerMatch[1]), max: parseFloat(rfPowerMatch[2]), step: parseFloat(rfPowerMatch[3]) } : { min: 0, max: 1, step: 0.01 };
       }
-    }
-    ctx.saveSettings();
-    ctx.io.emit("preamp-capabilities", ctx.rigctldSettings.preampCapabilities);
-    ctx.io.emit("attenuator-capabilities", ctx.rigctldSettings.attenuatorCapabilities);
-    ctx.io.emit("agc-capabilities", ctx.rigctldSettings.agcCapabilities);
-    ctx.io.emit("nb-capabilities", { supported: ctx.rigctldSettings.nbSupported, range: ctx.rigctldSettings.nbLevelRange });
-    ctx.io.emit("nr-capabilities", { supported: ctx.rigctldSettings.nrSupported, range: ctx.rigctldSettings.nrLevelRange });
-    ctx.io.emit("rfpower-capabilities", { range: ctx.rigctldSettings.rfPowerRange });
-    ctx.io.emit("anf-capabilities", { supported: ctx.rigctldSettings.anfSupported });
+      resolve(true);
+    });
   });
 }
 async function startRigctld(ctx) {
@@ -61395,6 +61329,7 @@ function createInitialContext(io2, baseDir, dataDir) {
     pollingTimeout: null,
     rigCommandQueue: [],
     isRigBusy: false,
+    pendingQuickPolls: /* @__PURE__ */ new Set(),
     rigctldProcess: null,
     rigctldStatus: "stopped",
     rigctldVersion: null,
@@ -61501,7 +61436,7 @@ function saveSettings(ctx, settingsFile) {
     console.error("[SETTINGS] Failed to save settings:", e);
   }
 }
-function registerSettingsHandlers(socket, ctx, radiosFile, onRigNumberChanged, startPolling2, syncKeyerPort2) {
+function registerSettingsHandlers(socket, ctx, radiosFile, startPolling2, syncKeyerPort2) {
   socket.on("save-settings", (data) => {
     const oldRigNumber = ctx.rigctldSettings.rigNumber;
     if (data.settings) {
@@ -61524,10 +61459,10 @@ function registerSettingsHandlers(socket, ctx, radiosFile, onRigNumberChanged, s
       const polarityChanged = data.cwSettings.serialKeyPolarity !== void 0 && data.cwSettings.serialKeyPolarity !== oldPolarity;
       syncKeyerPort2(polarityChanged);
     }
-    ctx.saveSettings();
     if (oldRigNumber !== ctx.rigctldSettings.rigNumber) {
-      onRigNumberChanged(ctx.rigctldSettings.rigNumber);
+      ctx.rigctldSettings.capabilityFingerprint = void 0;
     }
+    ctx.saveSettings();
   });
   socket.on("get-radios", () => {
     if (import_fs2.default.existsSync(radiosFile)) {
@@ -61660,23 +61595,122 @@ function sendToRig(ctx, cmd, useExtended = false, priority = false) {
     processRigQueue(ctx);
   });
 }
+async function probeDumpCaps(ctx) {
+  return new Promise((resolve, reject) => {
+    if (!ctx.rigSocket || ctx.rigSocket.destroyed) {
+      return reject("Not connected");
+    }
+    let buffer = "";
+    const timeout = setTimeout(() => {
+      ctx.rigSocket?.removeListener("data", onData);
+      ctx.rigSocket?.removeListener("error", onError);
+      reject("dump_caps timed out");
+    }, 1e4);
+    const onData = (data) => {
+      buffer += data.toString();
+      if (/RPRT -?\d+/.test(buffer)) {
+        clearTimeout(timeout);
+        ctx.rigSocket?.removeListener("data", onData);
+        ctx.rigSocket?.removeListener("error", onError);
+        resolve(buffer);
+      }
+    };
+    const onError = (err) => {
+      clearTimeout(timeout);
+      ctx.rigSocket?.removeListener("data", onData);
+      reject(`dump_caps error: ${err.message}`);
+    };
+    ctx.rigSocket.on("data", onData);
+    ctx.rigSocket.once("error", onError);
+    ctx.rigSocket.write("+\\dump_caps\n");
+  });
+}
+function parseDumpCapsIntoContext(dump, ctx) {
+  const lines = dump.split("\n");
+  const preampLine = lines.find((l) => l.trim().startsWith("Preamp:"));
+  ctx.rigctldSettings.preampCapabilities = preampLine ? preampLine.replace("Preamp:", "").trim().split(/\s+/).filter(Boolean) : [];
+  const attenuatorLine = lines.find((l) => l.trim().startsWith("Attenuator:"));
+  ctx.rigctldSettings.attenuatorCapabilities = attenuatorLine ? attenuatorLine.replace("Attenuator:", "").trim().split(/\s+/).filter(Boolean) : [];
+  const agcLine = lines.find((l) => l.trim().startsWith("AGC levels:"));
+  ctx.rigctldSettings.agcCapabilities = agcLine ? agcLine.replace("AGC levels:", "").trim().split(/\s+/).filter(Boolean) : [];
+  const setFunctionsLine = lines.find((l) => l.trim().startsWith("Set functions:"));
+  if (setFunctionsLine) {
+    const funcs = setFunctionsLine.replace("Set functions:", "").trim().split(/\s+/);
+    ctx.rigctldSettings.nbSupported = funcs.includes("NB");
+    ctx.rigctldSettings.nrSupported = funcs.includes("NR");
+    ctx.rigctldSettings.anfSupported = funcs.includes("ANF");
+  } else {
+    ctx.rigctldSettings.nbSupported = false;
+    ctx.rigctldSettings.nrSupported = false;
+    ctx.rigctldSettings.anfSupported = false;
+  }
+  const getLevelLine = lines.find((l) => l.trim().startsWith("Get level:"));
+  if (getLevelLine) {
+    const nbMatch = getLevelLine.match(/NB\(([\d.-]+)\.\.([\d.-]+)\/([\d.-]+)\)/);
+    ctx.rigctldSettings.nbLevelRange = nbMatch ? { min: parseFloat(nbMatch[1]), max: parseFloat(nbMatch[2]), step: parseFloat(nbMatch[3]) } : { min: 0, max: 1, step: 0.1 };
+    const nrMatch = getLevelLine.match(/NR\(([\d.-]+)\.\.([\d.-]+)\/([\d.-]+)\)/);
+    ctx.rigctldSettings.nrLevelRange = nrMatch ? { min: parseFloat(nrMatch[1]), max: parseFloat(nrMatch[2]), step: parseFloat(nrMatch[3]) } : { min: 0, max: 1, step: 0.066667 };
+    const rfPowerMatch = getLevelLine.match(/RFPOWER\(([\d.-]+)\.\.([\d.-]+)\/([\d.-]+)\)/);
+    ctx.rigctldSettings.rfPowerRange = rfPowerMatch ? { min: parseFloat(rfPowerMatch[1]), max: parseFloat(rfPowerMatch[2]), step: parseFloat(rfPowerMatch[3]) } : { min: 0, max: 1, step: 0.01 };
+  }
+}
+function emitCapabilities(ctx) {
+  ctx.io.emit("preamp-capabilities", ctx.rigctldSettings.preampCapabilities);
+  ctx.io.emit("attenuator-capabilities", ctx.rigctldSettings.attenuatorCapabilities);
+  ctx.io.emit("agc-capabilities", ctx.rigctldSettings.agcCapabilities);
+  ctx.io.emit("nb-capabilities", { supported: ctx.rigctldSettings.nbSupported, range: ctx.rigctldSettings.nbLevelRange });
+  ctx.io.emit("nr-capabilities", { supported: ctx.rigctldSettings.nrSupported, range: ctx.rigctldSettings.nrLevelRange });
+  ctx.io.emit("rfpower-capabilities", { range: ctx.rigctldSettings.rfPowerRange });
+  ctx.io.emit("anf-capabilities", { supported: ctx.rigctldSettings.anfSupported });
+}
+async function probeCapabilitiesIfNeeded(ctx, host, port) {
+  const fp = ctx.rigctldSettings.capabilityFingerprint;
+  const rigNumber = ctx.rigctldSettings.rigNumber;
+  if (fp && fp.host === host && fp.port === port && fp.rigNumber === rigNumber) {
+    console.log("[RIG] Capability fingerprint matches; using cached data");
+    emitCapabilities(ctx);
+    return;
+  }
+  console.log("[RIG] Probing rig capabilities via dump_caps...");
+  let success = false;
+  try {
+    const dump = await probeDumpCaps(ctx);
+    parseDumpCapsIntoContext(dump, ctx);
+    success = true;
+    console.log("[RIG] Capabilities probed via dump_caps");
+  } catch (err) {
+    console.warn("[RIG] dump_caps probe failed; trying local rigctld database:", err);
+    try {
+      const { fetchRadioCapabilities: fetchRadioCapabilities2 } = await Promise.resolve().then(() => (init_rigctld(), rigctld_exports));
+      success = await fetchRadioCapabilities2(ctx, rigNumber);
+      if (success) {
+        console.log("[RIG] Capabilities probed via local rigctld database");
+      } else {
+        console.warn("[RIG] Local capability probe also failed; capabilities may be unavailable");
+      }
+    } catch (importErr) {
+      console.warn("[RIG] Could not load local capability fallback:", importErr);
+    }
+  }
+  if (success) {
+    ctx.rigctldSettings.capabilityFingerprint = { host, port, rigNumber };
+    ctx.saveSettings();
+  }
+  emitCapabilities(ctx);
+}
 async function probeVfoCapability(ctx) {
   try {
-    const result = await sendToRig(ctx, "v", false);
-    if (result.includes("RPRT -11")) {
-      ctx.vfoSupported = false;
-      console.log("VFO not supported by this radio (RPRT -11); disabling VFO B and split");
-      const freq = await sendToRig(ctx, "f", false);
-      if (!freq || freq.includes("RPRT")) {
-        console.warn("get_freq also failed after VFO probe \u2014 rig may not be responding");
-      }
-    } else {
-      ctx.vfoSupported = true;
-      console.log(`VFO supported (reported: ${result})`);
-    }
+    const result = await sendToRig(ctx, "v", true);
+    ctx.vfoSupported = true;
+    console.log(`VFO supported (reported: ${result})`);
   } catch (err) {
     ctx.vfoSupported = false;
-    console.log("VFO probe failed; disabling VFO B and split:", err);
+    console.log("VFO not supported or probe failed; disabling VFO B and split:", err);
+    try {
+      await sendToRig(ctx, "f", true);
+    } catch {
+      console.warn("get_freq also failed after VFO probe \u2014 rig may not be responding");
+    }
   }
 }
 function stopPolling(ctx) {
@@ -61752,6 +61786,21 @@ async function pollRig(ctx) {
       nrLevel = parseFloat(await sendToRig(ctx, "l NR", true).catch(() => "0"));
       anf = await sendToRig(ctx, "u ANF", true).catch(() => "0") === "1";
       tuner = await sendToRig(ctx, "u TUNER", true).catch(() => "0") === "1";
+    }
+    if (ctx.pendingQuickPolls.size > 0) {
+      const pending = new Set(ctx.pendingQuickPolls);
+      ctx.pendingQuickPolls.clear();
+      if (pending.has("attenuation")) att = parseInt(await sendToRig(ctx, "l ATT", true).catch(() => String(att))) || 0;
+      if (pending.has("preamp")) preamp = parseInt(await sendToRig(ctx, "l PREAMP", true).catch(() => String(preamp))) || 0;
+      if (pending.has("agc")) agc = parseInt(await sendToRig(ctx, "l AGC", true).catch(() => String(agc)));
+      if (pending.has("nb")) nb = await sendToRig(ctx, "u NB", true).catch(() => nb ? "1" : "0") === "1";
+      if (pending.has("nbLevel")) nbLevel = parseFloat(await sendToRig(ctx, "l NB", true).catch(() => String(nbLevel)));
+      if (pending.has("nr")) nr = await sendToRig(ctx, "u NR", true).catch(() => nr ? "1" : "0") === "1";
+      if (pending.has("nrLevel")) nrLevel = parseFloat(await sendToRig(ctx, "l NR", true).catch(() => String(nrLevel)));
+      if (pending.has("anf")) anf = await sendToRig(ctx, "u ANF", true).catch(() => anf ? "1" : "0") === "1";
+      if (pending.has("rfpower")) rfpower = parseFloat(await sendToRig(ctx, "l RFPOWER", true).catch(() => String(rfpower)));
+      if (pending.has("rfLevel")) rflevel = parseFloat(await sendToRig(ctx, "l RF", true).catch(() => String(rflevel)));
+      if (pending.has("tuner")) tuner = await sendToRig(ctx, "u TUNER", true).catch(() => tuner ? "1" : "0") === "1";
     }
     ctx.lastStatus = {
       frequency,
@@ -61848,6 +61897,7 @@ function connectToRig(ctx, host, port, socket) {
     console.log(`Connected to rigctld at ${host}:${port}`);
     ctx.isConnected = true;
     await probeVfoCapability(ctx);
+    await probeCapabilitiesIfNeeded(ctx, host, port);
     ctx.io.emit("rig-connected", { host, port, vfoSupported: ctx.vfoSupported });
     startPolling(ctx);
   });
@@ -61881,38 +61931,38 @@ function registerRigCommHandlers(socket, ctx) {
   });
   socket.on("set-func", async ({ func, state }) => {
     try {
-      await sendToRig(ctx, `U ${func} ${state ? "1" : "0"}`, false, true);
-      const confirmedState = await sendToRig(ctx, `u ${func}`, true, true) === "1";
+      await sendToRig(ctx, `U ${func} ${state ? "1" : "0"}`, true, true);
       const key = func.toLowerCase();
-      ctx.lastStatus = { ...ctx.lastStatus, [key]: confirmedState };
+      ctx.lastStatus = { ...ctx.lastStatus, [key]: state };
       ctx.io.emit("rig-status", ctx.lastStatus);
+      ctx.pendingQuickPolls.add(key);
     } catch (err) {
-      socket.emit("rig-error", `Failed to set ${func}`);
+      socket.emit("rig-op-error", `Failed to set ${func}`);
     }
   });
   socket.on("set-level", async ({ level, val }) => {
     try {
-      await sendToRig(ctx, `L ${level} ${val}`, false, true);
-      const confirmedVal = parseFloat(await sendToRig(ctx, `l ${level}`, true, true));
+      await sendToRig(ctx, `L ${level} ${val}`, true, true);
       const key = level.toLowerCase() === "rfpower" ? "rfpower" : level.toLowerCase() === "rf" ? "rfLevel" : level.toLowerCase() === "agc" ? "agc" : level.toLowerCase() === "att" ? "attenuation" : level.toLowerCase() === "preamp" ? "preamp" : level.toLowerCase() === "nr" ? "nrLevel" : level.toLowerCase() === "nb" ? "nbLevel" : null;
       if (key) {
-        ctx.lastStatus = { ...ctx.lastStatus, [key]: confirmedVal };
+        ctx.lastStatus = { ...ctx.lastStatus, [key]: parseFloat(val) };
         ctx.io.emit("rig-status", ctx.lastStatus);
+        ctx.pendingQuickPolls.add(key);
       }
     } catch (err) {
-      socket.emit("rig-error", `Failed to set ${level}`);
+      socket.emit("rig-op-error", `Failed to set ${level}`);
     }
   });
   socket.on("tune-to-spot", async ({ freqHz, mode, modeChanged }) => {
     try {
-      await sendToRig(ctx, `F ${freqHz}`, false, true);
+      await sendToRig(ctx, `F ${freqHz}`, true, true);
       if (modeChanged) {
-        await sendToRig(ctx, `M ${mode} -1`, false, true);
+        await sendToRig(ctx, `M ${mode} -1`, true, true);
         const modeBw = await sendToRig(ctx, "m", true, true);
         const [confirmedMode, confirmedBw] = modeBw.split("\n");
         ctx.lastStatus = { ...ctx.lastStatus, mode: confirmedMode, bandwidth: confirmedBw };
         await new Promise((resolve) => setTimeout(resolve, 200));
-        await sendToRig(ctx, `F ${freqHz}`, false, true);
+        await sendToRig(ctx, `F ${freqHz}`, true, true);
       }
       const confirmedFreq = await sendToRig(ctx, "f", true, true);
       ctx.lastStatus = { ...ctx.lastStatus, frequency: confirmedFreq };
@@ -61923,7 +61973,7 @@ function registerRigCommHandlers(socket, ctx) {
   });
   socket.on("set-frequency", async (freq) => {
     try {
-      await sendToRig(ctx, `F ${freq}`, false, true);
+      await sendToRig(ctx, `F ${freq}`, true, true);
       const confirmedFreq = await sendToRig(ctx, "f", true, true);
       ctx.lastStatus = { ...ctx.lastStatus, frequency: confirmedFreq };
       ctx.io.emit("rig-status", ctx.lastStatus);
@@ -61933,7 +61983,7 @@ function registerRigCommHandlers(socket, ctx) {
   });
   socket.on("set-mode", async ({ mode, bandwidth }) => {
     try {
-      await sendToRig(ctx, `M ${mode} ${bandwidth}`, false, true);
+      await sendToRig(ctx, `M ${mode} ${bandwidth}`, true, true);
       const modeBw = await sendToRig(ctx, "m", true, true);
       const [confirmedMode, confirmedBw] = modeBw.split("\n");
       ctx.lastStatus = { ...ctx.lastStatus, mode: confirmedMode, bandwidth: confirmedBw };
@@ -61944,7 +61994,7 @@ function registerRigCommHandlers(socket, ctx) {
   });
   socket.on("get-modes", async () => {
     try {
-      const modes = await sendToRig(ctx, "M ?", false, true);
+      const modes = await sendToRig(ctx, "M ?", true, true);
       const modeList = modes.split(/[\s\n]+/).filter((m) => Boolean(m) && m !== "RPRT" && !/^\d+$/.test(m));
       socket.emit("available-modes", modeList);
     } catch (err) {
@@ -61953,7 +62003,7 @@ function registerRigCommHandlers(socket, ctx) {
   });
   socket.on("set-ptt", async (ptt) => {
     try {
-      await sendToRig(ctx, `T ${ptt ? "1" : "0"}`, false, true);
+      await sendToRig(ctx, `T ${ptt ? "1" : "0"}`, true, true);
       const confirmedPtt = await sendToRig(ctx, "t", true, true) === "1";
       ctx.lastStatus = { ...ctx.lastStatus, ptt: confirmedPtt };
       ctx.io.emit("rig-status", ctx.lastStatus);
@@ -61964,7 +62014,7 @@ function registerRigCommHandlers(socket, ctx) {
   socket.on("set-vfo", async (vfo) => {
     if (!ctx.vfoSupported) return;
     try {
-      await sendToRig(ctx, `V ${vfo}`, false, true);
+      await sendToRig(ctx, `V ${vfo}`, true, true);
       const confirmedVfo = await sendToRig(ctx, "v", true, true);
       ctx.lastStatus = { ...ctx.lastStatus, vfo: confirmedVfo };
       ctx.io.emit("rig-status", ctx.lastStatus);
@@ -61975,7 +62025,7 @@ function registerRigCommHandlers(socket, ctx) {
   socket.on("set-split-vfo", async ({ split, txVFO }) => {
     if (!ctx.vfoSupported) return;
     try {
-      await sendToRig(ctx, `S ${split} ${txVFO}`, false, true);
+      await sendToRig(ctx, `S ${split} ${txVFO}`, true, true);
       const splitInfo = await sendToRig(ctx, "s", true, true);
       const [isSplitStr, confirmedTxVFO] = splitInfo.split("\n");
       ctx.lastStatus = { ...ctx.lastStatus, isSplit: isSplitStr === "1", txVFO: confirmedTxVFO || "VFOB" };
@@ -61986,7 +62036,7 @@ function registerRigCommHandlers(socket, ctx) {
   });
   socket.on("vfo-op", async (op) => {
     try {
-      await sendToRig(ctx, `G ${op}`, false, true);
+      await sendToRig(ctx, `G ${op}`, true, true);
       const frequency = await sendToRig(ctx, "f", true, true);
       const modeBw = await sendToRig(ctx, "m", true, true);
       const [mode, bandwidth] = modeBw.split("\n");
@@ -65288,6 +65338,8 @@ async function startServer(appPath, userDataPath) {
     }
     socket.emit("audio-status", ctx.audioStatus);
     socket.emit("preamp-capabilities", ctx.rigctldSettings.preampCapabilities);
+    socket.emit("attenuator-capabilities", ctx.rigctldSettings.attenuatorCapabilities);
+    socket.emit("agc-capabilities", ctx.rigctldSettings.agcCapabilities);
     socket.emit("nb-capabilities", { supported: ctx.rigctldSettings.nbSupported, range: ctx.rigctldSettings.nbLevelRange });
     socket.emit("nr-capabilities", { supported: ctx.rigctldSettings.nrSupported, range: ctx.rigctldSettings.nrLevelRange });
     socket.emit("mic-active-client", ctx.activeMicClientId);
@@ -65321,7 +65373,6 @@ async function startServer(appPath, userDataPath) {
       socket,
       ctx,
       RADIOS_FILE,
-      (rigNumber) => fetchRadioCapabilities(ctx, rigNumber),
       () => startPolling(ctx),
       (forceReopen) => syncKeyerPort(ctx, forceReopen)
     );

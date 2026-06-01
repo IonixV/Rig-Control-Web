@@ -76,7 +76,6 @@ export interface ServerContext {
     nrLevelRange: { min: number; max: number; step: number };
     rfPowerRange: { min: number; max: number; step: number };
     anfSupported: boolean;
-    capabilityFingerprint?: { host: string; port: number; rigNumber: string };
   };
   audioSettings: {
     inputDevice: string;

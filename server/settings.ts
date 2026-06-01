@@ -94,10 +94,6 @@ export function registerSettingsHandlers(
       syncKeyerPort(polarityChanged);
     }
 
-    if (oldRigNumber !== ctx.rigctldSettings.rigNumber) {
-      ctx.rigctldSettings.capabilityFingerprint = undefined;
-    }
-
     ctx.saveSettings();
   });
 
