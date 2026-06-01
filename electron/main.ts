@@ -225,11 +225,18 @@ app.on('will-quit', (event) => {
   isShuttingDown = true;
   // Hard timeout: if shutdown hangs (e.g. naudiodon WASAPI deadlock on Windows),
   // force-exit after 5 s rather than leaving the process alive.
-  const forceExit = setTimeout(() => process.exit(0), 5000);
+  const forceExit = setTimeout(() => {
+    console.log("[ELECTRON] Force exit fired — shutdown did not complete in 5s");
+    process.exit(0);
+  }, 5000);
   // setTimeout(0) works around Electron bug #33643 where calling app.quit()
   // synchronously inside .then() after preventDefault() silently fails on Windows.
-  const done = () => { clearTimeout(forceExit); setTimeout(() => app.quit(), 0); };
-  shutdown().then(done).catch(done);
+  const done = () => {
+    console.log("[ELECTRON] Shutdown complete — clearing force-exit timer, calling app.quit()");
+    clearTimeout(forceExit);
+    setTimeout(() => app.quit(), 0);
+  };
+  shutdown().then(done).catch((err) => { console.error("[ELECTRON] Shutdown error:", err); done(); });
 });
 
 app.on('window-all-closed', () => {

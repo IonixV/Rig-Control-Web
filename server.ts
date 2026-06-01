@@ -329,18 +329,58 @@ export async function startServer(appPath?: string, userDataPath?: string) {
 
   // Ordered shutdown: keyer → audio → rigctld → polling → sockets → HTTP
   _shutdown = async () => {
+    const step = (label: string) => {
+      const start = Date.now();
+      console.log(`[SHUTDOWN] ${label}`);
+      return () => console.log(`[SHUTDOWN] ${label} done (${Date.now() - start}ms)`);
+    };
+
+    let done = step("closeKeyerPort");
     await closeKeyerPort(ctx);
+    done();
+
     // stopAudio can deadlock on Windows WASAPI; cap it so shutdown always proceeds.
+    done = step("stopAudio (3s cap)");
     await Promise.race([stopAudio(ctx), new Promise<void>(r => setTimeout(r, 3000))]);
-    stopRigctld(ctx);
-    stopPolling(ctx);
+    done();
+
+    step("stopRigctld")(); stopRigctld(ctx);
+    step("stopPolling")(); stopPolling(ctx);
+
+    done = step("destroy rigSocket");
     if (ctx.rigSocket) { ctx.rigSocket.destroy(); ctx.rigSocket = null; }
+    done();
+
+    done = step("disconnectSockets");
     ctx.io.disconnectSockets(true);
+    done();
+
     // Destroy all tracked TCP sockets (including WebSocket-upgraded ones that
     // closeAllConnections() misses per Node.js bug #53536) so httpServer.close()
     // fires immediately rather than waiting for connections to drain.
+    done = step(`destroy openSockets (${openSockets.size})`);
     openSockets.forEach(s => s.destroy());
-    await new Promise<void>((resolve) => httpServer.close(() => resolve()));
+    done();
+
+    done = step("httpServer.close()");
+    await Promise.race([
+      new Promise<void>((resolve) => httpServer.close(() => resolve())),
+      new Promise<void>((resolve) => setTimeout(() => { console.log("[SHUTDOWN] httpServer.close() timed out after 2s"); resolve(); }, 2000)),
+    ]);
+    done();
+
+    // Log any handles still keeping the event loop alive so we can identify blockers.
+    if (typeof (process as any)._getActiveHandles === "function") {
+      const handles: any[] = (process as any)._getActiveHandles();
+      console.log(`[SHUTDOWN] Active handles: ${handles.length}`);
+      handles.forEach(h => console.log(`[SHUTDOWN]   ${h?.constructor?.name ?? typeof h}`));
+    }
+    if (typeof (process as any)._getActiveRequests === "function") {
+      const reqs: any[] = (process as any)._getActiveRequests();
+      if (reqs.length) console.log(`[SHUTDOWN] Active requests: ${reqs.length}`);
+    }
+
+    console.log("[SHUTDOWN] Sequence complete");
   };
 
   return new Promise<void>((resolve) => {
