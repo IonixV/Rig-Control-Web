@@ -111,6 +111,12 @@ export default function App() {
     [compactLayout.items, phoneLayout.items]
   );
 
+  const hasWaterfallPanel = useMemo(() =>
+    compactLayout.items.some(i => i.panelType === 'spectrum_audio') ||
+    phoneLayout.items.some(i => i.panelType === 'spectrum_audio'),
+    [compactLayout.items, phoneLayout.items]
+  );
+
   const compactGridCallbacks = useMemo(() => ({
     onExitEditMode: () => setIsCompactEditMode(false),
     addPanel: (panelType: PanelType, config?: PanelAddConfig) => addPanel('compact', panelType, config),
@@ -210,6 +216,11 @@ export default function App() {
     stopVideoCapture,
   } = useVideoStream({ socket, settingsLoaded });
 
+  const waterfallActiveRef = useRef(false);
+  useEffect(() => {
+    waterfallActiveRef.current = hasWaterfallPanel && !isSpectrumAudioCollapsed;
+  }, [hasWaterfallPanel, isSpectrumAudioCollapsed]);
+
   const {
     activeMicClientId,
     audioStatus,
@@ -231,7 +242,7 @@ export default function App() {
     handleStartAudio,
     startMicCapture,
     stopMicCapture,
-  } = useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef });
+  } = useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, waterfallActiveRef });
 
   const {
     connected,
@@ -1005,6 +1016,7 @@ export default function App() {
           stopMicCapture={stopMicCapture}
           activeMicClientId={activeMicClientId}
           clientId={clientId}
+          inboundMuted={inboundMuted}
           outboundMuted={outboundMuted}
           localAudioReady={localAudioReady}
           audioDevices={audioDevices}

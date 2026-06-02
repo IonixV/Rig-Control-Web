@@ -9,9 +9,10 @@ interface UseAudioOptions {
   socket: Socket | null;
   cwDecodeEnabledRef: MutableRefObject<boolean>;
   cwDecoderRef: MutableRefObject<GGMorseDecoder | null>;
+  waterfallActiveRef: MutableRefObject<boolean>;
 }
 
-export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef }: UseAudioOptions) {
+export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, waterfallActiveRef }: UseAudioOptions) {
   const [activeMicClientId, setActiveMicClientId] = useState<string | null>(null);
   const [audioStatus, setAudioStatus] = useState<"playing" | "stopped">("stopped");
   const [audioEngineState, setAudioEngineState] = useState<{ isReady: boolean; error: string | null }>({ isReady: false, error: null });
@@ -65,6 +66,11 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef }: UseAudioO
   useEffect(() => { localAudioSettingsRef.current = localAudioSettings; }, [localAudioSettings]);
   useEffect(() => { inboundVolumeRef.current = inboundVolume; }, [inboundVolume]);
 
+  useEffect(() => {
+    if (!inboundGainRef.current) return;
+    inboundGainRef.current.gain.value = inboundMuted ? 0 : inboundVolumeRef.current;
+  }, [inboundMuted]);
+
   // Collapse backend engine panel when audio starts playing
   useEffect(() => { if (audioStatus === "playing") setIsBackendEngineCollapsed(true); }, [audioStatus]);
 
@@ -113,7 +119,7 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef }: UseAudioO
       if (!audioSettingsRef.current.inboundEnabled || audioStatusRef.current !== "playing" || !localAudioReadyRef.current) {
         return;
       }
-      if (inboundMutedRef.current && !cwDecodeEnabledRef.current) {
+      if (inboundMutedRef.current && !cwDecodeEnabledRef.current && !waterfallActiveRef.current) {
         return;
       }
       playInboundAudio(data);
@@ -290,8 +296,9 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef }: UseAudioO
             const isPlaying = audioStatusRef.current === "playing";
             const needPcm = isPlaying && (!inboundMutedRef.current);
             const needCw = isPlaying && cwDecodeEnabledRef.current && !!cwDecoderRef.current;
+            const needWaterfall = isPlaying && waterfallActiveRef.current;
 
-            if (!needPcm && !needCw) {
+            if (!needPcm && !needCw && !needWaterfall) {
               audioData.close();
               return;
             }
@@ -302,7 +309,7 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef }: UseAudioO
             audioData.copyTo(buffer, options);
             const float32Data = new Float32Array(buffer);
 
-            if (needPcm && playbackNodeRef.current) {
+            if ((needPcm || needWaterfall) && playbackNodeRef.current) {
               playbackNodeRef.current.port.postMessage({ type: 'pcm', pcm: float32Data });
             }
             if (needCw) {

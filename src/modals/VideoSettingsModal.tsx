@@ -86,6 +86,7 @@ export interface VideoSettingsModalProps {
   stopMicCapture: () => void;
   activeMicClientId: string | null;
   clientId: string;
+  inboundMuted: boolean;
   outboundMuted: boolean;
   localAudioReady: boolean;
   audioDevices: {
@@ -129,6 +130,7 @@ function VideoSettingsModal({
   stopMicCapture,
   activeMicClientId,
   clientId,
+  inboundMuted,
   outboundMuted,
   localAudioReady,
   audioDevices,
@@ -387,7 +389,7 @@ function VideoSettingsModal({
                   const vol = parseFloat(e.target.value);
                   setInboundVolume(vol);
                   localStorage.setItem("local-audio-inbound-volume", String(vol));
-                  if (inboundGainRef.current) inboundGainRef.current.gain.value = vol;
+                  if (inboundGainRef.current) inboundGainRef.current.gain.value = inboundMuted ? 0 : vol;
                 }}
                 className="flex-1 accent-blue-500"
               />
