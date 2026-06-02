@@ -1,7 +1,7 @@
 import fs from "fs";
 import { Socket } from "socket.io";
 import { ServerContext } from "./context.ts";
-import { vlog } from "./vlog.ts";
+import { vlogInfra as vlog } from "./vlog.ts";
 
 export function loadSettings(ctx: ServerContext, settingsFile: string): void {
   if (!fs.existsSync(settingsFile)) return;

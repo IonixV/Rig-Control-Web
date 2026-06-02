@@ -5,7 +5,7 @@ import path from "path";
 import fs from "fs";
 
 import { loadOrGenerateCert } from "./server/tls.ts";
-import { VERBOSE, vlog } from "./server/vlog.ts";
+import { vlogInfra, vlogRig, vlogVideo, vlogAudio, debugFlags } from "./server/vlog.ts";
 import { createInitialContext } from "./server/context.ts";
 import { loadSettings, saveSettings, registerSettingsHandlers } from "./server/settings.ts";
 import { getRigctldVersion, checkVersionSupported, emitRigctldStatus, startRigctld, stopRigctld, registerRigctldHandlers } from "./server/rigctld.ts";
@@ -42,9 +42,9 @@ export async function startServer(appPath?: string, userDataPath?: string) {
   const SETTINGS_FILE = path.join(dataDir, "settings.json");
   const RADIOS_FILE = path.join(baseDir, "radios.json");
 
-  vlog(`Server initializing. Base directory (assets): ${baseDir}`);
-  vlog(`Data directory (settings): ${dataDir}`);
-  vlog(`NODE_ENV: ${process.env.NODE_ENV}, Electron: ${!!process.versions.electron}`);
+  vlogInfra(`Server initializing. Base directory (assets): ${baseDir}`);
+  vlogInfra(`Data directory (settings): ${dataDir}`);
+  vlogInfra(`NODE_ENV: ${process.env.NODE_ENV}, Electron: ${!!process.versions.electron}`);
 
   const { key: tlsKey, cert: tlsCert } = await loadOrGenerateCert(dataDir);
   const httpServer = https.createServer({ key: tlsKey, cert: tlsCert }, app);
@@ -75,7 +75,7 @@ export async function startServer(appPath?: string, userDataPath?: string) {
   getRigctldVersion(baseDir).then(v => {
     ctx.rigctldVersion = v;
     ctx.isRigctldVersionSupported = checkVersionSupported(v);
-    vlog(`[HAMLIB] Detected rigctld version: ${v || "unknown"}`);
+    vlogRig(`[HAMLIB] Detected rigctld version: ${v || "unknown"}`);
     emitRigctldStatus(ctx);
   });
 
@@ -132,7 +132,7 @@ export async function startServer(appPath?: string, userDataPath?: string) {
     });
     socket.emit("rigctld-log", ctx.rigctldLogs);
 
-    vlog(`[VIDEO] New client ${socket.id} connected. videoStatus=${ctx.videoStatus} hasKeyframe=${!!ctx.lastKeyframe}`);
+    vlogVideo(`[VIDEO] New client ${socket.id} connected. videoStatus=${ctx.videoStatus} hasKeyframe=${!!ctx.lastKeyframe}`);
     socket.emit("video-source-status", {
       status: ctx.videoStatus,
       videoWidth: ctx.videoSettings.videoWidth,
@@ -141,7 +141,7 @@ export async function startServer(appPath?: string, userDataPath?: string) {
     });
     socket.emit("video-devices-list", ctx.videoDeviceList);
     if (ctx.videoStatus === "streaming" && ctx.lastKeyframe) {
-      vlog(`[VIDEO] Sending buffered keyframe to ${socket.id}: type=${ctx.lastKeyframe.type} dataBytes=${ctx.lastKeyframe.data.byteLength} hasDescription=${!!ctx.lastKeyframe.description}`);
+      vlogVideo(`[VIDEO] Sending buffered keyframe to ${socket.id}: type=${ctx.lastKeyframe.type} dataBytes=${ctx.lastKeyframe.data.byteLength} hasDescription=${!!ctx.lastKeyframe.description}`);
       socket.emit("video-frame", ctx.lastKeyframe);
     }
 
@@ -174,7 +174,7 @@ export async function startServer(appPath?: string, userDataPath?: string) {
   // Registers all functional (post-auth) socket handlers for a given socket
   const registerFunctionalHandlers = (socket: import("socket.io").Socket, clientId: string) => {
     socket.emit("audio-engine-state", { isReady: ctx.isAudioEngineReady, error: ctx.audioEngineError });
-    socket.emit("verbose-mode", VERBOSE);
+    socket.emit("debug-flags", debugFlags);
 
     registerRigCommHandlers(socket, ctx);
     registerRigctldHandlers(socket, ctx);
@@ -257,7 +257,7 @@ export async function startServer(appPath?: string, userDataPath?: string) {
       }
 
       if (socket.id === ctx.videoSourceSocketId) {
-        vlog("[VIDEO] Source client disconnected — stopping stream.");
+        vlogVideo("[VIDEO] Source client disconnected — stopping stream.");
         ctx.videoSourceSocketId = null;
         ctx.lastKeyframe = null;
         ctx.videoStatus = "stopped";
@@ -275,7 +275,7 @@ export async function startServer(appPath?: string, userDataPath?: string) {
             }
           });
           if (!hasActiveSocket && ctx.activeMicClientId === clientId) {
-            vlog(`[AUDIO] Releasing mic for disconnected client: ${clientId}`);
+            vlogAudio(`[AUDIO] Releasing mic for disconnected client: ${clientId}`);
             ctx.activeMicClientId = null;
             ctx.io.emit("mic-active-client", null);
           }
@@ -331,8 +331,8 @@ export async function startServer(appPath?: string, userDataPath?: string) {
   _shutdown = async () => {
     const step = (label: string) => {
       const start = Date.now();
-      vlog(`[SHUTDOWN] ${label}`);
-      return () => vlog(`[SHUTDOWN] ${label} done (${Date.now() - start}ms)`);
+      vlogInfra(`[SHUTDOWN] ${label}`);
+      return () => vlogInfra(`[SHUTDOWN] ${label} done (${Date.now() - start}ms)`);
     };
 
     let done = step("closeKeyerPort");
@@ -381,22 +381,22 @@ export async function startServer(appPath?: string, userDataPath?: string) {
     done = step("httpServer.close()");
     await Promise.race([
       new Promise<void>((resolve) => httpServer.close(() => resolve())),
-      new Promise<void>((resolve) => setTimeout(() => { vlog("[SHUTDOWN] httpServer.close() timed out after 2s"); resolve(); }, 2000)),
+      new Promise<void>((resolve) => setTimeout(() => { vlogInfra("[SHUTDOWN] httpServer.close() timed out after 2s"); resolve(); }, 2000)),
     ]);
     done();
 
     // Log any handles still keeping the event loop alive so we can identify blockers.
     if (typeof (process as any)._getActiveHandles === "function") {
       const handles: any[] = (process as any)._getActiveHandles();
-      vlog(`[SHUTDOWN] Active handles: ${handles.length}`);
-      handles.forEach(h => vlog(`[SHUTDOWN]   ${h?.constructor?.name ?? typeof h}`));
+      vlogInfra(`[SHUTDOWN] Active handles: ${handles.length}`);
+      handles.forEach(h => vlogInfra(`[SHUTDOWN]   ${h?.constructor?.name ?? typeof h}`));
     }
     if (typeof (process as any)._getActiveRequests === "function") {
       const reqs: any[] = (process as any)._getActiveRequests();
-      if (reqs.length) vlog(`[SHUTDOWN] Active requests: ${reqs.length}`);
+      if (reqs.length) vlogInfra(`[SHUTDOWN] Active requests: ${reqs.length}`);
     }
 
-    vlog("[SHUTDOWN] Sequence complete");
+    vlogInfra("[SHUTDOWN] Sequence complete");
   };
 
   return new Promise<void>((resolve) => {

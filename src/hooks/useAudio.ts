@@ -171,7 +171,7 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef }: UseAudioO
       setAudioDevices(devices);
     };
 
-    const onVerboseMode = (v: boolean) => { audioVerbose = v; };
+    const onDebugFlags = ({ audio }: { audio: boolean }) => { audioVerbose = audio; };
 
     socket.on("settings-data", onSettingsData);
     socket.on("audio-status", onAudioStatus);
@@ -179,7 +179,7 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef }: UseAudioO
     socket.on("mic-active-client", onMicActiveClient);
     socket.on("mic-mute-forced", onMicMuteForced);
     socket.on("audio-devices-list", onAudioDevicesList);
-    socket.on("verbose-mode", onVerboseMode);
+    socket.on("debug-flags", onDebugFlags);
 
     return () => {
       socket.off("settings-data", onSettingsData);
@@ -188,7 +188,7 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef }: UseAudioO
       socket.off("mic-active-client", onMicActiveClient);
       socket.off("mic-mute-forced", onMicMuteForced);
       socket.off("audio-devices-list", onAudioDevicesList);
-      socket.off("verbose-mode", onVerboseMode);
+      socket.off("debug-flags", onDebugFlags);
     };
   }, [socket]);
 

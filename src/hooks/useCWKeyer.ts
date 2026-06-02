@@ -386,20 +386,20 @@ export function useCWKeyer({ socket, connected, localAudioOutputDevice }: UseCWK
       cwConnectTimeRef.current = performance.now();
     };
 
-    const onVerboseMode = (v: boolean) => { cwVerboseRef.current = v; };
+    const onDebugFlags = ({ cw }: { cw: boolean }) => { cwVerboseRef.current = cw; };
 
     socket.on("settings-data", onSettingsData);
     socket.on("cw-port-status", onCwPortStatus);
     socket.on("cw-stuck-key-alert", onCwStuckKeyAlert);
     socket.on("connect", onConnect);
-    socket.on("verbose-mode", onVerboseMode);
+    socket.on("debug-flags", onDebugFlags);
 
     return () => {
       socket.off("settings-data", onSettingsData);
       socket.off("cw-port-status", onCwPortStatus);
       socket.off("cw-stuck-key-alert", onCwStuckKeyAlert);
       socket.off("connect", onConnect);
-      socket.off("verbose-mode", onVerboseMode);
+      socket.off("debug-flags", onDebugFlags);
     };
   }, [socket]);
 

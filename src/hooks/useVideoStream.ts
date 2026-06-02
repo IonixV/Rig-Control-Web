@@ -343,7 +343,7 @@ export function useVideoStream({ socket, settingsLoaded }: UseVideoStreamOptions
       }
     };
 
-    const onVerboseMode = (v: boolean) => { videoVerbose = v; };
+    const onDebugFlags = ({ video }: { video: boolean }) => { videoVerbose = video; };
 
     socket.on("settings-data", onSettingsData);
     socket.on("video-devices-list", onVideoDevicesList);
@@ -352,7 +352,7 @@ export function useVideoStream({ socket, settingsLoaded }: UseVideoStreamOptions
     socket.on("video-start-requested", onVideoStartRequested);
     socket.on("video-stop-requested", onVideoStopRequested);
     socket.on("video-frame", onVideoFrame);
-    socket.on("verbose-mode", onVerboseMode);
+    socket.on("debug-flags", onDebugFlags);
 
     socket.emit("get-video-devices");
     if (isElectronSource) enumerateVideoDevices();
@@ -365,7 +365,7 @@ export function useVideoStream({ socket, settingsLoaded }: UseVideoStreamOptions
       socket.off("video-start-requested", onVideoStartRequested);
       socket.off("video-stop-requested", onVideoStopRequested);
       socket.off("video-frame", onVideoFrame);
-      socket.off("verbose-mode", onVerboseMode);
+      socket.off("debug-flags", onDebugFlags);
     };
   }, [socket]);
 

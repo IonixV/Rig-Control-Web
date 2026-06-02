@@ -13,7 +13,7 @@ if (!isDev) {
 console.log(`Electron starting. isDev: ${isDev}, NODE_ENV: ${process.env.NODE_ENV}`);
 
 import { startServer, setElectronWindow, shutdown } from '../server.ts';
-import { vlog } from '../server/vlog.ts';
+import { vlogInfra as vlog } from '../server/vlog.ts';
 
 const windowStatePath = path.join(app.getPath('userData'), 'window-state.json');
 

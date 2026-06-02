@@ -1,6 +1,6 @@
 import { Socket } from "socket.io";
 import { ServerContext } from "./context.ts";
-import { vlog } from "./vlog.ts";
+import { vlogVideo as vlog } from "./vlog.ts";
 
 export function registerVideoHandlers(socket: Socket, ctx: ServerContext): void {
   socket.on("get-video-devices", () => {

@@ -495,7 +495,7 @@ export function useRigControl({
       });
     };
 
-    const onVerboseMode = (v: boolean) => { rigVerbose = v; };
+    const onDebugFlags = ({ rig }: { rig: boolean }) => { rigVerbose = rig; };
 
     socket.on("settings-data", onSettingsData);
     socket.on("rig-connected", onRigConnected);
@@ -505,7 +505,7 @@ export function useRigControl({
     socket.on("rig-op-error", onRigOpError);
     socket.on("raw-response", onRawResponse);
     socket.on("rig-status", onRigStatus);
-    socket.on("verbose-mode", onVerboseMode);
+    socket.on("debug-flags", onDebugFlags);
 
     socket.emit("get-settings");
     socket.emit("get-radios");
@@ -519,7 +519,7 @@ export function useRigControl({
       socket.off("rig-op-error", onRigOpError);
       socket.off("raw-response", onRawResponse);
       socket.off("rig-status", onRigStatus);
-      socket.off("verbose-mode", onVerboseMode);
+      socket.off("debug-flags", onDebugFlags);
       if (opErrorTimer.current) clearTimeout(opErrorTimer.current);
     };
   }, [socket]);

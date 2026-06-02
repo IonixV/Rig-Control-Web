@@ -1,6 +1,6 @@
 import { Socket } from "socket.io";
 import { ServerContext } from "./context.ts";
-import { vlog } from "./vlog.ts";
+import { vlogAudio as vlog } from "./vlog.ts";
 
 const OUTBOUND_SILENCE = Buffer.alloc(960 * 2);
 const OUTBOUND_PRE_FILL = 3;

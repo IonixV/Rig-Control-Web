@@ -1,7 +1,7 @@
 import net from "net";
 import { Socket } from "socket.io";
 import { ServerContext } from "./context.ts";
-import { vlog } from "./vlog.ts";
+import { vlogRig as vlog } from "./vlog.ts";
 
 export function formatExtendedCommand(cmd: string): string {
   const trimmed = cmd.trim();
