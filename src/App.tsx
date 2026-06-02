@@ -866,6 +866,8 @@ export default function App() {
             waterfallHistoryRef={waterfallHistoryRef}
             spectrumSupported={spectrumSupported}
             spectrumEnabled={spectrumEnabled}
+            spectrumSettings={spectrumSettings}
+            setSpectrumSettings={setSpectrumSettings}
             analyserNodeRef={analyserNodeRef}
             isSpectrumHamlibCollapsed={isSpectrumHamlibCollapsed}
             setIsSpectrumHamlibCollapsed={setIsSpectrumHamlibCollapsed}
@@ -1039,8 +1041,6 @@ export default function App() {
           sidetoneOscRef={sidetoneOscRef}
           rebindTarget={rebindTarget}
           setRebindTarget={setRebindTarget}
-          spectrumSettings={spectrumSettings}
-          setSpectrumSettings={setSpectrumSettings}
         />
       </div>
 

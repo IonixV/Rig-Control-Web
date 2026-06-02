@@ -8,7 +8,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "../utils";
-import type { CwSettings, RigctldSettings, SpectrumSettings } from "../types";
+import type { CwSettings, RigctldSettings } from "../types";
 
 const AdminTab = lazy(() => import("./AdminTab"));
 
@@ -20,14 +20,10 @@ export interface SettingsModalProps {
   role?: "admin" | "regular";
 
   // Tab state
-  activeSettingsTab: "rigctld" | "cw" | "spectrum" | "admin";
+  activeSettingsTab: "rigctld" | "cw" | "admin";
   setActiveSettingsTab: React.Dispatch<
-    React.SetStateAction<"rigctld" | "cw" | "spectrum" | "admin">
+    React.SetStateAction<"rigctld" | "cw" | "admin">
   >;
-
-  // Spectrum tab
-  spectrumSettings: SpectrumSettings;
-  setSpectrumSettings: React.Dispatch<React.SetStateAction<SpectrumSettings>>;
 
   // Rigctld tab
   rigctldSettings: RigctldSettings;
@@ -89,8 +85,6 @@ function SettingsModal({
   sidetoneOscRef,
   rebindTarget,
   setRebindTarget,
-  spectrumSettings,
-  setSpectrumSettings,
 }: SettingsModalProps) {
   if (!isOpen) return null;
   return (
@@ -114,8 +108,8 @@ function SettingsModal({
     {/* Tab Bar */}
     <div className="flex border-b border-[#2a2b2e] bg-[#1a1b1e]">
       {(role === "admin"
-        ? (["rigctld", "cw", "spectrum", "admin"] as const)
-        : (["rigctld", "cw", "spectrum"] as const)
+        ? (["rigctld", "cw", "admin"] as const)
+        : (["rigctld", "cw"] as const)
       ).map((tab) => (
         <button
           key={tab}
@@ -600,75 +594,6 @@ function SettingsModal({
       </div>
 
     </div>
-    )}
-
-    {activeSettingsTab === 'spectrum' && (
-      <div className="p-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-xs font-semibold text-[#e0e0e0]">Enable Hamlib Spectrum Scope</div>
-            <div className="text-[0.625rem] text-[#8e9299] mt-0.5">Receives spectrum data via rigctld UDP multicast</div>
-          </div>
-          <button
-            onClick={() => {
-              const next = { ...spectrumSettings, enabled: !spectrumSettings.enabled };
-              setSpectrumSettings(next);
-              socket?.emit("save-settings", { spectrumSettings: next });
-            }}
-            className={cn(
-              "w-10 h-5 rounded-full transition-colors relative",
-              spectrumSettings.enabled ? "bg-emerald-500" : "bg-[#2a2b2e]"
-            )}
-          >
-            <span className={cn(
-              "absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all",
-              spectrumSettings.enabled ? "left-5.5" : "left-0.5"
-            )} />
-          </button>
-        </div>
-
-        {spectrumSettings.enabled && (
-          <div className="space-y-3 pt-2">
-            <div className="flex items-center justify-between gap-3">
-              <label className="text-xs text-[#e0e0e0] shrink-0">Multicast Address</label>
-              <input
-                type="text"
-                value={spectrumSettings.multicastAddr}
-                onChange={e => setSpectrumSettings(prev => ({ ...prev, multicastAddr: e.target.value }))}
-                onBlur={() => socket?.emit("save-settings", { spectrumSettings })}
-                className="bg-[#1a1b1e] border border-[#2a2b2e] rounded px-2 py-1 text-xs text-[#e0e0e0] w-36"
-              />
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <label className="text-xs text-[#e0e0e0] shrink-0">Multicast Port</label>
-              <input
-                type="number"
-                value={spectrumSettings.multicastPort}
-                onChange={e => setSpectrumSettings(prev => ({ ...prev, multicastPort: Number(e.target.value) }))}
-                onBlur={() => socket?.emit("save-settings", { spectrumSettings })}
-                className="bg-[#1a1b1e] border border-[#2a2b2e] rounded px-2 py-1 text-xs text-[#e0e0e0] w-24"
-              />
-            </div>
-          </div>
-        )}
-
-        <div className="rounded-lg bg-[#1a1b1e] border border-[#2a2b2e] p-3 text-[0.625rem] text-[#8e9299] space-y-1 leading-relaxed">
-          <div className="font-semibold text-[#b0b3b8]">Requirements</div>
-          <div>• rigctld 4.5+ (already required by this app)</div>
-          <div>• Radio with CI-V spectrum scope: IC-7300, IC-7610, IC-705, IC-9700</div>
-          <div>• Serial speed must be 115200 baud for spectrum data</div>
-          <div>• CI-V Transceive must remain OFF on the radio</div>
-        </div>
-
-        {rigctldProcessStatus === "already_running" && spectrumSettings.enabled && (
-          <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-3 text-[0.625rem] text-amber-300 space-y-1 leading-relaxed">
-            <div className="font-semibold">External rigctld — add these flags:</div>
-            <div className="font-mono bg-black/30 rounded p-2 select-all break-all">
-              {`--multicast-addr ${spectrumSettings.multicastAddr} --multicast-port ${spectrumSettings.multicastPort} --set-conf=async=1 --set-conf=transceive=POLL`}
-            </div>
-          </div>
-        )}
-      </div>
     )}
 
     {activeSettingsTab === 'admin' && role === 'admin' && (

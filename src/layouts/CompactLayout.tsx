@@ -224,6 +224,8 @@ export interface CompactLayoutProps {
   waterfallHistoryRef: React.MutableRefObject<number[][]>;
   spectrumSupported: boolean;
   spectrumEnabled: boolean;
+  spectrumSettings: import("../types").SpectrumSettings;
+  setSpectrumSettings: React.Dispatch<React.SetStateAction<import("../types").SpectrumSettings>>;
   analyserNodeRef: React.MutableRefObject<AnalyserNode | null>;
   isSpectrumHamlibCollapsed: boolean;
   setIsSpectrumHamlibCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
@@ -375,6 +377,8 @@ function CompactLayout({
   waterfallHistoryRef,
   spectrumSupported,
   spectrumEnabled,
+  spectrumSettings,
+  setSpectrumSettings,
   analyserNodeRef,
   isSpectrumHamlibCollapsed,
   setIsSpectrumHamlibCollapsed,
@@ -838,6 +842,9 @@ function CompactLayout({
             waterfallHistoryRef={waterfallHistoryRef}
             spectrumSupported={spectrumSupported}
             spectrumEnabled={spectrumEnabled}
+            spectrumSettings={spectrumSettings}
+            setSpectrumSettings={setSpectrumSettings}
+            socket={socket}
             connected={connected}
             handleSetFreq={handleSetFreq}
             isCollapsed={isSpectrumHamlibCollapsed}

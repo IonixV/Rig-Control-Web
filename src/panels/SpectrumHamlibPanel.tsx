@@ -1,19 +1,31 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
-import { Activity } from "lucide-react";
+import { Activity, Settings, X } from "lucide-react";
+import type { Socket } from "socket.io-client";
 import PanelChrome from "../components/PanelChrome";
-import type { SpectrumData } from "../types";
+import type { SpectrumData, SpectrumSettings } from "../types";
 import { COLORMAPS, COLORMAP_NAMES, amplitudeToPixel } from "../utils/spectrumColors";
 
 const DEFAULT_HEIGHT = 350;
 const SPECTRUM_RATIO = 0.3;
 const FLOOR_DEFAULT = -130;
 const CEILING_DEFAULT = -40;
+const LS_PREFIX = "spectrum-hamlib-";
+
+function lsGet(key: string, fallback: string): string {
+  try { return localStorage.getItem(LS_PREFIX + key) ?? fallback; } catch { return fallback; }
+}
+function lsSet(key: string, value: string): void {
+  try { localStorage.setItem(LS_PREFIX + key, value); } catch { /* ignore */ }
+}
 
 interface Props {
   latestSpectrumRef: React.MutableRefObject<SpectrumData | null>;
   waterfallHistoryRef: React.MutableRefObject<number[][]>;
   spectrumSupported: boolean;
   spectrumEnabled: boolean;
+  spectrumSettings: SpectrumSettings;
+  setSpectrumSettings: React.Dispatch<React.SetStateAction<SpectrumSettings>>;
+  socket: Socket | null;
   connected: boolean;
   handleSetFreq: (freq: string) => void;
   isCollapsed: boolean;
@@ -26,6 +38,9 @@ export default function SpectrumHamlibPanel({
   waterfallHistoryRef,
   spectrumSupported,
   spectrumEnabled,
+  spectrumSettings,
+  setSpectrumSettings,
+  socket,
   connected,
   handleSetFreq,
   isCollapsed,
@@ -37,12 +52,13 @@ export default function SpectrumHamlibPanel({
   const animFrameRef = useRef<number>(0);
   const lastDrawnTimestampRef = useRef<number>(0);
 
-  const [colorMapId, setColorMapId] = useState("classic");
-  const [floor, setFloor] = useState(FLOOR_DEFAULT);
-  const [ceiling, setCeiling] = useState(CEILING_DEFAULT);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [colorMapId, setColorMapId] = useState(() => lsGet("colormap", "classic"));
+  const [floor, setFloor] = useState(() => Number(lsGet("floor", String(FLOOR_DEFAULT))));
+  const [ceiling, setCeiling] = useState(() => Number(lsGet("ceiling", String(CEILING_DEFAULT))));
 
   const spectrumHeight = Math.floor(heightPx * SPECTRUM_RATIO);
-  const waterfallHeight = heightPx - spectrumHeight - 20; // 20px for freq axis
+  const waterfallHeight = heightPx - spectrumHeight - 20;
 
   const freqLabel = useCallback((hz: number): string => {
     if (hz >= 1_000_000) return `${(hz / 1_000_000).toFixed(3)} MHz`;
@@ -95,7 +111,6 @@ export default function SpectrumHamlibPanel({
         const sh = specCanvas.height;
         sCtx.clearRect(0, 0, w, sh);
 
-        // Grid lines
         sCtx.strokeStyle = "rgba(255,255,255,0.08)";
         sCtx.lineWidth = 1;
         for (let db = Math.ceil(floor / 10) * 10; db <= ceiling; db += 10) {
@@ -184,39 +199,146 @@ export default function SpectrumHamlibPanel({
   })();
 
   const headerActions = (
-    <div className="flex items-center gap-2 mr-1">
-      <select
-        value={colorMapId}
-        onChange={e => setColorMapId(e.target.value)}
-        className="bg-gray-700 text-gray-200 text-[0.5rem] rounded px-1 py-0.5 border border-gray-600"
+    <button
+      onClick={e => { e.stopPropagation(); setIsSettingsOpen(true); }}
+      className="p-1 rounded hover:bg-white/10 text-gray-400 hover:text-gray-200 transition-colors mr-1"
+      title="Spectrum scope settings"
+    >
+      <Settings size={13} />
+    </button>
+  );
+
+  const settingsModal = isSettingsOpen && (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto"
+      onClick={() => setIsSettingsOpen(false)}
+    >
+      <div
+        className="bg-[#151619] w-full max-w-sm rounded-2xl border border-[#2a2b2e] shadow-2xl overflow-hidden mt-16"
         onClick={e => e.stopPropagation()}
       >
-        {COLORMAP_NAMES.map(cm => (
-          <option key={cm.id} value={cm.id}>{cm.label}</option>
-        ))}
-      </select>
-      <label className="flex items-center gap-1 text-[0.5rem] text-gray-400">
-        Floor
-        <input
-          type="range" min={-160} max={-60} step={5}
-          value={floor}
-          onChange={e => setFloor(Number(e.target.value))}
-          className="w-14 accent-green-500"
-          onClick={e => e.stopPropagation()}
-        />
-        <span className="w-8">{floor}</span>
-      </label>
-      <label className="flex items-center gap-1 text-[0.5rem] text-gray-400">
-        Ceil
-        <input
-          type="range" min={-100} max={0} step={5}
-          value={ceiling}
-          onChange={e => setCeiling(Number(e.target.value))}
-          className="w-14 accent-green-500"
-          onClick={e => e.stopPropagation()}
-        />
-        <span className="w-8">{ceiling}</span>
-      </label>
+        <div className="p-5 border-b border-[#2a2b2e] flex items-center justify-between bg-[#1a1b1e]">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400">
+              <Activity size={18} />
+            </div>
+            <h2 className="text-sm font-bold tracking-tight uppercase italic">CI-V Spectrum Settings</h2>
+          </div>
+          <button
+            onClick={() => setIsSettingsOpen(false)}
+            className="p-2 hover:bg-[#2a2b2e] rounded-xl text-[#8e9299] transition-all"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {/* Enable / disable */}
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xs font-semibold text-[#e0e0e0]">Enable CI-V Spectrum Scope</div>
+              <div className="text-[0.625rem] text-[#8e9299] mt-0.5">Receives spectrum data via rigctld UDP multicast</div>
+            </div>
+            <button
+              onClick={() => {
+                const next = { ...spectrumSettings, enabled: !spectrumSettings.enabled };
+                setSpectrumSettings(next);
+                socket?.emit("save-settings", { spectrumSettings: next });
+              }}
+              className={`w-10 h-5 rounded-full transition-colors relative ${spectrumSettings.enabled ? "bg-emerald-500" : "bg-[#2a2b2e]"}`}
+            >
+              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${spectrumSettings.enabled ? "left-5.5" : "left-0.5"}`} />
+            </button>
+          </div>
+
+          {/* Multicast config */}
+          {spectrumSettings.enabled && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <label className="text-xs text-[#e0e0e0] shrink-0">Multicast Address</label>
+                <input
+                  type="text"
+                  value={spectrumSettings.multicastAddr}
+                  onChange={e => setSpectrumSettings(prev => ({ ...prev, multicastAddr: e.target.value }))}
+                  onBlur={() => socket?.emit("save-settings", { spectrumSettings })}
+                  className="bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-3 py-2 text-xs text-[#e0e0e0] w-36 focus:outline-none focus:border-emerald-500 transition-all"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <label className="text-xs text-[#e0e0e0] shrink-0">Multicast Port</label>
+                <input
+                  type="number"
+                  value={spectrumSettings.multicastPort}
+                  onChange={e => setSpectrumSettings(prev => ({ ...prev, multicastPort: Number(e.target.value) }))}
+                  onBlur={() => socket?.emit("save-settings", { spectrumSettings })}
+                  className="bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-3 py-2 text-xs text-[#e0e0e0] w-24 focus:outline-none focus:border-emerald-500 transition-all"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Color map */}
+          <div className="space-y-2">
+            <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Color Map</label>
+            <select
+              value={colorMapId}
+              onChange={e => { setColorMapId(e.target.value); lsSet("colormap", e.target.value); }}
+              className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-all"
+            >
+              {COLORMAP_NAMES.map(cm => (
+                <option key={cm.id} value={cm.id}>{cm.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Floor */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Noise Floor</label>
+              <span className="text-xs font-mono text-[#8e9299]">{floor} dBm</span>
+            </div>
+            <input
+              type="range" min={-160} max={-60} step={5}
+              value={floor}
+              onChange={e => { setFloor(Number(e.target.value)); lsSet("floor", e.target.value); }}
+              className="w-full accent-emerald-500"
+            />
+          </div>
+
+          {/* Ceiling */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Ceiling</label>
+              <span className="text-xs font-mono text-[#8e9299]">{ceiling} dBm</span>
+            </div>
+            <input
+              type="range" min={-100} max={0} step={5}
+              value={ceiling}
+              onChange={e => { setCeiling(Number(e.target.value)); lsSet("ceiling", e.target.value); }}
+              className="w-full accent-emerald-500"
+            />
+          </div>
+
+          {/* Requirements */}
+          <div className="rounded-lg bg-[#1a1b1e] border border-[#2a2b2e] p-3 text-[0.625rem] text-[#8e9299] space-y-1 leading-relaxed">
+            <div className="font-semibold text-[#b0b3b8]">Requirements</div>
+            <div>• Hamlib 4.7+ (already required by this app)</div>
+            <div>• Radio with CI-V spectrum scope: IC-7300, IC-7610, IC-705, IC-9700</div>
+            <div>• Serial speed must be 115200 baud for spectrum data</div>
+            <div>• CI-V Transceive must remain OFF on the radio</div>
+          </div>
+
+          {/* External rigctld flags — always visible when enabled */}
+          {spectrumSettings.enabled && (
+            <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-3 text-[0.625rem] text-amber-300 space-y-1 leading-relaxed">
+              <div className="font-semibold">If managing rigctld externally, add these flags:</div>
+              <div className="font-mono bg-black/30 rounded p-2 select-all break-all">
+                {`--multicast-addr ${spectrumSettings.multicastAddr} --multicast-port ${spectrumSettings.multicastPort} --set-conf=async=1 --set-conf=transceive=POLL`}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 
@@ -224,7 +346,7 @@ export default function SpectrumHamlibPanel({
     if (!spectrumEnabled) {
       return (
         <div className="flex items-center justify-center h-24 text-gray-400 text-xs">
-          Spectrum scope is disabled. Enable it in Settings → Spectrum.
+          CI-V Spectrum Scope is disabled. Enable it in the panel settings.
         </div>
       );
     }
@@ -268,16 +390,19 @@ export default function SpectrumHamlibPanel({
   };
 
   return (
-    <PanelChrome
-      title="Spectrum Scope"
-      icon={<Activity size={14} />}
-      isCollapsed={isCollapsed}
-      setIsCollapsed={setIsCollapsed}
-      headerActions={headerActions}
-      headerSize="sm"
-      bodyClassName="p-0"
-    >
-      {renderBody()}
-    </PanelChrome>
+    <>
+      {settingsModal}
+      <PanelChrome
+        title="CI-V Spectrum Scope"
+        icon={<Activity size={14} />}
+        isCollapsed={isCollapsed}
+        setIsCollapsed={setIsCollapsed}
+        headerActions={headerActions}
+        headerSize="sm"
+        bodyClassName="p-0"
+      >
+        {renderBody()}
+      </PanelChrome>
+    </>
   );
 }
