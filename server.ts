@@ -55,7 +55,7 @@ export async function startServer(appPath?: string, userDataPath?: string) {
   // closeAllConnections() (Node 18.2+) does not destroy upgraded WebSocket
   // connections (Node.js bug #53536), so we handle it manually.
   const openSockets = new Set<import("net").Socket>();
-  httpServer.on("connection", (socket) => {
+  httpServer.on("connection", (socket: import("net").Socket) => {
     openSockets.add(socket);
     socket.on("close", () => openSockets.delete(socket));
   });

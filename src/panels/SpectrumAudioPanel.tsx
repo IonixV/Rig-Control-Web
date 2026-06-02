@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from "react";
-import { Waves } from "lucide-react";
+import { Settings, Waves, X } from "lucide-react";
 import PanelChrome from "../components/PanelChrome";
 import { COLORMAPS, COLORMAP_NAMES, amplitudeToPixel } from "../utils/spectrumColors";
 
@@ -8,6 +8,26 @@ const SPECTRUM_RATIO = 0.3;
 const FLOOR_DEFAULT = -120;
 const CEILING_DEFAULT = -20;
 const WATERFALL_MAX_LINES = 300;
+const LS_PREFIX = "spectrum-audio-";
+
+const BW_OPTIONS: { label: string; value: string }[] = [
+  { label: "Automatic", value: "auto" },
+  { label: "300 Hz", value: "300" },
+  { label: "500 Hz", value: "500" },
+  { label: "750 Hz", value: "750" },
+  { label: "1.0 kHz", value: "1000" },
+  { label: "1.5 kHz", value: "1500" },
+  { label: "2.0 kHz", value: "2000" },
+  { label: "2.7 kHz", value: "2700" },
+  { label: "3.0 kHz", value: "3000" },
+  { label: "3.2 kHz", value: "3200" },
+  { label: "4.0 kHz", value: "4000" },
+  { label: "6.0 kHz", value: "6000" },
+  { label: "8.0 kHz", value: "8000" },
+  { label: "10.0 kHz", value: "10000" },
+  { label: "12.0 kHz", value: "12000" },
+  { label: "15.0 kHz", value: "15000" },
+];
 
 interface Props {
   analyserNodeRef: React.MutableRefObject<AnalyserNode | null>;
@@ -23,6 +43,13 @@ function computeDisplayBandwidth(bandwidth: number, mode: string, maxHz: number)
   const bw = bandwidth === 0 ? 3000 : bandwidth;
   const isCw = mode === "CW" || mode === "CWR";
   return Math.min(isCw ? bw * 2 : bw, maxHz);
+}
+
+function lsGet(key: string, fallback: string): string {
+  try { return localStorage.getItem(LS_PREFIX + key) ?? fallback; } catch { return fallback; }
+}
+function lsSet(key: string, value: string): void {
+  try { localStorage.setItem(LS_PREFIX + key, value); } catch { /* ignore */ }
 }
 
 export default function SpectrumAudioPanel({
@@ -41,16 +68,19 @@ export default function SpectrumAudioPanel({
   const freqDataBufRef = useRef<Float32Array | null>(null);
   const prevDisplayBwRef = useRef<number>(0);
 
-  const [colorMapId, setColorMapId] = useState("classic");
-  const [floor, setFloor] = useState(FLOOR_DEFAULT);
-  const [ceiling, setCeiling] = useState(CEILING_DEFAULT);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [colorMapId, setColorMapId] = useState(() => lsGet("colormap", "classic"));
+  const [floor, setFloor] = useState(() => Number(lsGet("floor", String(FLOOR_DEFAULT))));
+  const [ceiling, setCeiling] = useState(() => Number(lsGet("ceiling", String(CEILING_DEFAULT))));
+  const [bwOverride, setBwOverride] = useState<string>(() => lsGet("bwOverride", "auto"));
 
   const spectrumHeight = Math.floor(heightPx * SPECTRUM_RATIO);
   const waterfallHeight = heightPx - spectrumHeight - 20;
 
   const sampleRate = analyserNodeRef.current?.context.sampleRate ?? 48000;
   const maxHz = sampleRate / 2;
-  const displayBandwidth = computeDisplayBandwidth(bandwidth, mode, maxHz);
+  const autoBw = computeDisplayBandwidth(bandwidth, mode, maxHz);
+  const displayBandwidth = bwOverride === "auto" ? autoBw : Math.min(Number(bwOverride), maxHz);
 
   useEffect(() => {
     if (isCollapsed || audioStatus !== "playing") return;
@@ -75,7 +105,8 @@ export default function SpectrumAudioPanel({
       const totalBins = analyser.frequencyBinCount;
       const sr = analyser.context.sampleRate;
       const nyquist = sr / 2;
-      const displayBw = computeDisplayBandwidth(bandwidth, mode, nyquist);
+      const overrideVal = bwOverride === "auto" ? null : Math.min(Number(bwOverride), nyquist);
+      const displayBw = overrideVal ?? computeDisplayBandwidth(bandwidth, mode, nyquist);
       const endBin = Math.min(totalBins, Math.round((displayBw / nyquist) * totalBins));
 
       if (!freqDataBufRef.current || freqDataBufRef.current.length !== totalBins) {
@@ -84,7 +115,6 @@ export default function SpectrumAudioPanel({
       analyser.getFloatFrequencyData(freqDataBufRef.current);
       const freqData = freqDataBufRef.current;
 
-      // Capture full waterfall line; rendering slices to endBin
       waterfallLinesRef.current = [
         freqData.slice(),
         ...waterfallLinesRef.current,
@@ -162,7 +192,7 @@ export default function SpectrumAudioPanel({
     return () => {
       cancelAnimationFrame(animFrameRef.current);
     };
-  }, [isCollapsed, audioStatus, colorMapId, floor, ceiling, analyserNodeRef, bandwidth, mode, displayBandwidth]);
+  }, [isCollapsed, audioStatus, colorMapId, floor, ceiling, analyserNodeRef, bandwidth, mode, displayBandwidth, bwOverride]);
 
   const freqAxisContent = (
     <div className="relative h-5 text-[0.5rem] text-gray-400 select-none">
@@ -183,39 +213,107 @@ export default function SpectrumAudioPanel({
   );
 
   const headerActions = (
-    <div className="flex items-center gap-2 mr-1">
-      <select
-        value={colorMapId}
-        onChange={e => setColorMapId(e.target.value)}
-        className="bg-gray-700 text-gray-200 text-[0.5rem] rounded px-1 py-0.5 border border-gray-600"
+    <button
+      onClick={e => { e.stopPropagation(); setIsSettingsOpen(true); }}
+      className="p-1 rounded hover:bg-white/10 text-gray-400 hover:text-gray-200 transition-colors mr-1"
+      title="Waterfall settings"
+    >
+      <Settings size={13} />
+    </button>
+  );
+
+  const settingsModal = isSettingsOpen && (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto"
+      onClick={() => setIsSettingsOpen(false)}
+    >
+      <div
+        className="bg-[#151619] w-full max-w-sm rounded-2xl border border-[#2a2b2e] shadow-2xl overflow-hidden mt-16"
         onClick={e => e.stopPropagation()}
       >
-        {COLORMAP_NAMES.map(cm => (
-          <option key={cm.id} value={cm.id}>{cm.label}</option>
-        ))}
-      </select>
-      <label className="flex items-center gap-1 text-[0.5rem] text-gray-400">
-        Floor
-        <input
-          type="range" min={-160} max={-20} step={5}
-          value={floor}
-          onChange={e => setFloor(Number(e.target.value))}
-          className="w-14 accent-blue-500"
-          onClick={e => e.stopPropagation()}
-        />
-        <span className="w-8">{floor}</span>
-      </label>
-      <label className="flex items-center gap-1 text-[0.5rem] text-gray-400">
-        Ceil
-        <input
-          type="range" min={-80} max={0} step={5}
-          value={ceiling}
-          onChange={e => setCeiling(Number(e.target.value))}
-          className="w-14 accent-blue-500"
-          onClick={e => e.stopPropagation()}
-        />
-        <span className="w-8">{ceiling}</span>
-      </label>
+        <div className="p-5 border-b border-[#2a2b2e] flex items-center justify-between bg-[#1a1b1e]">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400">
+              <Waves size={18} />
+            </div>
+            <h2 className="text-sm font-bold tracking-tight uppercase italic">Audio Waterfall Settings</h2>
+          </div>
+          <button
+            onClick={() => setIsSettingsOpen(false)}
+            className="p-2 hover:bg-[#2a2b2e] rounded-xl text-[#8e9299] transition-all"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {/* Bandwidth */}
+          <div className="space-y-2">
+            <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Display Bandwidth</label>
+            <select
+              value={bwOverride}
+              onChange={e => {
+                setBwOverride(e.target.value);
+                lsSet("bwOverride", e.target.value);
+                waterfallLinesRef.current = [];
+              }}
+              className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all"
+            >
+              {BW_OPTIONS.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            {bwOverride === "auto" && (
+              <p className="text-[0.5rem] text-[#4a4b4e] uppercase font-bold">
+                Currently {displayBandwidth >= 1000 ? `${(displayBandwidth / 1000).toFixed(1)} kHz` : `${displayBandwidth} Hz`}
+                {mode === "CW" || mode === "CWR" ? " (CW ×2)" : ""}
+              </p>
+            )}
+          </div>
+
+          {/* Color map */}
+          <div className="space-y-2">
+            <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Color Map</label>
+            <select
+              value={colorMapId}
+              onChange={e => { setColorMapId(e.target.value); lsSet("colormap", e.target.value); }}
+              className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all"
+            >
+              {COLORMAP_NAMES.map(cm => (
+                <option key={cm.id} value={cm.id}>{cm.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Floor */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Noise Floor</label>
+              <span className="text-xs font-mono text-[#8e9299]">{floor} dBFS</span>
+            </div>
+            <input
+              type="range" min={-160} max={-20} step={5}
+              value={floor}
+              onChange={e => { setFloor(Number(e.target.value)); lsSet("floor", e.target.value); }}
+              className="w-full accent-blue-500"
+            />
+          </div>
+
+          {/* Ceiling */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Ceiling</label>
+              <span className="text-xs font-mono text-[#8e9299]">{ceiling} dBFS</span>
+            </div>
+            <input
+              type="range" min={-80} max={0} step={5}
+              value={ceiling}
+              onChange={e => { setCeiling(Number(e.target.value)); lsSet("ceiling", e.target.value); }}
+              className="w-full accent-blue-500"
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 
@@ -249,16 +347,19 @@ export default function SpectrumAudioPanel({
   };
 
   return (
-    <PanelChrome
-      title="Audio Waterfall"
-      icon={<Waves size={14} />}
-      isCollapsed={isCollapsed}
-      setIsCollapsed={setIsCollapsed}
-      headerActions={headerActions}
-      headerSize="sm"
-      bodyClassName="p-0"
-    >
-      {renderBody()}
-    </PanelChrome>
+    <>
+      {settingsModal}
+      <PanelChrome
+        title="Audio Waterfall"
+        icon={<Waves size={14} />}
+        isCollapsed={isCollapsed}
+        setIsCollapsed={setIsCollapsed}
+        headerActions={headerActions}
+        headerSize="sm"
+        bodyClassName="p-0"
+      >
+        {renderBody()}
+      </PanelChrome>
+    </>
   );
 }
