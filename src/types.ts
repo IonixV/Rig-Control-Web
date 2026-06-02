@@ -139,3 +139,24 @@ export interface AnfCapabilities {
 export interface RfPowerCapabilities {
   range: CapabilityRange;
 }
+
+export interface SpectrumData {
+  id: number;
+  name: string;
+  type: "FIXED" | "CENTER";
+  length: number;
+  amplitudes: number[];
+  minLevel: number;
+  maxLevel: number;
+  centerFreq: number;
+  span: number;
+  lowFreq: number;
+  highFreq: number;
+  timestamp: number;
+}
+
+export interface SpectrumSettings {
+  enabled: boolean;
+  multicastAddr: string;
+  multicastPort: number;
+}

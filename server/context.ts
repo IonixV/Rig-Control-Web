@@ -1,4 +1,5 @@
 import net from "net";
+import dgram from "dgram";
 import { Server } from "socket.io";
 import { ChildProcess } from "child_process";
 import type { AuthenticatedSocket } from "./authTypes.ts";
@@ -203,6 +204,15 @@ export interface ServerContext {
   // Per-socket connection timestamps (used by CW jitter buffer)
   socketConnectTimes: Map<string, number>;
 
+  // Spectrum scope
+  spectrumSettings: {
+    enabled: boolean;
+    multicastAddr: string;
+    multicastPort: number;
+  };
+  spectrumSocket: dgram.Socket | null;
+  spectrumSupported: boolean;
+
   // Cross-module callbacks (wired in orchestrator after modules init)
   saveSettings: () => void;
   sendToRig: (cmd: string, useExtended?: boolean, priority?: boolean) => Promise<string>;
@@ -351,6 +361,14 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
     cwClaimIdleTimer: null,
 
     socketConnectTimes: new Map(),
+
+    spectrumSettings: {
+      enabled: false,
+      multicastAddr: "224.0.0.1",
+      multicastPort: 4531,
+    },
+    spectrumSocket: null,
+    spectrumSupported: false,
 
     saveSettings: () => {},
     sendToRig: () => Promise.reject("sendToRig not yet initialized"),

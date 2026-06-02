@@ -35,6 +35,9 @@ export function loadSettings(ctx: ServerContext, settingsFile: string): void {
     if (data.cwSettings) {
       ctx.cwSettings = { ...ctx.cwSettings, ...data.cwSettings };
     }
+    if (data.spectrumSettings) {
+      ctx.spectrumSettings = { ...ctx.spectrumSettings, ...data.spectrumSettings };
+    }
   } catch (e) {
     console.error("Failed to load settings:", e);
   }
@@ -56,6 +59,7 @@ export function saveSettings(ctx: ServerContext, settingsFile: string): void {
       potaSettings: ctx.potaSettings,
       sotaSettings: ctx.sotaSettings,
       cwSettings: ctx.cwSettings,
+      spectrumSettings: ctx.spectrumSettings,
     }, null, 2));
   } catch (e) {
     console.error("[SETTINGS] Failed to save settings:", e);
@@ -68,6 +72,7 @@ export function registerSettingsHandlers(
   radiosFile: string,
   startPolling: () => void,
   syncKeyerPort: (forceReopen?: boolean) => Promise<void>,
+  onSpectrumEnabledChanged?: (enabled: boolean) => void,
 ): void {
   socket.on("save-settings", (data) => {
     const oldRigNumber = ctx.rigctldSettings.rigNumber;
@@ -92,6 +97,13 @@ export function registerSettingsHandlers(
       ctx.cwSettings = { ...ctx.cwSettings, ...data.cwSettings };
       const polarityChanged = data.cwSettings.serialKeyPolarity !== undefined && data.cwSettings.serialKeyPolarity !== oldPolarity;
       syncKeyerPort(polarityChanged);
+    }
+    if (data.spectrumSettings !== undefined) {
+      const wasEnabled = ctx.spectrumSettings.enabled;
+      ctx.spectrumSettings = { ...ctx.spectrumSettings, ...data.spectrumSettings };
+      if (onSpectrumEnabledChanged && ctx.spectrumSettings.enabled !== wasEnabled) {
+        onSpectrumEnabledChanged(ctx.spectrumSettings.enabled);
+      }
     }
 
     ctx.saveSettings();

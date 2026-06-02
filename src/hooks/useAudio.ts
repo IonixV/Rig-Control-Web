@@ -40,6 +40,7 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef }: UseAudioO
   const audioContextRef = useRef<AudioContext | null>(null);
   const playbackNodeRef = useRef<AudioWorkletNode | null>(null);
   const inboundGainRef = useRef<GainNode | null>(null);
+  const analyserNodeRef = useRef<AnalyserNode | null>(null);
   const captureNodeRef = useRef<AudioWorkletNode | null>(null);
   const opusDecoderRef = useRef<any>(null);
   const opusEncoderRef = useRef<any>(null);
@@ -150,6 +151,7 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef }: UseAudioO
         if (opusEncoderRef.current) { try { opusEncoderRef.current.close(); } catch (_) {} opusEncoderRef.current = null; }
         if (opusDecoderRef.current) { try { opusDecoderRef.current.close(); } catch (_) {} opusDecoderRef.current = null; }
         if (playbackNodeRef.current) { playbackNodeRef.current.disconnect(); playbackNodeRef.current = null; }
+        if (analyserNodeRef.current) { analyserNodeRef.current.disconnect(); analyserNodeRef.current = null; }
         if (audioContextRef.current) { audioContextRef.current.close().catch(() => {}); audioContextRef.current = null; }
         setLocalAudioReady(false);
       }
@@ -232,6 +234,10 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef }: UseAudioO
       playbackNodeRef.current.disconnect();
       playbackNodeRef.current = null;
     }
+    if (analyserNodeRef.current) {
+      analyserNodeRef.current.disconnect();
+      analyserNodeRef.current = null;
+    }
     if (inboundGainRef.current) {
       inboundGainRef.current.disconnect();
       inboundGainRef.current = null;
@@ -266,10 +272,15 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef }: UseAudioO
 
       if (!playbackNodeRef.current) {
         playbackNodeRef.current = new AudioWorkletNode(ctx, 'playback-processor');
+        const analyserNode = ctx.createAnalyser();
+        analyserNode.fftSize = 4096;
+        analyserNode.smoothingTimeConstant = 0.6;
+        analyserNodeRef.current = analyserNode;
         const gainNode = ctx.createGain();
         gainNode.gain.value = inboundVolumeRef.current;
         inboundGainRef.current = gainNode;
-        playbackNodeRef.current.connect(gainNode);
+        playbackNodeRef.current.connect(analyserNode);
+        analyserNode.connect(gainNode);
         gainNode.connect(ctx.destination);
       }
 
@@ -474,6 +485,7 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef }: UseAudioO
     isBackendEngineCollapsed, setIsBackendEngineCollapsed,
     audioContextRef,
     inboundGainRef,
+    analyserNodeRef,
     initLocalAudioPipeline,
     handleStartAudio,
     startMicCapture,

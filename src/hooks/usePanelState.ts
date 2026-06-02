@@ -20,6 +20,8 @@ export function usePanelState(callsign = "") {
   const [isMufMapCollapsed, setIsMufMapCollapsed] = useState(() => localStorage.getItem(ns("mufmap-collapsed")) === "true");
   const [isCwDecodeCollapsed, setIsCwDecodeCollapsed] = useState(() => localStorage.getItem(ns("cwdecode-collapsed")) === "true");
   const [isComboSpotsCollapsed, setIsComboSpotsCollapsed] = useState(() => localStorage.getItem(ns("combospots-collapsed")) === "true");
+  const [isSpectrumHamlibCollapsed, setIsSpectrumHamlibCollapsed] = useState(() => localStorage.getItem(ns("spectrum-hamlib-collapsed")) === "true");
+  const [isSpectrumAudioCollapsed, setIsSpectrumAudioCollapsed] = useState(() => localStorage.getItem(ns("spectrum-audio-collapsed")) === "true");
 
   useEffect(() => {
     localStorage.setItem(ns("console-collapsed"), isConsoleCollapsed.toString());
@@ -30,7 +32,9 @@ export function usePanelState(callsign = "") {
     localStorage.setItem(ns("mufmap-collapsed"), isMufMapCollapsed.toString());
     localStorage.setItem(ns("cwdecode-collapsed"), isCwDecodeCollapsed.toString());
     localStorage.setItem(ns("combospots-collapsed"), isComboSpotsCollapsed.toString());
-  }, [isSolarCollapsed, isMufMapCollapsed, isCwDecodeCollapsed, isComboSpotsCollapsed]);
+    localStorage.setItem(ns("spectrum-hamlib-collapsed"), isSpectrumHamlibCollapsed.toString());
+    localStorage.setItem(ns("spectrum-audio-collapsed"), isSpectrumAudioCollapsed.toString());
+  }, [isSolarCollapsed, isMufMapCollapsed, isCwDecodeCollapsed, isComboSpotsCollapsed, isSpectrumHamlibCollapsed, isSpectrumAudioCollapsed]);
 
   useEffect(() => {
     localStorage.setItem(ns("is-compact-smeter-collapsed"), isCompactSMeterCollapsed.toString());
@@ -53,5 +57,7 @@ export function usePanelState(callsign = "") {
     isMufMapCollapsed, setIsMufMapCollapsed,
     isCwDecodeCollapsed, setIsCwDecodeCollapsed,
     isComboSpotsCollapsed, setIsComboSpotsCollapsed,
+    isSpectrumHamlibCollapsed, setIsSpectrumHamlibCollapsed,
+    isSpectrumAudioCollapsed, setIsSpectrumAudioCollapsed,
   };
 }

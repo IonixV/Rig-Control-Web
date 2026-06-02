@@ -211,15 +211,27 @@ export async function startRigctld(ctx: ServerContext): Promise<void> {
   }
 
   const rigctldPath = getRigctldPath(ctx.baseDir);
-  console.log(`Starting rigctld: ${rigctldPath} -m ${rigNumber} -r ${serialPort} -t ${portNumber} -T ${ipAddress} -s ${serialPortSpeed}`);
 
-  ctx.rigctldProcess = spawn(rigctldPath, [
+  const args = [
     "-m", rigNumber,
     "-r", serialPort,
     "-t", portNumber,
     "-T", ipAddress,
     "-s", serialPortSpeed,
-  ], { detached: false });
+  ];
+
+  if (ctx.spectrumSettings.enabled) {
+    args.push(
+      "--multicast-addr", ctx.spectrumSettings.multicastAddr,
+      "--multicast-port", String(ctx.spectrumSettings.multicastPort),
+      "--set-conf=async=1",
+      "--set-conf=transceive=POLL",
+    );
+  }
+
+  console.log(`Starting rigctld: ${rigctldPath} ${args.join(" ")}`);
+
+  ctx.rigctldProcess = spawn(rigctldPath, args, { detached: false });
 
   ctx.rigctldStatus = "running";
   emitRigctldStatus(ctx);

@@ -17,6 +17,18 @@ export const PANEL_CONFIG_OPTIONS: Partial<Record<string, PanelConfigOptions>> =
     hasFullWidth: true,
     defaultFullWidth: true,
   },
+  spectrum_hamlib: {
+    hasHeightSlider: true,
+    defaultHeightPx: 350,
+    hasFullWidth: true,
+    defaultFullWidth: false,
+  },
+  spectrum_audio: {
+    hasHeightSlider: true,
+    defaultHeightPx: 350,
+    hasFullWidth: true,
+    defaultFullWidth: false,
+  },
 };
 
 export type PanelType =
@@ -35,7 +47,9 @@ export type PanelType =
   | 'spots_wwff'
   | 'spots_combo'
   | 'solar'
-  | 'mufmap';
+  | 'mufmap'
+  | 'spectrum_hamlib'
+  | 'spectrum_audio';
 
 export interface GridItem {
   i: string;
@@ -84,6 +98,8 @@ export const PANEL_LABELS: Record<PanelType, string> = {
   spots_combo: 'All Spots',
   solar: 'Solar Conditions',
   mufmap: 'MUF Map',
+  spectrum_hamlib: 'Spectrum Scope',
+  spectrum_audio: 'Audio Waterfall',
 };
 
 export const PANEL_MIN_SIZES: Partial<Record<PanelType, { minW: number; minH: number }>> = {
@@ -91,6 +107,8 @@ export const PANEL_MIN_SIZES: Partial<Record<PanelType, { minW: number; minH: nu
   videoaudio: { minW: 1, minH: 1 },
   commandconsole: { minW: 1, minH: 1 },
   mufmap: { minW: 1, minH: 1 },
+  spectrum_hamlib: { minW: 2, minH: 2 },
+  spectrum_audio: { minW: 2, minH: 2 },
 };
 
 export interface GridLayoutCallbacks {

@@ -20,12 +20,15 @@ import type {
   AnfCapabilities,
   RfPowerCapabilities,
   ConsoleLog,
+  SpectrumData,
 } from "../types";
 import type { GridItem, GridLayoutCallbacks, PanelType, ViewLayout } from "../types/layout";
 import { PANEL_LABELS } from "../types/layout";
 import type { SolarData } from "../types/solar";
 import SolarPanel from "../panels/SolarPanel";
 import MufMapPanel from "../panels/MufMapPanel";
+import SpectrumHamlibPanel from "../panels/SpectrumHamlibPanel";
+import SpectrumAudioPanel from "../panels/SpectrumAudioPanel";
 import PanelChrome from "../components/PanelChrome";
 import EditToolbar from "../components/EditToolbar";
 import PanelPicker from "../components/PanelPicker";
@@ -47,6 +50,7 @@ export type { GridLayoutCallbacks };
 const COMPACT_PANEL_TYPES: PanelType[] = [
   'vfo', 'smeter', 'videoaudio', 'controls', 'rflevels',
   'cwdecode', 'commandconsole', 'spots_pota', 'spots_sota', 'spots_wwff', 'spots_combo', 'solar', 'mufmap',
+  'spectrum_hamlib', 'spectrum_audio',
 ];
 
 export interface CompactLayoutProps {
@@ -214,6 +218,17 @@ export interface CompactLayoutProps {
   setCompactLayout: (layout: ViewLayout) => void;
   isEditMode: boolean;
   gridCallbacks?: GridLayoutCallbacks;
+
+  // Spectrum panels
+  latestSpectrumRef: React.MutableRefObject<SpectrumData | null>;
+  waterfallHistoryRef: React.MutableRefObject<number[][]>;
+  spectrumSupported: boolean;
+  spectrumEnabled: boolean;
+  analyserNodeRef: React.MutableRefObject<AnalyserNode | null>;
+  isSpectrumHamlibCollapsed: boolean;
+  setIsSpectrumHamlibCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  isSpectrumAudioCollapsed: boolean;
+  setIsSpectrumAudioCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 function CompactLayout({
@@ -356,6 +371,15 @@ function CompactLayout({
   setCompactLayout,
   isEditMode,
   gridCallbacks,
+  latestSpectrumRef,
+  waterfallHistoryRef,
+  spectrumSupported,
+  spectrumEnabled,
+  analyserNodeRef,
+  isSpectrumHamlibCollapsed,
+  setIsSpectrumHamlibCollapsed,
+  isSpectrumAudioCollapsed,
+  setIsSpectrumAudioCollapsed,
 }: CompactLayoutProps) {
 
   const [showPanelPicker, setShowPanelPicker] = useState(false);
@@ -805,6 +829,34 @@ function CompactLayout({
           >
             <MufMapPanel heightPx={_item.heightPx} />
           </PanelChrome>
+        );
+
+      case 'spectrum_hamlib':
+        return (
+          <SpectrumHamlibPanel
+            latestSpectrumRef={latestSpectrumRef}
+            waterfallHistoryRef={waterfallHistoryRef}
+            spectrumSupported={spectrumSupported}
+            spectrumEnabled={spectrumEnabled}
+            connected={connected}
+            handleSetFreq={handleSetFreq}
+            isCollapsed={isSpectrumHamlibCollapsed}
+            setIsCollapsed={setIsSpectrumHamlibCollapsed}
+            heightPx={_item.heightPx}
+          />
+        );
+
+      case 'spectrum_audio':
+        return (
+          <SpectrumAudioPanel
+            analyserNodeRef={analyserNodeRef}
+            audioStatus={audioStatus}
+            isCollapsed={isSpectrumAudioCollapsed}
+            setIsCollapsed={setIsSpectrumAudioCollapsed}
+            heightPx={_item.heightPx}
+            bandwidth={parseInt(status?.bandwidth ?? "0", 10) || 0}
+            mode={status?.mode ?? ""}
+          />
         );
 
       default:

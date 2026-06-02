@@ -185,10 +185,12 @@ function parseDumpCapsIntoContext(dump: string, ctx: ServerContext): void {
     ctx.rigctldSettings.nbSupported = funcs.includes('NB');
     ctx.rigctldSettings.nrSupported = funcs.includes('NR');
     ctx.rigctldSettings.anfSupported = funcs.includes('ANF');
+    ctx.spectrumSupported = funcs.includes('SPECTRUM');
   } else {
     ctx.rigctldSettings.nbSupported = false;
     ctx.rigctldSettings.nrSupported = false;
     ctx.rigctldSettings.anfSupported = false;
+    ctx.spectrumSupported = false;
   }
 
   const getLevelLine = lines.find(l => l.trim().startsWith('Get level:'));
@@ -218,6 +220,7 @@ function emitCapabilities(ctx: ServerContext): void {
   ctx.io.emit("nr-capabilities", { supported: ctx.rigctldSettings.nrSupported, range: ctx.rigctldSettings.nrLevelRange });
   ctx.io.emit("rfpower-capabilities", { range: ctx.rigctldSettings.rfPowerRange });
   ctx.io.emit("anf-capabilities", { supported: ctx.rigctldSettings.anfSupported });
+  ctx.io.emit("spectrum-supported", ctx.spectrumSupported);
 }
 
 async function probeCapabilities(ctx: ServerContext): Promise<void> {
@@ -463,6 +466,14 @@ export function connectToRig(ctx: ServerContext, host: string, port: number, soc
     await probeVfoCapability(ctx);
     await probeCapabilities(ctx);
     ctx.io.emit("rig-connected", { host, port, vfoSupported: ctx.vfoSupported });
+    if (ctx.spectrumSettings.enabled && ctx.spectrumSupported) {
+      try {
+        await sendToRig(ctx, "U SPECTRUM 1", true);
+        console.log("[SPECTRUM] Enabled spectrum output on rig");
+      } catch (err) {
+        console.warn("[SPECTRUM] Failed to enable spectrum output:", err);
+      }
+    }
     startPolling(ctx);
   });
 

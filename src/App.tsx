@@ -32,6 +32,7 @@ import { useLayoutState } from "./hooks/useLayoutState";
 import { useCwDecoder } from "./hooks/useCwDecoder";
 import { usePanelState } from "./hooks/usePanelState";
 import { useLayoutConfig } from "./hooks/useLayoutConfig";
+import { useSpectrum } from "./hooks/useSpectrum";
 import type { PanelType, PanelAddConfig } from "./types/layout";
 
 export default function App() {
@@ -143,6 +144,8 @@ export default function App() {
     isMufMapCollapsed, setIsMufMapCollapsed,
     isCwDecodeCollapsed, setIsCwDecodeCollapsed,
     isComboSpotsCollapsed, setIsComboSpotsCollapsed,
+    isSpectrumHamlibCollapsed, setIsSpectrumHamlibCollapsed,
+    isSpectrumAudioCollapsed, setIsSpectrumAudioCollapsed,
   } = usePanelState(currentUser?.callsign ?? "");
 
   const {
@@ -154,6 +157,15 @@ export default function App() {
   } = useCwDecoder(hasCwDecodePanel);
 
   const { solarData, requestSolarData } = useSolarData(socket, hasSolarPanel);
+
+  const {
+    spectrumSupported,
+    spectrumEnabled,
+    spectrumSettings,
+    setSpectrumSettings,
+    latestSpectrumRef,
+    waterfallHistoryRef,
+  } = useSpectrum(socket);
 
   const {
     rigctldSettings, setRigctldSettings,
@@ -214,6 +226,7 @@ export default function App() {
     isBackendEngineCollapsed, setIsBackendEngineCollapsed,
     audioContextRef,
     inboundGainRef,
+    analyserNodeRef,
     initLocalAudioPipeline,
     handleStartAudio,
     startMicCapture,
@@ -849,6 +862,15 @@ export default function App() {
             isEditMode={isCompactEditMode}
             gridCallbacks={compactGridCallbacks}
             callsign={currentUser?.callsign ?? ""}
+            latestSpectrumRef={latestSpectrumRef}
+            waterfallHistoryRef={waterfallHistoryRef}
+            spectrumSupported={spectrumSupported}
+            spectrumEnabled={spectrumEnabled}
+            analyserNodeRef={analyserNodeRef}
+            isSpectrumHamlibCollapsed={isSpectrumHamlibCollapsed}
+            setIsSpectrumHamlibCollapsed={setIsSpectrumHamlibCollapsed}
+            isSpectrumAudioCollapsed={isSpectrumAudioCollapsed}
+            setIsSpectrumAudioCollapsed={setIsSpectrumAudioCollapsed}
           />
         )}
 
@@ -1017,6 +1039,8 @@ export default function App() {
           sidetoneOscRef={sidetoneOscRef}
           rebindTarget={rebindTarget}
           setRebindTarget={setRebindTarget}
+          spectrumSettings={spectrumSettings}
+          setSpectrumSettings={setSpectrumSettings}
         />
       </div>
 

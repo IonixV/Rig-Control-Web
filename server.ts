@@ -14,6 +14,7 @@ import { initAudioEngine, stopAudio, registerAudioHandlers } from "./server/audi
 import { syncKeyerPort, closeKeyerPort, cwSetKey, stopCwTick, registerCwHandlers } from "./server/cw.ts";
 import { registerVideoHandlers } from "./server/video.ts";
 import { registerSolarHandlers } from "./server/solar.ts";
+import { startSpectrumListener, stopSpectrumListener } from "./server/spectrum.ts";
 import {
   initAuth,
   issueToken,
@@ -84,6 +85,11 @@ export async function startServer(appPath?: string, userDataPath?: string) {
     startRigctld(ctx);
   }
 
+  // Start spectrum multicast listener if enabled
+  if (ctx.spectrumSettings.enabled) {
+    startSpectrumListener(ctx);
+  }
+
   // Open CW keyer serial port if needed
   await syncKeyerPort(ctx);
 
@@ -123,7 +129,9 @@ export async function startServer(appPath?: string, userDataPath?: string) {
       cwPortStatus: (ctx.cwKeyerProcess && !ctx.cwKeyerProcess.killed)
         ? { open: true, port: ctx.cwSettings.keyerPort }
         : { open: false, port: ctx.cwSettings.keyerPort },
+      spectrumSettings: ctx.spectrumSettings,
     });
+    socket.emit("spectrum-supported", ctx.spectrumSupported);
     socket.emit("rigctld-status", {
       status: ctx.rigctldStatus,
       logs: ctx.rigctldLogs,
@@ -189,6 +197,13 @@ export async function startServer(appPath?: string, userDataPath?: string) {
       RADIOS_FILE,
       () => startPolling(ctx),
       (forceReopen) => syncKeyerPort(ctx, forceReopen),
+      (enabled) => {
+        if (enabled) {
+          startSpectrumListener(ctx);
+        } else {
+          stopSpectrumListener(ctx);
+        }
+      },
     );
 
     socket.on("get-settings", async () => { await pushInitialState(socket); });
@@ -361,6 +376,10 @@ export async function startServer(appPath?: string, userDataPath?: string) {
 
     done = step("stopPolling");
     stopPolling(ctx);
+    done();
+
+    done = step("stopSpectrumListener");
+    stopSpectrumListener(ctx);
     done();
 
     done = step("destroy rigSocket");
