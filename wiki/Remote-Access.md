@@ -98,7 +98,7 @@ For connections within your home network (same Wi-Fi or wired network), the buil
 
 For connections **outside your home network** — from a hotel, a friend's house, a mobile hotspot, or anywhere else — you will need a VPN that puts your remote device on the same network as your shack computer. Common solutions include Tailscale, WireGuard, and OpenVPN. Once your VPN is connected, use the server's VPN-assigned IP address in the browser the same way you would use the local network IP.
 
-> Exposing RigControl Web directly to the public internet without a VPN is not recommended. The built-in certificate is self-signed and the app has no built-in user authentication. A VPN is the simplest and safest approach for remote access.
+> Exposing RigControl Web directly to the public internet without a VPN is not recommended. The built-in certificate is self-signed and, while the app requires a login, a VPN provides an additional layer of network-level protection. A VPN is the simplest and safest approach for remote access.
 
 ---
 
