@@ -112,10 +112,6 @@ function AudioSettingsModal({
 
         <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
           <div className="space-y-4">
-            <div className="border-b border-blue-500/20 pb-1">
-              <h3 className="text-[0.625rem] uppercase text-blue-500 font-bold">Audio Settings (Bi-Directional)</h3>
-            </div>
-
             <div className="space-y-4">
               <h4 className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Local Client Audio (Your System)</h4>
 
