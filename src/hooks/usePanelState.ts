@@ -15,6 +15,7 @@ export function usePanelState(callsign = "") {
   const [isCompactControlsCollapsed, setIsCompactControlsCollapsed] = useState(() => localStorage.getItem(ns("is-compact-controls-collapsed")) === "true");
   const [isCompactRFPowerCollapsed, setIsCompactRFPowerCollapsed] = useState(() => localStorage.getItem(ns("is-compact-rfpower-collapsed")) === "true");
 
+  const [isAudioFeedCollapsed, setIsAudioFeedCollapsed] = useState(() => localStorage.getItem(ns("audio-feed-collapsed")) !== "false");
   const [isConsoleCollapsed, setIsConsoleCollapsed] = useState(() => localStorage.getItem(ns("console-collapsed")) === "true");
   const [isSolarCollapsed, setIsSolarCollapsed] = useState(() => localStorage.getItem(ns("solar-collapsed")) === "true");
   const [isMufMapCollapsed, setIsMufMapCollapsed] = useState(() => localStorage.getItem(ns("mufmap-collapsed")) === "true");
@@ -22,6 +23,10 @@ export function usePanelState(callsign = "") {
   const [isComboSpotsCollapsed, setIsComboSpotsCollapsed] = useState(() => localStorage.getItem(ns("combospots-collapsed")) === "true");
   const [isSpectrumHamlibCollapsed, setIsSpectrumHamlibCollapsed] = useState(() => localStorage.getItem(ns("spectrum-hamlib-collapsed")) === "true");
   const [isSpectrumAudioCollapsed, setIsSpectrumAudioCollapsed] = useState(() => localStorage.getItem(ns("spectrum-audio-collapsed")) === "true");
+
+  useEffect(() => {
+    localStorage.setItem(ns("audio-feed-collapsed"), isAudioFeedCollapsed.toString());
+  }, [isAudioFeedCollapsed]);
 
   useEffect(() => {
     localStorage.setItem(ns("console-collapsed"), isConsoleCollapsed.toString());
@@ -52,6 +57,7 @@ export function usePanelState(callsign = "") {
     isCompactSMeterCollapsed, setIsCompactSMeterCollapsed,
     isCompactControlsCollapsed, setIsCompactControlsCollapsed,
     isCompactRFPowerCollapsed, setIsCompactRFPowerCollapsed,
+    isAudioFeedCollapsed, setIsAudioFeedCollapsed,
     isConsoleCollapsed, setIsConsoleCollapsed,
     isSolarCollapsed, setIsSolarCollapsed,
     isMufMapCollapsed, setIsMufMapCollapsed,

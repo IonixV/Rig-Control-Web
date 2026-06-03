@@ -7,7 +7,8 @@ import type { PanelType, PanelAddConfig } from "../types/layout";
 const PANEL_ORDER: PanelType[] = [
   "vfo",
   "smeter",
-  "videoaudio",
+  "video_feed",
+  "audio_feed",
   "controls",
   "rflevels",
   "swr",

@@ -34,7 +34,8 @@ export const PANEL_CONFIG_OPTIONS: Partial<Record<string, PanelConfigOptions>> =
 export type PanelType =
   | 'vfo'
   | 'smeter'
-  | 'videoaudio'
+  | 'video_feed'
+  | 'audio_feed'
   | 'controls'
   | 'rflevels'
   | 'swr'
@@ -84,7 +85,8 @@ export interface LayoutConfig {
 export const PANEL_LABELS: Record<PanelType, string> = {
   vfo: 'VFO',
   smeter: 'Signal Meter',
-  videoaudio: 'Video & Audio',
+  video_feed: 'Video Feed',
+  audio_feed: 'Audio Feed',
   controls: 'Controls',
   rflevels: 'RF Levels',
   swr: 'SWR',
@@ -104,7 +106,8 @@ export const PANEL_LABELS: Record<PanelType, string> = {
 
 export const PANEL_MIN_SIZES: Partial<Record<PanelType, { minW: number; minH: number }>> = {
   vfo: { minW: 2, minH: 1 },
-  videoaudio: { minW: 1, minH: 1 },
+  video_feed: { minW: 1, minH: 1 },
+  audio_feed: { minW: 1, minH: 1 },
   commandconsole: { minW: 1, minH: 1 },
   mufmap: { minW: 1, minH: 1 },
   spectrum_hamlib: { minW: 2, minH: 2 },
