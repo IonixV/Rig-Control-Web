@@ -9,26 +9,28 @@ export const DEFAULT_COMPACT_LAYOUT: ViewLayout = {
   cols: 2,
   rows: 4,
   items: [
-    { i: 'vfo', x: 0, y: 0, w: 2, h: 1, minW: 2, minH: 1, panelType: 'vfo' },
-    { i: 'smeter', x: 0, y: 1, w: 1, h: 1, minW: 1, minH: 1, panelType: 'smeter' },
-    { i: 'videoaudio', x: 1, y: 1, w: 1, h: 1, minW: 1, minH: 1, panelType: 'videoaudio' },
-    { i: 'controls', x: 0, y: 2, w: 1, h: 1, minW: 1, minH: 1, panelType: 'controls' },
-    { i: 'rflevels', x: 1, y: 2, w: 1, h: 1, minW: 1, minH: 1, panelType: 'rflevels' },
-    { i: 'commandconsole', x: 0, y: 3, w: 2, h: 1, minW: 1, minH: 1, panelType: 'commandconsole' },
+    { i: 'vfo',         x: 0, y: 0, w: 2, h: 1, minW: 2, minH: 1, panelType: 'vfo' },
+    { i: 'smeter',      x: 0, y: 1, w: 1, h: 1, minW: 1, minH: 1, panelType: 'smeter' },
+    { i: 'audio_feed',  x: 1, y: 1, w: 1, h: 1, minW: 1, minH: 1, panelType: 'audio_feed' },
+    { i: 'controls',    x: 0, y: 2, w: 1, h: 1, minW: 1, minH: 1, panelType: 'controls' },
+    { i: 'video_feed',  x: 1, y: 2, w: 1, h: 1, minW: 1, minH: 1, panelType: 'video_feed' },
+    { i: 'rflevels',    x: 0, y: 3, w: 1, h: 1, minW: 1, minH: 1, panelType: 'rflevels' },
+    { i: 'cwdecode',    x: 1, y: 3, w: 1, h: 1, minW: 1, minH: 1, panelType: 'cwdecode' },
   ],
 };
 
 export const DEFAULT_PHONE_LAYOUT: ViewLayout = {
   cols: 1,
-  rows: 7,
+  rows: 8,
   items: [
     { i: 'vfo', x: 0, y: 0, w: 1, h: 1, minW: 1, minH: 1, panelType: 'vfo' },
-    { i: 'videoaudio', x: 0, y: 1, w: 1, h: 1, minW: 1, minH: 1, panelType: 'videoaudio' },
-    { i: 'smeter', x: 0, y: 2, w: 1, h: 1, minW: 1, minH: 1, panelType: 'smeter' },
-    { i: 'controls', x: 0, y: 3, w: 1, h: 2, minW: 1, minH: 1, panelType: 'controls' },
-    { i: 'spots_pota', x: 0, y: 5, w: 1, h: 1, minW: 1, minH: 1, panelType: 'spots_pota' },
-    { i: 'spots_sota', x: 0, y: 6, w: 1, h: 1, minW: 1, minH: 1, panelType: 'spots_sota' },
-    { i: 'commandconsole', x: 0, y: 7, w: 1, h: 1, minW: 1, minH: 1, panelType: 'commandconsole' },
+    { i: 'video_feed', x: 0, y: 1, w: 1, h: 1, minW: 1, minH: 1, panelType: 'video_feed' },
+    { i: 'audio_feed', x: 0, y: 2, w: 1, h: 1, minW: 1, minH: 1, panelType: 'audio_feed' },
+    { i: 'smeter', x: 0, y: 3, w: 1, h: 1, minW: 1, minH: 1, panelType: 'smeter' },
+    { i: 'controls', x: 0, y: 4, w: 1, h: 2, minW: 1, minH: 1, panelType: 'controls' },
+    { i: 'spots_pota', x: 0, y: 6, w: 1, h: 1, minW: 1, minH: 1, panelType: 'spots_pota' },
+    { i: 'spots_sota', x: 0, y: 7, w: 1, h: 1, minW: 1, minH: 1, panelType: 'spots_sota' },
+    { i: 'commandconsole', x: 0, y: 8, w: 1, h: 1, minW: 1, minH: 1, panelType: 'commandconsole' },
   ],
 };
 
@@ -41,7 +43,14 @@ function loadFromStorage(storageKey: string): LayoutConfig | null {
   try {
     const raw = localStorage.getItem(storageKey);
     if (!raw) return null;
-    return JSON.parse(raw) as LayoutConfig;
+    const config = JSON.parse(raw) as LayoutConfig;
+    const hasLegacyPanel = (items: { panelType?: string }[]) =>
+      items.some(item => item.panelType === 'videoaudio');
+    if (hasLegacyPanel(config.compact.items) || hasLegacyPanel(config.phone.items)) {
+      localStorage.removeItem(storageKey);
+      return null;
+    }
+    return config;
   } catch {
     return null;
   }
