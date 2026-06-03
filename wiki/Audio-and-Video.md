@@ -1,31 +1,23 @@
 # Audio and Video
 
-RigControl Web supports two-way audio (transmit and receive) and a live video feed of your radio's front panel. Both are configured through the **Video & Audio** section of the main screen and the **Video & Audio Settings** panel.
+RigControl Web supports two-way audio (transmit and receive) and a live video feed of your radio's front panel. These are now surfaced as two separate panels — **Audio Feed** and **Video Feed** — each with its own settings modal. You can place them independently in your layout, and the Audio Feed panel is useful even on rigs that have no video output.
 
 ---
 
-## Opening Video & Audio Settings
+## Audio Feed Panel
 
-In the **Video & Audio** section header, click the **gear icon** to open the settings panel. This is where you configure your video capture device and both audio subsystems.
+The **Audio Feed** panel is a slim control strip. It has no expandable body — all of its controls live in the panel header:
+
+- **Join Audio** button — appears when a backend audio session is running but you have not yet connected your local devices to it.
+- **Inbound mute** (headphone icon) — mutes received audio in your local speakers; the radio keeps receiving.
+- **Outbound mute** (microphone icon) — mutes your local mic so your voice is not sent to the radio even if you key PTT.
+- **Gear icon** — opens **Audio Settings**.
 
 ---
 
-## Video
+## Opening Audio Settings
 
-Video lets you see your radio's front panel display on screen, which is especially useful when operating remotely. A common setup is to connect your radio's DVI or HDMI output to a USB HDMI capture card plugged into your shack computer.
-
-![RigControl Web — Video Settings](https://raw.githubusercontent.com/jbdubbs/Rig-Control-Web/main/assets/rigcontrolweb.manual.video.settings.png)
-
-### Setting Up Video
-
-1. Open Video & Audio Settings (gear icon in the Video & Audio section).
-2. Under **Video Settings**, select your capture device from the **Video Device** dropdown. If you do not see your device, make sure it is connected and recognized by your operating system.
-3. Set the **Resolution** — width × height in pixels. Match this to what your capture card supports, or start with `640 × 480` and adjust if needed.
-4. Choose a **Framerate**. Lower framerates (5–10 fps) use less bandwidth and are fine for watching a radio display. Higher framerates (24–30 fps) look smoother but use more resources.
-5. Click **Start Video**. The feed will appear in the Video & Audio panel on the main screen.
-6. Click **Stop Video** to stop the feed.
-
-The video feed is served from the server computer. Any client connected to RigControl Web will see the same video stream.
+Click the **gear icon** in the **Audio Feed** panel header to open Audio Settings. This is where you configure your microphone, speakers, volume, and the backend audio engine.
 
 ---
 
@@ -57,7 +49,7 @@ Think of it this way: **backend audio = the radio's end; local audio = your end*
 
 ### Configuring Local Client Audio
 
-1. Open Video & Audio Settings.
+1. Open Audio Settings (gear icon in the **Audio Feed** panel header).
 2. Under **Local Client Audio (Your System)**, select your microphone from the **Local Input (Microphone)** dropdown and your speakers or headphones from the **Local Output (Speakers/Headphones)** dropdown.
 3. Use the **Local Speaker Volume** slider (directly below the Local Output dropdown) to set the playback volume for received audio.
 4. These settings are saved in your browser and apply only to your device — a different device connecting to the same server will have its own local audio settings.
@@ -72,7 +64,7 @@ Think of it this way: **backend audio = the radio's end; local audio = your end*
 
 > The backend audio settings are configured once on the server (the shack computer). They do not need to be changed when connecting from a different device.
 
-1. Open Video & Audio Settings.
+1. Open Audio Settings (gear icon in the **Audio Feed** panel header).
 2. Scroll down to the **Backend Audio Engine** section. It shows a **READY** or **FAILED** status badge indicating whether the audio hardware initialized correctly.
 3. Select the audio device connected to your radio under **Backend Input (Mic/Line)** (receive audio from the radio). Use the toggle switch next to the label to enable or disable this direction.
 4. Select the audio device connected to your radio under **Backend Output (Speakers)** (transmit audio to the radio). Use its toggle switch to enable or disable it.
@@ -87,17 +79,17 @@ Think of it this way: **backend audio = the radio's end; local audio = your end*
 
 ### Starting and Joining Audio
 
-Once the backend audio engine is running, the **Join Audio** button appears in the Video & Audio panel header on the main screen.
+Once the backend audio engine is running, the **Join Audio** button appears in the **Audio Feed** panel header on the main screen.
 
 - **Join Audio** — Connects your browser session to the running audio stream. You will hear received audio through your local output device, and your local microphone will be available for transmitting. You must join audio before the mute buttons or PTT audio will work.
 
-If the backend audio engine is not started yet, you will not see the Join Audio button. Start the backend audio engine first (in Video & Audio Settings), then join from the main screen.
+If the backend audio engine is not started yet, you will not see the Join Audio button. Start the backend audio engine first (in Audio Settings), then join from the main screen.
 
 ---
 
 ### Mute Controls
 
-Once you have joined audio, two mute buttons appear in the Video & Audio panel header:
+Once you have joined audio, two mute buttons appear in the **Audio Feed** panel header:
 
 - **Inbound mute** (headphone icon) — Mutes received audio so you do not hear it through your local speakers. The radio continues receiving; you just will not hear it.
 - **Outbound mute** (microphone icon) — Mutes your microphone so your voice is not sent to the radio even if you key PTT.
@@ -106,7 +98,7 @@ Once you have joined audio, two mute buttons appear in the Video & Audio panel h
 
 ### Local Speaker Volume
 
-The **Local Speaker Volume** slider is found directly below the Local Output (Speakers/Headphones) dropdown in Video & Audio Settings.
+The **Local Speaker Volume** slider is found in Audio Settings under the Local Output (Speakers/Headphones) dropdown.
 
 - **0%** — silence (equivalent to mute, but continuous rather than a toggle)
 - **100%** — unity gain: audio plays at your system volume level with no modification
@@ -119,3 +111,36 @@ The slider adjusts volume in real time with no need to stop or restart audio. Yo
 ### Multi-Client Audio
 
 Multiple people can connect to the same RigControl Web server at the same time, and all of them can hear received audio simultaneously. However, only one client at a time can transmit. If another client's microphone is active, a warning will appear in the audio settings. Unmuting your own microphone (or pressing PTT) will transfer the transmit session to you.
+
+---
+
+## Video Feed Panel
+
+The **Video Feed** panel displays a live stream of your radio's front panel. A common setup is to connect your radio's DVI or HDMI output to a USB HDMI capture card plugged into your shack computer. The panel shows the stream when active and a "Stopped" placeholder when it is not.
+
+The gear icon in the **Video Feed** panel header opens **Video Settings**.
+
+---
+
+## Opening Video Settings
+
+Click the **gear icon** in the **Video Feed** panel header to open Video Settings.
+
+---
+
+## Video
+
+Video lets you see your radio's front panel display on screen, which is especially useful when operating remotely.
+
+![RigControl Web — Video Settings](https://raw.githubusercontent.com/jbdubbs/Rig-Control-Web/main/assets/rigcontrolweb.manual.video.settings.png)
+
+### Setting Up Video
+
+1. Open Video Settings (gear icon in the **Video Feed** panel header).
+2. Under **Video Device**, select your capture device from the dropdown. If you do not see your device, make sure it is connected and recognized by your operating system.
+3. Set the **Resolution** — width × height in pixels. Match this to what your capture card supports, or start with `640 × 480` and adjust if needed.
+4. Choose a **Framerate**. Lower framerates (5–10 fps) use less bandwidth and are fine for watching a radio display. Higher framerates (24–30 fps) look smoother but use more resources.
+5. Click **Start Video**. The feed will appear in the **Video Feed** panel on the main screen.
+6. Click **Stop Video** to stop the feed.
+
+The video feed is served from the server computer. Any client connected to RigControl Web will see the same video stream.

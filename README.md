@@ -243,17 +243,18 @@ The tab also includes **Start / Stop / Test** controls for the `rigctld` process
 - **Sidetone**: Enable/disable local audio feedback, set tone frequency (Hz), and volume. The sidetone plays instantly in the browser — it does not travel through the radio.
 - **Key Bindings**: Rebind the dit, dah, and straight key keyboard keys. Click the binding and press any key to rebind.
 
-### Video & Audio Settings (monitor icon in the Video/Audio panel)
+### Video Settings (gear icon in the Video Feed panel)
 
-Open the **Video & Audio Settings** modal from the gear/monitor icon in the **Video & Audio** panel.
+Open the **Video Settings** modal from the gear icon in the **Video Feed** panel.
 
-**Video Settings**
 - **Video Device**: Capture device to stream (populated by the host Electron app).
 - **Resolution**: Width × height in pixels.
 - **Framerate**: 5, 10, 15, 24, or 30 fps.
 - Start / Stop video stream controls.
 
-**Audio Settings (Bi-Directional)**
+### Audio Settings (gear icon in the Audio Feed panel)
+
+Open the **Audio Settings** modal from the gear icon in the **Audio Feed** panel. The mute buttons and **Join Audio** prompt also live in the **Audio Feed** panel header.
 
 *Local Client Audio (Your System)*
 - **Local Input (Microphone)**: Browser-side mic device used to transmit your voice.
