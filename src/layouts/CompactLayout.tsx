@@ -35,9 +35,8 @@ import PanelPicker from "../components/PanelPicker";
 import CommandConsolePanel from "../panels/CommandConsolePanel";
 import RfLevelsPanel from "../panels/RfLevelsPanel";
 import VfoPanel, { VfoCollapsedHeader } from "../panels/VfoPanel";
-import VideoAudioPanel, {
-  VideoAudioHeaderActions,
-} from "../panels/VideoAudioPanel";
+import VideoFeedPanel, { VideoFeedHeaderActions } from "../panels/VideoFeedPanel";
+import { AudioFeedHeaderActions } from "../panels/AudioFeedPanel";
 import ControlsPanel from "../panels/ControlsPanel";
 import CwDecodePanel from "../panels/CwDecodePanel";
 import { SpotSettingsGear } from "../panels/SpotsPanel";
@@ -48,7 +47,7 @@ import ComboSpotSettingsModal from "../modals/ComboSpotSettingsModal";
 export type { GridLayoutCallbacks };
 
 const COMPACT_PANEL_TYPES: PanelType[] = [
-  'vfo', 'smeter', 'videoaudio', 'controls', 'rflevels',
+  'vfo', 'smeter', 'video_feed', 'audio_feed', 'controls', 'rflevels',
   'cwdecode', 'commandconsole', 'spots_pota', 'spots_sota', 'spots_wwff', 'spots_combo', 'solar', 'mufmap',
   'spectrum_hamlib', 'spectrum_audio',
 ];
@@ -94,7 +93,7 @@ export interface CompactLayoutProps {
   cwScrollContainerRef: React.RefObject<HTMLDivElement>;
   setCwDecodedText: React.Dispatch<React.SetStateAction<string>>;
 
-  // Video
+  // Video feed
   videoStatus: "streaming" | "stopped";
   isVideoCollapsed: boolean;
   isElectronSource: boolean;
@@ -106,8 +105,11 @@ export interface CompactLayoutProps {
   setVideoError: React.Dispatch<React.SetStateAction<string | null>>;
   enumerateVideoDevices: () => Promise<void>;
 
-  // Audio
+  // Audio feed
   audioStatus: "playing" | "stopped";
+  isAudioFeedCollapsed: boolean;
+  setIsAudioFeedCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsAudioSettingsOpen: React.Dispatch<React.SetStateAction<boolean>>;
   localAudioReady: boolean;
   inboundMuted: boolean;
   outboundMuted: boolean;
@@ -275,6 +277,9 @@ function CompactLayout({
   setVideoError,
   enumerateVideoDevices,
   audioStatus,
+  isAudioFeedCollapsed,
+  setIsAudioFeedCollapsed,
+  setIsAudioSettingsOpen,
   localAudioReady,
   inboundMuted,
   outboundMuted,
@@ -576,37 +581,28 @@ function CompactLayout({
           </div>
         );
 
-      case 'videoaudio':
+      case 'video_feed':
         return (
           <PanelChrome
-            title="Video & Audio"
+            title="Video Feed"
             icon={<Monitor size={12} />}
             isCollapsed={isVideoCollapsed}
             setIsCollapsed={setIsVideoCollapsed}
             headerActions={
-              <VideoAudioHeaderActions
+              <VideoFeedHeaderActions
                 variant="compact"
                 socket={socket}
                 videoStatus={videoStatus}
                 setIsVideoSettingsOpen={setIsVideoSettingsOpen}
                 enumerateVideoDevices={enumerateVideoDevices}
                 isElectronSource={isElectronSource}
-                audioStatus={audioStatus}
-                localAudioReady={localAudioReady}
-                audioWasRestarted={audioWasRestarted}
-                audioSettings={audioSettings}
-                inboundMuted={inboundMuted}
-                setInboundMuted={setInboundMuted}
-                outboundMuted={outboundMuted}
-                setOutboundMuted={setOutboundMuted}
-                handleJoinAudio={handleJoinAudio}
               />
             }
             className="shadow-lg"
             bodyClassName="p-0"
             headerSize="sm"
           >
-            <VideoAudioPanel
+            <VideoFeedPanel
               variant="compact"
               socket={socket}
               videoStatus={videoStatus}
@@ -616,6 +612,37 @@ function CompactLayout({
               videoPreviewCallbackRef={videoPreviewCallbackRef}
               videoCanvasRef={videoCanvasRef}
             />
+          </PanelChrome>
+        );
+
+      case 'audio_feed':
+        return (
+          <PanelChrome
+            title="Audio Feed"
+            icon={<Radio size={12} />}
+            isCollapsed={isAudioFeedCollapsed}
+            setIsCollapsed={setIsAudioFeedCollapsed}
+            headerActions={
+              <AudioFeedHeaderActions
+                variant="compact"
+                socket={socket}
+                audioStatus={audioStatus}
+                localAudioReady={localAudioReady}
+                audioWasRestarted={audioWasRestarted}
+                audioSettings={audioSettings}
+                inboundMuted={inboundMuted}
+                setInboundMuted={setInboundMuted}
+                outboundMuted={outboundMuted}
+                setOutboundMuted={setOutboundMuted}
+                handleJoinAudio={handleJoinAudio}
+                setIsAudioSettingsOpen={setIsAudioSettingsOpen}
+              />
+            }
+            className="shadow-lg"
+            headerSize="sm"
+            hideCollapse
+          >
+            {null}
           </PanelChrome>
         );
 

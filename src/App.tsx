@@ -18,6 +18,7 @@ import CompactLayout from "./layouts/CompactLayout";
 import PhoneStickyBar from "./layouts/PhoneStickyBar";
 import SettingsModal from "./modals/SettingsModal";
 import VideoSettingsModal from "./modals/VideoSettingsModal";
+import AudioSettingsModal from "./modals/AudioSettingsModal";
 import LoginScreen from "./components/LoginScreen";
 import ChangePasswordModal from "./components/ChangePasswordModal";
 import { useAuth } from "./hooks/useAuth";
@@ -145,6 +146,7 @@ export default function App() {
     isCompactSMeterCollapsed, setIsCompactSMeterCollapsed,
     isCompactControlsCollapsed, setIsCompactControlsCollapsed,
     isCompactRFPowerCollapsed, setIsCompactRFPowerCollapsed,
+    isAudioFeedCollapsed, setIsAudioFeedCollapsed,
     isConsoleCollapsed, setIsConsoleCollapsed,
     isSolarCollapsed, setIsSolarCollapsed,
     isMufMapCollapsed, setIsMufMapCollapsed,
@@ -215,6 +217,8 @@ export default function App() {
     startVideoCapture,
     stopVideoCapture,
   } = useVideoStream({ socket, settingsLoaded });
+
+  const [isAudioSettingsOpen, setIsAudioSettingsOpen] = useState(false);
 
   const waterfallActiveRef = useRef(false);
   useEffect(() => {
@@ -443,14 +447,12 @@ export default function App() {
     const explicitInput = localStorage.getItem("local-audio-input");
     const explicitOutput = localStorage.getItem("local-audio-output");
     if (!explicitInput && !explicitOutput) {
-      setIsVideoSettingsOpen(true);
-      socket?.emit("get-video-devices");
+      setIsAudioSettingsOpen(true);
       socket?.emit("get-audio-devices");
-      if (isElectronSource) enumerateVideoDevices();
       return;
     }
     await initLocalAudioPipeline();
-  }, [socket, isElectronSource, enumerateVideoDevices, initLocalAudioPipeline, setIsVideoSettingsOpen]);
+  }, [socket, initLocalAudioPipeline]);
 
   // ── Auth gates ────────────────────────────────────────────────────────────
   if (authState === "unknown") {
@@ -631,6 +633,9 @@ export default function App() {
             setVideoError={setVideoError}
             enumerateVideoDevices={enumerateVideoDevices}
             audioStatus={audioStatus}
+            isAudioFeedCollapsed={isAudioFeedCollapsed}
+            setIsAudioFeedCollapsed={setIsAudioFeedCollapsed}
+            setIsAudioSettingsOpen={setIsAudioSettingsOpen}
             localAudioReady={localAudioReady}
             inboundMuted={inboundMuted}
             outboundMuted={outboundMuted}
@@ -774,6 +779,9 @@ export default function App() {
             setVideoError={setVideoError}
             enumerateVideoDevices={enumerateVideoDevices}
             audioStatus={audioStatus}
+            isAudioFeedCollapsed={isAudioFeedCollapsed}
+            setIsAudioFeedCollapsed={setIsAudioFeedCollapsed}
+            setIsAudioSettingsOpen={setIsAudioSettingsOpen}
             localAudioReady={localAudioReady}
             inboundMuted={inboundMuted}
             outboundMuted={outboundMuted}
@@ -996,6 +1004,13 @@ export default function App() {
           resolutionDebounceRef={resolutionDebounceRef}
           resolutionDraftRef={resolutionDraftRef}
           videoSettingsRef={videoSettingsRef}
+        />
+
+        {/* Audio Settings Modal */}
+        <AudioSettingsModal
+          isOpen={isAudioSettingsOpen}
+          onClose={() => setIsAudioSettingsOpen(false)}
+          socket={socket}
           audioStatus={audioStatus}
           audioSettings={audioSettings}
           setAudioSettings={setAudioSettings}

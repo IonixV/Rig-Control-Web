@@ -23,6 +23,8 @@ export interface PanelChromeProps {
   /** Forwarded to outer div. Used by SpotsPanel for scroll-into-view. */
   outerRef?: React.RefObject<HTMLDivElement>;
   collapseTitle?: string;
+  /** Hides the collapse chevron entirely. Use for panels with no expandable body. */
+  hideCollapse?: boolean;
 }
 
 const headerPaddingMap = {
@@ -51,6 +53,7 @@ export default function PanelChrome({
   headerSize = "md",
   outerRef,
   collapseTitle,
+  hideCollapse = false,
 }: PanelChromeProps) {
   const chevronSize = chevronSizeMap[headerSize];
 
@@ -66,7 +69,7 @@ export default function PanelChrome({
         className={cn(
           headerPaddingMap[headerSize],
           "flex items-center justify-between bg-[#1a1b1e]",
-          !isCollapsed && "border-b border-[#2a2b2e]"
+          !hideCollapse && !isCollapsed && "border-b border-[#2a2b2e]"
         )}
       >
         {customHeaderContent ? (
@@ -101,17 +104,19 @@ export default function PanelChrome({
             )}
           </>
         )}
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-1 hover:bg-white/5 rounded text-[#8e9299] flex-shrink-0"
-          title={collapseTitle ?? (isCollapsed ? "Expand" : "Collapse")}
-        >
-          {isCollapsed ? (
-            <ChevronDown size={chevronSize} />
-          ) : (
-            <ChevronUp size={chevronSize} />
-          )}
-        </button>
+        {!hideCollapse && (
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="p-1 hover:bg-white/5 rounded text-[#8e9299] flex-shrink-0"
+            title={collapseTitle ?? (isCollapsed ? "Expand" : "Collapse")}
+          >
+            {isCollapsed ? (
+              <ChevronDown size={chevronSize} />
+            ) : (
+              <ChevronUp size={chevronSize} />
+            )}
+          </button>
+        )}
       </div>
       {!isCollapsed && (
         <div className={bodyClassName ?? "p-4"}>{children}</div>
