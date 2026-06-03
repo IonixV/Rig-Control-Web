@@ -59,7 +59,7 @@ Express + Socket.io Server  (server.ts orchestrator + server/ modules)
 - **`server/cw.ts`** — Server-side iambic state machine (A/B/straight); drives DTR/RTS via the `cw-key-helper` C binary subprocess; 5 s stuck-key watchdog.
 - **`server/video.ts`** — Relays WebCodecs H.264 chunks from the Electron source to remote clients; buffers the latest keyframe.
 - **`server/solar.ts`** — Fetches solar/propagation data from hamqsl.com (HF band conditions, VHF phenomena, SFI, SSN); caches server-side and pushes `solar-data` events to clients.
-- **`server/vlog.ts`** — Verbose-logging helper; gated by the `-v` / `--verbose` CLI flag.
+- **`server/vlog.ts`** — Per-subsystem debug logging; exports `vlogRig`, `vlogAudio`, `vlogVideo`, `vlogCw`, `vlogInfra` helpers gated by the corresponding `--debug-*` CLI flag.
 
 ### Key Files — Frontend
 
@@ -77,9 +77,9 @@ Express + Socket.io Server  (server.ts orchestrator + server/ modules)
   - `usePanelState` — Per-panel collapse state
   - `useLayoutConfig` — Grid layout persistence to `localStorage`; `addPanel`, `removePanel`, `updateItemPositions`
 - **`src/layouts/`** — `CompactLayout.tsx`, `PhoneLayout.tsx`, `PhoneStickyBar.tsx`. No Desktop layout (removed 2026-05-01).
-- **`src/panels/`** — 15 panel components (each wrapped in `PanelChrome`): `VfoPanel`, `ControlsPanel`, `SMeterPanel`, `AlcPanel`, `SwrPanel`, `TabbedMeterPanel`, `RfLevelsPanel`, `ModeBwPanel`, `VideoAudioPanel`, `SpotsPanel`, `SpotComboPanel`, `CwDecodePanel`, `CommandConsolePanel`, `MufMapPanel`, `SolarPanel`.
-- **`src/modals/`** — `SettingsModal.tsx` (tabs: RIGCTLD / SPOTS / KEYER), `VideoSettingsModal.tsx`, `SpotSettingsModal.tsx`, `ComboSpotSettingsModal.tsx`.
-- **`src/components/PanelChrome.tsx`** — Shared collapsible/expandable wrapper with title and header-action slots; used by all panels.
+- **`src/panels/`** — 18 panel components (each wrapped in `PanelChrome`): `VfoPanel`, `ControlsPanel`, `SMeterPanel`, `AlcPanel`, `SwrPanel`, `TabbedMeterPanel`, `RfLevelsPanel`, `ModeBwPanel`, `AudioFeedPanel`, `VideoFeedPanel`, `SpectrumHamlibPanel`, `SpectrumAudioPanel`, `SpotsPanel`, `SpotComboPanel`, `CwDecodePanel`, `CommandConsolePanel`, `MufMapPanel`, `SolarPanel`.
+- **`src/modals/`** — `SettingsModal.tsx` (tabs: RIGCTLD / SPOTS / KEYER), `AudioSettingsModal.tsx`, `VideoSettingsModal.tsx`, `SpotSettingsModal.tsx`, `ComboSpotSettingsModal.tsx`.
+- **`src/components/PanelChrome.tsx`** — Shared collapsible/expandable wrapper with title and header-action slots; used by all panels. `hideCollapse` prop suppresses the chevron entirely for body-less panels (e.g. `AudioFeedPanel`).
 - **`src/components/EditToolbar.tsx`** — Fixed toolbar rendered during compact/phone layout edit mode. Cols/rows ± controls, Add Panel, Reset, and Done buttons. `showRowsControl` prop gates the size controls (phone view omits them).
 - **`src/components/PanelPicker.tsx`** — Two-step modal for adding panels. Step 1 lists available panel types (already-placed panels greyed out). Step 2 (for panels with `PANEL_CONFIG_OPTIONS` entries, e.g. `mufmap`) shows a height slider and Full Width toggle before confirming.
 - **`public/audio-processor.js`** — Static file loaded by `AudioWorklet.addModule()`. Defines two `AudioWorkletProcessor` classes: `PlaybackProcessor` (inbound jitter buffer, 60 ms min / 240 ms max at 48 kHz) and `CaptureProcessor` (posts mic PCM frames to the main thread). Must be a static URL-addressable file; cannot be bundled.
@@ -116,7 +116,7 @@ Per-message deflate compression (`perMessageDeflate: false`) is explicitly disab
 - `settings-data` — Full settings object on connect or change
 - `video-chunk` — Encoded H.264 chunks relayed to remote clients
 - `solar-data` — HF band conditions, VHF phenomena, SFI, SSN from hamqsl.com
-- `verbose-mode` — Mirrors server `-v` flag to browser clients
+- `debug-flags` — Mirrors server `--debug-*` flags as a `DebugFlags` object to browser clients
 
 ### Audio Pipeline
 
