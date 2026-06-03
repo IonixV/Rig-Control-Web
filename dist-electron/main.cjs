@@ -25009,10 +25009,10 @@ var require_browser5 = __commonJS({
 var require_has_flag = __commonJS({
   "node_modules/has-flag/index.js"(exports2, module2) {
     "use strict";
-    module2.exports = (flag, argv = process.argv) => {
+    module2.exports = (flag, argv2 = process.argv) => {
       const prefix = flag.startsWith("-") ? "" : flag.length === 1 ? "-" : "--";
-      const position = argv.indexOf(prefix + flag);
-      const terminatorPosition = argv.indexOf("--");
+      const position = argv2.indexOf(prefix + flag);
+      const terminatorPosition = argv2.indexOf("--");
       return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
     };
   }
@@ -57099,12 +57099,34 @@ var require_selfsigned = __commonJS({
 });
 
 // server/vlog.ts
-var VERBOSE, vlog;
+var argv, debugAll, DEBUG_RIG, DEBUG_AUDIO, DEBUG_VIDEO, DEBUG_CW, DEBUG_INFRA, vlogRig, vlogAudio, vlogVideo, vlogInfra, debugFlags;
 var init_vlog = __esm({
   "server/vlog.ts"() {
-    VERBOSE = process.argv.includes("-v") || process.argv.includes("--verbose");
-    vlog = (...args) => {
-      if (VERBOSE) console.log(...args);
+    argv = process.argv;
+    debugAll = argv.includes("--debug-all");
+    DEBUG_RIG = debugAll || argv.includes("--debug-rig");
+    DEBUG_AUDIO = debugAll || argv.includes("--debug-audio");
+    DEBUG_VIDEO = debugAll || argv.includes("--debug-video");
+    DEBUG_CW = debugAll || argv.includes("--debug-cw");
+    DEBUG_INFRA = debugAll || argv.includes("--debug-infra");
+    vlogRig = (...args) => {
+      if (DEBUG_RIG) console.log(...args);
+    };
+    vlogAudio = (...args) => {
+      if (DEBUG_AUDIO) console.log(...args);
+    };
+    vlogVideo = (...args) => {
+      if (DEBUG_VIDEO) console.log(...args);
+    };
+    vlogInfra = (...args) => {
+      if (DEBUG_INFRA) console.log(...args);
+    };
+    debugFlags = {
+      rig: DEBUG_RIG,
+      audio: DEBUG_AUDIO,
+      video: DEBUG_VIDEO,
+      cw: DEBUG_CW,
+      infra: DEBUG_INFRA
     };
   }
 });
@@ -57183,7 +57205,13 @@ function addLog(ctx, data) {
 function stopRigctld(ctx) {
   if (ctx.rigctldProcess) {
     console.log("Stopping rigctld...");
-    ctx.rigctldProcess.kill();
+    const pid = ctx.rigctldProcess.pid;
+    if (process.platform === "win32" && pid) {
+      (0, import_child_process.exec)(`taskkill /PID ${pid} /T /F`, () => {
+      });
+    } else {
+      ctx.rigctldProcess.kill();
+    }
     ctx.rigctldProcess = null;
     ctx.rigctldStatus = "stopped";
     emitRigctldStatus(ctx);
@@ -57214,7 +57242,7 @@ function fetchRadioCapabilities(ctx, rigNumber) {
       return;
     }
     const rigctldPath = getRigctldPath(ctx.baseDir);
-    vlog(`[HAMLIB] Fetching radio capabilities for rig ${rigNumber}...`);
+    vlogRig(`[HAMLIB] Fetching radio capabilities for rig ${rigNumber}...`);
     (0, import_child_process.exec)(`"${rigctldPath}" -m ${rigNumber} -u`, (error, stdout) => {
       if (error) {
         console.error(`[HAMLIB] Error getting radio capabilities: ${error.message}`);
@@ -57280,8 +57308,7 @@ async function startRigctld(ctx) {
     return;
   }
   const rigctldPath = getRigctldPath(ctx.baseDir);
-  console.log(`Starting rigctld: ${rigctldPath} -m ${rigNumber} -r ${serialPort} -t ${portNumber} -T ${ipAddress} -s ${serialPortSpeed}`);
-  ctx.rigctldProcess = (0, import_child_process.spawn)(rigctldPath, [
+  const args = [
     "-m",
     rigNumber,
     "-r",
@@ -57292,13 +57319,25 @@ async function startRigctld(ctx) {
     ipAddress,
     "-s",
     serialPortSpeed
-  ], { detached: false });
+  ];
+  if (ctx.spectrumSettings.enabled) {
+    args.push(
+      "--multicast-addr",
+      ctx.spectrumSettings.multicastAddr,
+      "--multicast-port",
+      String(ctx.spectrumSettings.multicastPort),
+      "--set-conf=async=1",
+      "--set-conf=transceive=POLL"
+    );
+  }
+  console.log(`Starting rigctld: ${rigctldPath} ${args.join(" ")}`);
+  ctx.rigctldProcess = (0, import_child_process.spawn)(rigctldPath, args, { detached: false });
   ctx.rigctldStatus = "running";
   emitRigctldStatus(ctx);
   addLog(ctx, "rigctld started");
   ctx.rigctldProcess.stdout?.on("data", (data) => {
     const str = data.toString();
-    vlog(`rigctld stdout: ${str}`);
+    vlogRig(`rigctld stdout: ${str}`);
     addLog(ctx, str);
   });
   ctx.rigctldProcess.stderr?.on("data", (data) => {
@@ -61370,6 +61409,13 @@ function createInitialContext(io2, baseDir, dataDir) {
     cwTickTimer: null,
     cwClaimIdleTimer: null,
     socketConnectTimes: /* @__PURE__ */ new Map(),
+    spectrumSettings: {
+      enabled: false,
+      multicastAddr: "224.0.0.1",
+      multicastPort: 4531
+    },
+    spectrumSocket: null,
+    spectrumSupported: false,
     saveSettings: () => {
     },
     sendToRig: () => Promise.reject("sendToRig not yet initialized")
@@ -61411,12 +61457,15 @@ function loadSettings(ctx, settingsFile) {
     if (data.cwSettings) {
       ctx.cwSettings = { ...ctx.cwSettings, ...data.cwSettings };
     }
+    if (data.spectrumSettings) {
+      ctx.spectrumSettings = { ...ctx.spectrumSettings, ...data.spectrumSettings };
+    }
   } catch (e) {
     console.error("Failed to load settings:", e);
   }
 }
 function saveSettings(ctx, settingsFile) {
-  vlog(`[SETTINGS] Saving settings to ${settingsFile}...`);
+  vlogInfra(`[SETTINGS] Saving settings to ${settingsFile}...`);
   try {
     import_fs2.default.writeFileSync(settingsFile, JSON.stringify({
       settings: ctx.rigctldSettings,
@@ -61430,13 +61479,14 @@ function saveSettings(ctx, settingsFile) {
       clientPort: Number(ctx.clientPort),
       potaSettings: ctx.potaSettings,
       sotaSettings: ctx.sotaSettings,
-      cwSettings: ctx.cwSettings
+      cwSettings: ctx.cwSettings,
+      spectrumSettings: ctx.spectrumSettings
     }, null, 2));
   } catch (e) {
     console.error("[SETTINGS] Failed to save settings:", e);
   }
 }
-function registerSettingsHandlers(socket, ctx, radiosFile, startPolling2, syncKeyerPort2) {
+function registerSettingsHandlers(socket, ctx, radiosFile, startPolling2, syncKeyerPort2, onSpectrumEnabledChanged) {
   socket.on("save-settings", (data) => {
     const oldRigNumber = ctx.rigctldSettings.rigNumber;
     if (data.settings) {
@@ -61459,8 +61509,12 @@ function registerSettingsHandlers(socket, ctx, radiosFile, startPolling2, syncKe
       const polarityChanged = data.cwSettings.serialKeyPolarity !== void 0 && data.cwSettings.serialKeyPolarity !== oldPolarity;
       syncKeyerPort2(polarityChanged);
     }
-    if (oldRigNumber !== ctx.rigctldSettings.rigNumber) {
-      ctx.rigctldSettings.capabilityFingerprint = void 0;
+    if (data.spectrumSettings !== void 0) {
+      const wasEnabled = ctx.spectrumSettings.enabled;
+      ctx.spectrumSettings = { ...ctx.spectrumSettings, ...data.spectrumSettings };
+      if (onSpectrumEnabledChanged && ctx.spectrumSettings.enabled !== wasEnabled) {
+        onSpectrumEnabledChanged(ctx.spectrumSettings.enabled);
+      }
     }
     ctx.saveSettings();
   });
@@ -61538,7 +61592,7 @@ function executeRigCommand(ctx, cmd, useExtended = false) {
           clearTimeout(timeout);
           ctx.rigSocket?.removeListener("data", onData);
           ctx.rigSocket?.removeListener("error", onError);
-          vlog(`[RIG] Response for "${cmd}": ${responseBuffer.trim()}`);
+          vlogRig(`[RIG] Response for "${cmd}": ${responseBuffer.trim()}`);
           const rprtCode = parseInt(rprtMatch[1], 10);
           if (rprtCode === 0 || rprtCode === 1) {
             try {
@@ -61555,7 +61609,7 @@ function executeRigCommand(ctx, cmd, useExtended = false) {
         clearTimeout(timeout);
         ctx.rigSocket?.removeListener("data", onData);
         ctx.rigSocket?.removeListener("error", onError);
-        vlog(`[RIG] Response for "${cmd}": ${responseBuffer.trim()}`);
+        vlogRig(`[RIG] Response for "${cmd}": ${responseBuffer.trim()}`);
         resolve(responseBuffer.trim());
       }
     };
@@ -61565,7 +61619,7 @@ function executeRigCommand(ctx, cmd, useExtended = false) {
       console.error(`[RIG] Socket error during command "${cmd}":`, err.message);
       reject(err);
     };
-    vlog(`[RIG] Sending command: "${cmd}"`);
+    vlogRig(`[RIG] Sending command: "${cmd}"`);
     ctx.rigSocket.on("data", onData);
     ctx.rigSocket.once("error", onError);
     ctx.rigSocket.write(finalCmd + "\n");
@@ -61639,10 +61693,12 @@ function parseDumpCapsIntoContext(dump, ctx) {
     ctx.rigctldSettings.nbSupported = funcs.includes("NB");
     ctx.rigctldSettings.nrSupported = funcs.includes("NR");
     ctx.rigctldSettings.anfSupported = funcs.includes("ANF");
+    ctx.spectrumSupported = funcs.includes("SPECTRUM");
   } else {
     ctx.rigctldSettings.nbSupported = false;
     ctx.rigctldSettings.nrSupported = false;
     ctx.rigctldSettings.anfSupported = false;
+    ctx.spectrumSupported = false;
   }
   const getLevelLine = lines.find((l) => l.trim().startsWith("Get level:"));
   if (getLevelLine) {
@@ -61662,27 +61718,20 @@ function emitCapabilities(ctx) {
   ctx.io.emit("nr-capabilities", { supported: ctx.rigctldSettings.nrSupported, range: ctx.rigctldSettings.nrLevelRange });
   ctx.io.emit("rfpower-capabilities", { range: ctx.rigctldSettings.rfPowerRange });
   ctx.io.emit("anf-capabilities", { supported: ctx.rigctldSettings.anfSupported });
+  ctx.io.emit("spectrum-supported", ctx.spectrumSupported);
 }
-async function probeCapabilitiesIfNeeded(ctx, host, port) {
-  const fp = ctx.rigctldSettings.capabilityFingerprint;
+async function probeCapabilities(ctx) {
   const rigNumber = ctx.rigctldSettings.rigNumber;
-  if (fp && fp.host === host && fp.port === port && fp.rigNumber === rigNumber) {
-    console.log("[RIG] Capability fingerprint matches; using cached data");
-    emitCapabilities(ctx);
-    return;
-  }
   console.log("[RIG] Probing rig capabilities via dump_caps...");
-  let success = false;
   try {
     const dump = await probeDumpCaps(ctx);
     parseDumpCapsIntoContext(dump, ctx);
-    success = true;
     console.log("[RIG] Capabilities probed via dump_caps");
   } catch (err) {
     console.warn("[RIG] dump_caps probe failed; trying local rigctld database:", err);
     try {
       const { fetchRadioCapabilities: fetchRadioCapabilities2 } = await Promise.resolve().then(() => (init_rigctld(), rigctld_exports));
-      success = await fetchRadioCapabilities2(ctx, rigNumber);
+      const success = await fetchRadioCapabilities2(ctx, rigNumber);
       if (success) {
         console.log("[RIG] Capabilities probed via local rigctld database");
       } else {
@@ -61691,10 +61740,6 @@ async function probeCapabilitiesIfNeeded(ctx, host, port) {
     } catch (importErr) {
       console.warn("[RIG] Could not load local capability fallback:", importErr);
     }
-  }
-  if (success) {
-    ctx.rigctldSettings.capabilityFingerprint = { host, port, rigNumber };
-    ctx.saveSettings();
   }
   emitCapabilities(ctx);
 }
@@ -61897,8 +61942,16 @@ function connectToRig(ctx, host, port, socket) {
     console.log(`Connected to rigctld at ${host}:${port}`);
     ctx.isConnected = true;
     await probeVfoCapability(ctx);
-    await probeCapabilitiesIfNeeded(ctx, host, port);
+    await probeCapabilities(ctx);
     ctx.io.emit("rig-connected", { host, port, vfoSupported: ctx.vfoSupported });
+    if (ctx.spectrumSettings.enabled && ctx.spectrumSupported) {
+      try {
+        await sendToRig(ctx, "U SPECTRUM 1", true);
+        console.log("[SPECTRUM] Enabled spectrum output on rig");
+      } catch (err) {
+        console.warn("[SPECTRUM] Failed to enable spectrum output:", err);
+      }
+    }
     startPolling(ctx);
   });
   ctx.rigSocket.on("error", (err) => {
@@ -62095,7 +62148,7 @@ async function initAudioEngine(ctx) {
       console.log("[AUDIO-INIT] naudiodon loaded successfully.");
       try {
         const hostAPIInfo = ctx.portAudio.getHostAPIs();
-        vlog("[AUDIO-INIT] Host APIs:", JSON.stringify(hostAPIInfo, null, 2));
+        vlogAudio("[AUDIO-INIT] Host APIs:", JSON.stringify(hostAPIInfo, null, 2));
       } catch (e) {
         console.warn("[AUDIO-INIT] Could not enumerate host APIs:", e.message);
       }
@@ -62259,12 +62312,12 @@ async function startAudio(ctx) {
 }
 function registerAudioHandlers(socket, ctx, clientId) {
   socket.on("get-audio-devices", async () => {
-    vlog("[AUDIO] Client requested audio devices list");
+    vlogAudio("[AUDIO] Client requested audio devices list");
     const { inputs, outputs, error } = await listAudioDevices(ctx);
     socket.emit("audio-devices-list", { inputs, outputs });
   });
   socket.on("update-audio-settings", async (settings) => {
-    vlog("[AUDIO] Updating audio settings:", settings);
+    vlogAudio("[AUDIO] Updating audio settings:", settings);
     const wasPlaying = ctx.audioStatus === "playing";
     ctx.audioSettings = { ...ctx.audioSettings, ...settings };
     ctx.saveSettings();
@@ -62274,7 +62327,7 @@ function registerAudioHandlers(socket, ctx, clientId) {
     }
   });
   socket.on("control-audio", async (action) => {
-    vlog(`[AUDIO] Control action received: ${action}`);
+    vlogAudio(`[AUDIO] Control action received: ${action}`);
     if (action === "start") {
       await startAudio(ctx);
     } else if (action === "stop") {
@@ -62298,7 +62351,7 @@ function registerAudioHandlers(socket, ctx, clientId) {
   socket.on("audio-outbound", (data) => {
     outboundRecvCount++;
     if (outboundRecvCount <= 5 || outboundRecvCount % 50 === 0) {
-      vlog(`[AUDIO-DIAG] audio-outbound received #${outboundRecvCount} from clientId=${clientId}, bytes=${data.length}, activeMic=${ctx.activeMicClientId}, ptt=${ctx.lastStatus.ptt}`);
+      vlogAudio(`[AUDIO-DIAG] audio-outbound received #${outboundRecvCount} from clientId=${clientId}, bytes=${data.length}, activeMic=${ctx.activeMicClientId}, ptt=${ctx.lastStatus.ptt}`);
     }
     if (ctx.activeMicClientId !== clientId) return;
     if (!ctx.audioOutputProcess || !ctx.opusDecoder) return;
@@ -62306,7 +62359,7 @@ function registerAudioHandlers(socket, ctx, clientId) {
     try {
       const pcmData = ctx.opusDecoder.decode(data);
       if (outboundDiagCount < 5) {
-        vlog(`[AUDIO-DIAG] encoded packet bytes=${data.length} decoded bytes=${pcmData.length} (expected 1920 for 48kHz/mono/20ms)`);
+        vlogAudio(`[AUDIO-DIAG] encoded packet bytes=${data.length} decoded bytes=${pcmData.length} (expected 1920 for 48kHz/mono/20ms)`);
         outboundDiagCount++;
       }
       ctx.outboundJitterBuffer.push(pcmData);
@@ -62683,30 +62736,30 @@ function registerVideoHandlers(socket, ctx) {
     socket.emit("video-devices-list", ctx.videoDeviceList);
   });
   socket.on("video-devices-update", (devices) => {
-    vlog(`[VIDEO] Device list updated by source (${devices.length} devices):`, devices.map((d) => d.label));
+    vlogVideo(`[VIDEO] Device list updated by source (${devices.length} devices):`, devices.map((d) => d.label));
     ctx.videoDeviceList = devices;
     ctx.io.emit("video-devices-list", ctx.videoDeviceList);
   });
   socket.on("update-video-settings", (settings) => {
-    vlog("[VIDEO] Updating video settings:", settings);
+    vlogVideo("[VIDEO] Updating video settings:", settings);
     ctx.videoSettings = { ...ctx.videoSettings, ...settings };
     ctx.saveSettings();
     ctx.io.emit("video-settings-updated", ctx.videoSettings);
   });
   socket.on("request-video-start", () => {
-    vlog(`[VIDEO] Start requested by socket=${socket.id}`);
+    vlogVideo(`[VIDEO] Start requested by socket=${socket.id}`);
     ctx.videoAutoStart = true;
     ctx.saveSettings();
     ctx.io.emit("video-start-requested");
   });
   socket.on("request-video-stop", () => {
-    vlog(`[VIDEO] Stop requested by socket=${socket.id}`);
+    vlogVideo(`[VIDEO] Stop requested by socket=${socket.id}`);
     ctx.videoAutoStart = false;
     ctx.saveSettings();
     ctx.io.emit("video-stop-requested");
   });
   socket.on("video-source-start", (config) => {
-    vlog(`[VIDEO] Source started: socket=${socket.id}`, config);
+    vlogVideo(`[VIDEO] Source started: socket=${socket.id}`, config);
     ctx.videoSourceSocketId = socket.id;
     ctx.lastKeyframe = null;
     ctx.videoSettings = { ...ctx.videoSettings, ...config };
@@ -62728,13 +62781,13 @@ function registerVideoHandlers(socket, ctx) {
     }
     videoFrameRelayCount++;
     if (chunk.type === "key" || videoFrameRelayCount <= 5) {
-      vlog(`[VIDEO] Relaying frame #${videoFrameRelayCount} type=${chunk.type} dataBytes=${chunk.data.byteLength} connectedClients=${ctx.io.engine.clientsCount}`);
+      vlogVideo(`[VIDEO] Relaying frame #${videoFrameRelayCount} type=${chunk.type} dataBytes=${chunk.data.byteLength} connectedClients=${ctx.io.engine.clientsCount}`);
     }
     socket.broadcast.emit("video-frame", chunk);
   });
   socket.on("video-source-stop", () => {
     if (socket.id !== ctx.videoSourceSocketId) return;
-    vlog("[VIDEO] Source stopped.");
+    vlogVideo("[VIDEO] Source stopped.");
     ctx.videoSourceSocketId = null;
     ctx.lastKeyframe = null;
     ctx.videoStatus = "stopped";
@@ -62828,6 +62881,65 @@ function registerSolarHandlers(socket, ctx) {
       socket.emit("solar-data", ctx.solarData);
     }
   });
+}
+
+// server/spectrum.ts
+var import_dgram = __toESM(require("dgram"), 1);
+function startSpectrumListener(ctx) {
+  if (ctx.spectrumSocket) {
+    stopSpectrumListener(ctx);
+  }
+  const sock = import_dgram.default.createSocket({ type: "udp4", reuseAddr: true });
+  sock.on("error", (err) => {
+    console.error(`[SPECTRUM] UDP socket error: ${err.message}`);
+    ctx.spectrumSocket = null;
+  });
+  sock.on("message", (msg) => {
+    let packet;
+    try {
+      packet = JSON.parse(msg.toString("utf8"));
+    } catch {
+      return;
+    }
+    const hexData = packet.data || "";
+    const amplitudes = [];
+    for (let i = 0; i < hexData.length - 1; i += 2) {
+      amplitudes.push(parseInt(hexData.slice(i, i + 2), 16));
+    }
+    ctx.io.emit("spectrum-data", {
+      id: packet.id ?? 0,
+      name: packet.name ?? "",
+      type: packet.type ?? "CENTER",
+      length: packet.length ?? amplitudes.length,
+      amplitudes,
+      minLevel: packet.minLevel ?? 0,
+      maxLevel: packet.maxLevel ?? 255,
+      centerFreq: packet.centerFreq ?? 0,
+      span: packet.span ?? 0,
+      lowFreq: packet.lowFreq ?? 0,
+      highFreq: packet.highFreq ?? 0,
+      timestamp: Date.now()
+    });
+  });
+  sock.bind(ctx.spectrumSettings.multicastPort, () => {
+    try {
+      sock.addMembership(ctx.spectrumSettings.multicastAddr);
+      console.log(`[SPECTRUM] Listening on multicast ${ctx.spectrumSettings.multicastAddr}:${ctx.spectrumSettings.multicastPort}`);
+    } catch (err) {
+      console.error(`[SPECTRUM] Failed to join multicast group: ${err.message}`);
+    }
+  });
+  ctx.spectrumSocket = sock;
+}
+function stopSpectrumListener(ctx) {
+  if (ctx.spectrumSocket) {
+    try {
+      ctx.spectrumSocket.close();
+    } catch {
+    }
+    ctx.spectrumSocket = null;
+    console.log("[SPECTRUM] Listener stopped");
+  }
 }
 
 // server/auth.ts
@@ -65262,12 +65374,17 @@ async function startServer(appPath, userDataPath) {
   const dataDir = userDataPath || (process.env.NODE_ENV === "production" ? "/tmp" : process.cwd());
   const SETTINGS_FILE = import_path5.default.join(dataDir, "settings.json");
   const RADIOS_FILE = import_path5.default.join(baseDir, "radios.json");
-  vlog(`Server initializing. Base directory (assets): ${baseDir}`);
-  vlog(`Data directory (settings): ${dataDir}`);
-  vlog(`NODE_ENV: ${process.env.NODE_ENV}, Electron: ${!!process.versions.electron}`);
+  vlogInfra(`Server initializing. Base directory (assets): ${baseDir}`);
+  vlogInfra(`Data directory (settings): ${dataDir}`);
+  vlogInfra(`NODE_ENV: ${process.env.NODE_ENV}, Electron: ${!!process.versions.electron}`);
   const { key: tlsKey, cert: tlsCert } = await loadOrGenerateCert(dataDir);
   const httpServer = import_https.default.createServer({ key: tlsKey, cert: tlsCert }, app2);
   const io2 = new Server(httpServer, { perMessageDeflate: false });
+  const openSockets = /* @__PURE__ */ new Set();
+  httpServer.on("connection", (socket) => {
+    openSockets.add(socket);
+    socket.on("close", () => openSockets.delete(socket));
+  });
   const ctx = createInitialContext(io2, baseDir, dataDir);
   ctx.saveSettings = () => saveSettings(ctx, SETTINGS_FILE);
   ctx.sendToRig = (cmd, ext, pri) => sendToRig(ctx, cmd, ext, pri);
@@ -65276,11 +65393,14 @@ async function startServer(appPath, userDataPath) {
   getRigctldVersion(baseDir).then((v) => {
     ctx.rigctldVersion = v;
     ctx.isRigctldVersionSupported = checkVersionSupported(v);
-    vlog(`[HAMLIB] Detected rigctld version: ${v || "unknown"}`);
+    vlogRig(`[HAMLIB] Detected rigctld version: ${v || "unknown"}`);
     emitRigctldStatus(ctx);
   });
   if (ctx.autoStartEnabled) {
     startRigctld(ctx);
+  }
+  if (ctx.spectrumSettings.enabled) {
+    startSpectrumListener(ctx);
   }
   await syncKeyerPort(ctx);
   await initAuth(ctx);
@@ -65315,8 +65435,10 @@ async function startServer(appPath, userDataPath) {
       potaSettings: ctx.potaSettings,
       sotaSettings: ctx.sotaSettings,
       cwSettings: ctx.cwSettings,
-      cwPortStatus: ctx.cwKeyerProcess && !ctx.cwKeyerProcess.killed ? { open: true, port: ctx.cwSettings.keyerPort } : { open: false, port: ctx.cwSettings.keyerPort }
+      cwPortStatus: ctx.cwKeyerProcess && !ctx.cwKeyerProcess.killed ? { open: true, port: ctx.cwSettings.keyerPort } : { open: false, port: ctx.cwSettings.keyerPort },
+      spectrumSettings: ctx.spectrumSettings
     });
+    socket.emit("spectrum-supported", ctx.spectrumSupported);
     socket.emit("rigctld-status", {
       status: ctx.rigctldStatus,
       logs: ctx.rigctldLogs,
@@ -65324,7 +65446,7 @@ async function startServer(appPath, userDataPath) {
       isVersionSupported: ctx.isRigctldVersionSupported
     });
     socket.emit("rigctld-log", ctx.rigctldLogs);
-    vlog(`[VIDEO] New client ${socket.id} connected. videoStatus=${ctx.videoStatus} hasKeyframe=${!!ctx.lastKeyframe}`);
+    vlogVideo(`[VIDEO] New client ${socket.id} connected. videoStatus=${ctx.videoStatus} hasKeyframe=${!!ctx.lastKeyframe}`);
     socket.emit("video-source-status", {
       status: ctx.videoStatus,
       videoWidth: ctx.videoSettings.videoWidth,
@@ -65333,7 +65455,7 @@ async function startServer(appPath, userDataPath) {
     });
     socket.emit("video-devices-list", ctx.videoDeviceList);
     if (ctx.videoStatus === "streaming" && ctx.lastKeyframe) {
-      vlog(`[VIDEO] Sending buffered keyframe to ${socket.id}: type=${ctx.lastKeyframe.type} dataBytes=${ctx.lastKeyframe.data.byteLength} hasDescription=${!!ctx.lastKeyframe.description}`);
+      vlogVideo(`[VIDEO] Sending buffered keyframe to ${socket.id}: type=${ctx.lastKeyframe.type} dataBytes=${ctx.lastKeyframe.data.byteLength} hasDescription=${!!ctx.lastKeyframe.description}`);
       socket.emit("video-frame", ctx.lastKeyframe);
     }
     socket.emit("audio-status", ctx.audioStatus);
@@ -65361,7 +65483,7 @@ async function startServer(appPath, userDataPath) {
   };
   const registerFunctionalHandlers = (socket, clientId) => {
     socket.emit("audio-engine-state", { isReady: ctx.isAudioEngineReady, error: ctx.audioEngineError });
-    socket.emit("verbose-mode", VERBOSE);
+    socket.emit("debug-flags", debugFlags);
     registerRigCommHandlers(socket, ctx);
     registerRigctldHandlers(socket, ctx);
     registerAudioHandlers(socket, ctx, clientId);
@@ -65374,7 +65496,14 @@ async function startServer(appPath, userDataPath) {
       ctx,
       RADIOS_FILE,
       () => startPolling(ctx),
-      (forceReopen) => syncKeyerPort(ctx, forceReopen)
+      (forceReopen) => syncKeyerPort(ctx, forceReopen),
+      (enabled) => {
+        if (enabled) {
+          startSpectrumListener(ctx);
+        } else {
+          stopSpectrumListener(ctx);
+        }
+      }
     );
     socket.on("get-settings", async () => {
       await pushInitialState(socket);
@@ -65439,7 +65568,7 @@ async function startServer(appPath, userDataPath) {
         }
       }
       if (socket.id === ctx.videoSourceSocketId) {
-        vlog("[VIDEO] Source client disconnected \u2014 stopping stream.");
+        vlogVideo("[VIDEO] Source client disconnected \u2014 stopping stream.");
         ctx.videoSourceSocketId = null;
         ctx.lastKeyframe = null;
         ctx.videoStatus = "stopped";
@@ -65456,7 +65585,7 @@ async function startServer(appPath, userDataPath) {
             }
           });
           if (!hasActiveSocket && ctx.activeMicClientId === clientId) {
-            vlog(`[AUDIO] Releasing mic for disconnected client: ${clientId}`);
+            vlogAudio(`[AUDIO] Releasing mic for disconnected client: ${clientId}`);
             ctx.activeMicClientId = null;
             ctx.io.emit("mic-active-client", null);
           }
@@ -65504,16 +65633,64 @@ async function startServer(appPath, userDataPath) {
     }
   }
   _shutdown = async () => {
+    const step = (label) => {
+      const start = Date.now();
+      vlogInfra(`[SHUTDOWN] ${label}`);
+      return () => vlogInfra(`[SHUTDOWN] ${label} done (${Date.now() - start}ms)`);
+    };
+    let done = step("closeKeyerPort");
     await closeKeyerPort(ctx);
-    await stopAudio(ctx);
+    done();
+    done = step("stopAudio (3s cap)");
+    await Promise.race([stopAudio(ctx), new Promise((r) => setTimeout(r, 3e3))]);
+    done();
+    const rigctldProc = ctx.rigctldProcess;
+    done = step("stopRigctld + await exit");
     stopRigctld(ctx);
+    if (rigctldProc) {
+      await Promise.race([
+        new Promise((r) => rigctldProc.once("close", r)),
+        new Promise((r) => setTimeout(r, 3e3))
+      ]);
+    }
+    done();
+    done = step("stopPolling");
     stopPolling(ctx);
+    done();
+    done = step("stopSpectrumListener");
+    stopSpectrumListener(ctx);
+    done();
+    done = step("destroy rigSocket");
     if (ctx.rigSocket) {
       ctx.rigSocket.destroy();
       ctx.rigSocket = null;
     }
+    done();
+    done = step("disconnectSockets");
     ctx.io.disconnectSockets(true);
-    await new Promise((resolve) => httpServer.close(() => resolve()));
+    done();
+    done = step(`destroy openSockets (${openSockets.size})`);
+    openSockets.forEach((s) => s.destroy());
+    done();
+    done = step("httpServer.close()");
+    await Promise.race([
+      new Promise((resolve) => httpServer.close(() => resolve())),
+      new Promise((resolve) => setTimeout(() => {
+        vlogInfra("[SHUTDOWN] httpServer.close() timed out after 2s");
+        resolve();
+      }, 2e3))
+    ]);
+    done();
+    if (typeof process._getActiveHandles === "function") {
+      const handles = process._getActiveHandles();
+      vlogInfra(`[SHUTDOWN] Active handles: ${handles.length}`);
+      handles.forEach((h) => vlogInfra(`[SHUTDOWN]   ${h?.constructor?.name ?? typeof h}`));
+    }
+    if (typeof process._getActiveRequests === "function") {
+      const reqs = process._getActiveRequests();
+      if (reqs.length) vlogInfra(`[SHUTDOWN] Active requests: ${reqs.length}`);
+    }
+    vlogInfra("[SHUTDOWN] Sequence complete");
   };
   return new Promise((resolve) => {
     httpServer.listen(PORT, "0.0.0.0", () => {
@@ -65531,6 +65708,7 @@ if (!process.env.ELECTRON_RUN && !process.versions.electron) {
 }
 
 // electron/main.ts
+init_vlog();
 import_electron2.app.setName("RigControl Web");
 if (!electron_is_dev_default) {
   process.env.NODE_ENV = "production";
@@ -65714,7 +65892,19 @@ import_electron2.app.on("will-quit", (event) => {
   if (isShuttingDown) return;
   event.preventDefault();
   isShuttingDown = true;
-  shutdown().then(() => import_electron2.app.quit()).catch(() => import_electron2.app.quit());
+  const forceExit = setTimeout(() => {
+    vlogInfra("[ELECTRON] Force exit fired \u2014 shutdown did not complete in 5s");
+    process.exit(0);
+  }, 5e3);
+  const done = () => {
+    vlogInfra("[ELECTRON] Shutdown complete \u2014 calling app.exit(0)");
+    clearTimeout(forceExit);
+    import_electron2.app.exit(0);
+  };
+  shutdown().then(done).catch((err) => {
+    console.error("[ELECTRON] Shutdown error:", err);
+    done();
+  });
 });
 import_electron2.app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
