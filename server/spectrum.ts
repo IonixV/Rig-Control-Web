@@ -28,19 +28,24 @@ export function startSpectrumListener(ctx: ServerContext): void {
     let packet: any;
     try {
       packet = JSON.parse(msg.toString("utf8"));
-      vlogSpectrum(`[SPECTRUM] JSON parsed OK: app=${packet.app} seq=${packet.seq} dataLen=${(packet.data ?? "").length} type=${packet.type}`);
-      if (packetCount === 0) {
-        vlogSpectrum(`[SPECTRUM] First packet structure: ${JSON.stringify(packet).slice(0, 1000)}`);
-      }
     } catch (e: any) {
       console.error(`[SPECTRUM] JSON parse failed: ${e.message}`);
       vlogSpectrum(`[SPECTRUM] Raw message (first 200 bytes): ${msg.toString("utf8").slice(0, 200)}`);
       return;
     }
 
-    const hexData: string = packet.data || "";
+    // Spectrum data is in packet.spectra[]; skip status-only packets.
+    const spectrum = packet.spectra?.[0];
+    if (!spectrum) {
+      vlogSpectrum(`[SPECTRUM] No spectra in packet seq=${packet.seq}, skipping`);
+      return;
+    }
+
+    vlogSpectrum(`[SPECTRUM] seq=${packet.seq} type=${spectrum.type} centerFreq=${spectrum.centerFreq} length=${spectrum.length} dataLen=${(spectrum.data ?? "").length}`);
+
+    const hexData: string = spectrum.data || "";
     const amplitudes: number[] = [];
-    for (let i = 0; i < hexData.length - 1; i += 2) {
+    for (let i = 0; i + 1 < hexData.length; i += 2) {
       amplitudes.push(parseInt(hexData.slice(i, i + 2), 16));
     }
     vlogSpectrum(`[SPECTRUM] Decoded ${amplitudes.length} amplitude points`);
@@ -57,17 +62,17 @@ export function startSpectrumListener(ctx: ServerContext): void {
     }
 
     ctx.io.emit("spectrum-data", {
-      id: packet.id ?? 0,
-      name: packet.name ?? "",
-      type: packet.type ?? "CENTER",
-      length: packet.length ?? amplitudes.length,
+      id: spectrum.id ?? 0,
+      name: spectrum.name ?? "",
+      type: spectrum.type ?? "CENTER",
+      length: spectrum.length ?? amplitudes.length,
       amplitudes,
-      minLevel: packet.minLevel ?? 0,
-      maxLevel: packet.maxLevel ?? 255,
-      centerFreq: packet.centerFreq ?? 0,
-      span: packet.span ?? 0,
-      lowFreq: packet.lowFreq ?? 0,
-      highFreq: packet.highFreq ?? 0,
+      minLevel: spectrum.minStrength ?? 0,
+      maxLevel: spectrum.maxStrength ?? 255,
+      centerFreq: spectrum.centerFreq ?? 0,
+      span: spectrum.span ?? 0,
+      lowFreq: spectrum.lowFreq ?? 0,
+      highFreq: spectrum.highFreq ?? 0,
       timestamp: Date.now(),
     });
   });
