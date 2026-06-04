@@ -98,8 +98,10 @@ Some Icom radios — most notably the **IC-7300** and compatible models — can 
 
 ### Requirements
 
-- **Hamlib 4.7.x with multicast support.** The bundled `rigctld` included in the Electron installer meets this requirement. If you are running `rigctld` from your system PATH, check that it is at least version 4.7.0 and was compiled with multicast support — most Linux distribution packages are 4.6.x and **will not work**. The RIGCTLD tab shows the detected version. If the version is shown as unsupported, use the bundled binary.
 - **An IC-7300 or other Icom radio with CI-V spectrum output** connected and `rigctld` running normally.
+- **Serial speed set to 115200 baud.** The IC-7300 and similar radios only stream spectrum data at this baud rate.
+- **CI-V Transceive OFF** in the radio's CI-V menu. The app uses polling; transceive mode sends unsolicited data that can interfere.
+- **CI-V USB Echo ON** in the radio's CI-V menu. This allows Hamlib to verify CI-V commands are received by the radio.
 
 ### Enabling the Spectrum Scope
 

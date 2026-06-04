@@ -59,7 +59,8 @@ Express + Socket.io Server  (server.ts orchestrator + server/ modules)
 - **`server/cw.ts`** — Server-side iambic state machine (A/B/straight); drives DTR/RTS via the `cw-key-helper` C binary subprocess; 5 s stuck-key watchdog.
 - **`server/video.ts`** — Relays WebCodecs H.264 chunks from the Electron source to remote clients; buffers the latest keyframe.
 - **`server/solar.ts`** — Fetches solar/propagation data from hamqsl.com (HF band conditions, VHF phenomena, SFI, SSN); caches server-side and pushes `solar-data` events to clients.
-- **`server/vlog.ts`** — Per-subsystem debug logging; exports `vlogRig`, `vlogAudio`, `vlogVideo`, `vlogCw`, `vlogInfra` helpers gated by the corresponding `--debug-*` CLI flag.
+- **`server/spectrum.ts`** — Binds a UDP socket on the configured multicast port and joins the multicast group on every non-loopback IPv4 interface (so packets are received regardless of which adapter `rigctld` uses). Parses Hamlib 5.x JSON (`packet.spectra[0]`) and emits `spectrum-data` Socket.io events to all clients. Started/stopped by `onSpectrumEnabledChanged` in `server/settings.ts`. Gated by `spectrumSettings.enabled`.
+- **`server/vlog.ts`** — Per-subsystem debug logging; exports `vlogRig`, `vlogAudio`, `vlogVideo`, `vlogCw`, `vlogInfra`, `vlogSpectrum` helpers gated by the corresponding `--debug-*` CLI flag (`--debug-spectrum` for `vlogSpectrum`).
 
 ### Key Files — Frontend
 
@@ -144,6 +145,10 @@ All functional UI sections live in `src/panels/` as independent components, each
 ### Spots Integration
 
 POTA, SOTA, and WWFF spots are fetched **browser-side** via `setInterval` (no server relay). Each spot type: deduplicates by activator, applies age/mode/band filters, and supports click-to-tune (SSB resolves to USB/LSB by the 10 MHz ITU boundary). Settings persisted to `settings.json`. Available as individual panels (`spots_pota`, `spots_sota`, `spots_wwff`) or the unified `spots_combo` panel (`SpotComboPanel` with `ComboSpotSettingsModal`).
+
+### CI-V Spectrum Scope
+
+`server/spectrum.ts` receives Hamlib's UDP multicast spectrum stream and relays it to browser clients as `spectrum-data` Socket.io events. On bind, it joins the multicast group on every non-loopback IPv4 interface via `os.networkInterfaces()` to handle machines where `rigctld`'s send interface differs from the OS routing default (common on Windows with VPN adapters). Hamlib 5.x wraps spectrum data in a `spectra[]` array at the packet root; the parser reads from `packet.spectra[0]` and maps `minStrength`/`maxStrength` (dBm) as the level range. Radio requirements: serial speed 115200 baud, CI-V Transceive OFF, CI-V USB Echo ON.
 
 ### Solar / Propagation Data
 

@@ -15,6 +15,7 @@ RigControl Web supports six diagnostic flags. Launch the app with one or more of
 | `--debug-video` | Video chunk relay, encoder and decoder events |
 | `--debug-cw` | CW keyer state machine, DTR/RTS serial line changes |
 | `--debug-infra` | Server startup, shutdown steps, TLS certificate, settings file reads/writes |
+| `--debug-spectrum` | CI-V spectrum scope — UDP socket binding, multicast interface joins, per-packet receive/parse/emit trace, 10 s throughput counter |
 | `--debug-all` | All of the above at once |
 
 Flags can be combined. For example, if your problem involves audio and the rig connection together, use `--debug-rig --debug-audio`.

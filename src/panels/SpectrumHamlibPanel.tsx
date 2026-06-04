@@ -322,21 +322,11 @@ export default function SpectrumHamlibPanel({
           {/* Requirements */}
           <div className="rounded-lg bg-[#1a1b1e] border border-[#2a2b2e] p-3 text-[0.625rem] text-[#8e9299] space-y-1 leading-relaxed">
             <div className="font-semibold text-[#b0b3b8]">Requirements</div>
-            <div>• Hamlib 4.7+ (already required by this app)</div>
             <div>• Radio with CI-V spectrum scope: IC-7300, IC-7610, IC-705, IC-9700</div>
             <div>• Serial speed must be 115200 baud for spectrum data</div>
             <div>• CI-V Transceive must remain OFF on the radio</div>
+            <div>• CI-V USB Echo must be ON in radio settings</div>
           </div>
-
-          {/* External rigctld flags — always visible when enabled */}
-          {spectrumSettings.enabled && (
-            <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-3 text-[0.625rem] text-amber-300 space-y-1 leading-relaxed">
-              <div className="font-semibold">If managing rigctld externally, add these flags:</div>
-              <div className="font-mono bg-black/30 rounded p-2 select-all break-all">
-                {`--multicast-addr ${spectrumSettings.multicastAddr} --multicast-port ${spectrumSettings.multicastPort} --set-conf=async=1 --set-conf=transceive=POLL`}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

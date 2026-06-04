@@ -24,7 +24,7 @@ Developers who want to run from source will find build instructions in the [Deve
 
 - **User Authentication**: Every browser client must log in before accessing any controls. JWT-based, bcrypt-hashed passwords, per-user layout namespacing, and a full admin panel for user management, session monitoring, and an audit log.
 - **Real-time Dashboard**: Frequency, mode, and meter displays (S-Meter, SWR, ALC, Power, VDD) polled live from the rig.
-- **CI-V Spectrum Scope** (Icom IC-7300 and compatible): Live panadapter display fed directly from the radio's CI-V bus via Hamlib's UDP multicast. Enable the toggle in **General Settings → RIGCTLD → CI-V Spectrum Scope**. Requires the bundled `rigctld` binary or a Hamlib 4.7.x build compiled with multicast support.
+- **CI-V Spectrum Scope** (Icom IC-7300 and compatible): Live panadapter display fed directly from the radio's CI-V bus via Hamlib's UDP multicast. Enable the toggle in **General Settings → RIGCTLD → CI-V Spectrum Scope**. Requires 115200 baud serial speed, CI-V Transceive OFF, and CI-V USB Echo ON in radio settings.
 - **Bidirectional Audio**: Full transmit and receive audio over the network using the Opus 1.5 codec. Works for remote SSB, AM, and FM contacts.
   - Multi-client support.
   - Audio device lists show the host API (MME, DirectSound, WASAPI, ALSA, Pipewire/PulseAudio) and native sample rate so you can pick the right entry for your hardware.
