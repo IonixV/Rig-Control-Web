@@ -7,7 +7,7 @@ import { COLORMAPS, COLORMAP_NAMES, amplitudeToPixel } from "../utils/spectrumCo
 
 const DEFAULT_HEIGHT = 350;
 const SPECTRUM_RATIO = 0.3;
-const FLOOR_DEFAULT = -130;
+const FLOOR_DEFAULT = -80;
 const CEILING_DEFAULT = -40;
 const LS_PREFIX = "spectrum-hamlib-";
 
@@ -49,6 +49,7 @@ export default function SpectrumHamlibPanel({
 }: Props) {
   const spectrumCanvasRef = useRef<HTMLCanvasElement>(null);
   const waterfallCanvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
   const animFrameRef = useRef<number>(0);
   const lastDrawnTimestampRef = useRef<number>(0);
 
@@ -56,6 +57,7 @@ export default function SpectrumHamlibPanel({
   const [colorMapId, setColorMapId] = useState(() => lsGet("colormap", "classic"));
   const [floor, setFloor] = useState(() => Number(lsGet("floor", String(FLOOR_DEFAULT))));
   const [ceiling, setCeiling] = useState(() => Number(lsGet("ceiling", String(CEILING_DEFAULT))));
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; label: string } | null>(null);
 
   const spectrumHeight = Math.floor(heightPx * SPECTRUM_RATIO);
   const waterfallHeight = heightPx - spectrumHeight - 20;
@@ -66,15 +68,34 @@ export default function SpectrumHamlibPanel({
     return `${hz} Hz`;
   }, []);
 
-  const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+  const hzAtCursor = useCallback((e: React.MouseEvent<HTMLCanvasElement>): number | null => {
     const data = latestSpectrumRef.current;
-    if (!data || !data.highFreq || !data.lowFreq) return;
-    const canvas = e.currentTarget;
-    const rect = canvas.getBoundingClientRect();
+    if (!data || !data.highFreq || !data.lowFreq) return null;
+    const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
-    const hz = Math.round(data.lowFreq + (x / rect.width) * (data.highFreq - data.lowFreq));
+    const raw = data.lowFreq + (x / rect.width) * (data.highFreq - data.lowFreq);
+    return Math.round(raw / 500) * 500;
+  }, [latestSpectrumRef]);
+
+  const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    const hz = hzAtCursor(e);
+    if (hz === null) return;
     handleSetFreq(String(hz));
-  }, [latestSpectrumRef, handleSetFreq]);
+  }, [hzAtCursor, handleSetFreq]);
+
+  const handleCanvasMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    const hz = hzAtCursor(e);
+    if (hz === null) { setTooltip(null); return; }
+    const containerRect = canvasContainerRef.current?.getBoundingClientRect();
+    if (!containerRect) { setTooltip(null); return; }
+    setTooltip({
+      x: e.clientX - containerRect.left,
+      y: e.clientY - containerRect.top,
+      label: freqLabel(hz),
+    });
+  }, [hzAtCursor, freqLabel]);
+
+  const handleCanvasMouseLeave = useCallback(() => setTooltip(null), []);
 
   useEffect(() => {
     if (isCollapsed) return;
@@ -354,25 +375,41 @@ export default function SpectrumHamlibPanel({
         </div>
       );
     }
+    const canvasProps = {
+      onClick: handleCanvasClick,
+      onMouseMove: handleCanvasMouseMove,
+      onMouseLeave: handleCanvasMouseLeave,
+      style: { cursor: "crosshair" } as React.CSSProperties,
+    };
     return (
-      <div className="flex flex-col gap-0">
+      <div ref={canvasContainerRef} className="flex flex-col gap-0 relative">
+        {tooltip && (
+          <div
+            className="pointer-events-none absolute z-10 px-1.5 py-0.5 rounded bg-black/80 text-[0.6rem] text-emerald-300 whitespace-nowrap"
+            style={{ left: tooltip.x + 8, top: tooltip.y - 18 }}
+          >
+            {tooltip.label}
+          </div>
+        )}
         <canvas
           ref={spectrumCanvasRef}
           width={600}
           height={spectrumHeight}
           className="w-full"
-          style={{ height: spectrumHeight, cursor: "crosshair" }}
-          onClick={handleCanvasClick}
-          title="Click to tune"
+          style={{ ...canvasProps.style, height: spectrumHeight }}
+          onClick={canvasProps.onClick}
+          onMouseMove={canvasProps.onMouseMove}
+          onMouseLeave={canvasProps.onMouseLeave}
         />
         <canvas
           ref={waterfallCanvasRef}
           width={600}
           height={waterfallHeight}
           className="w-full"
-          style={{ height: waterfallHeight, cursor: "crosshair" }}
-          onClick={handleCanvasClick}
-          title="Click to tune"
+          style={{ ...canvasProps.style, height: waterfallHeight }}
+          onClick={canvasProps.onClick}
+          onMouseMove={canvasProps.onMouseMove}
+          onMouseLeave={canvasProps.onMouseLeave}
         />
         {freqAxisContent}
       </div>
