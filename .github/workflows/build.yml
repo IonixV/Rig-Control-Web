@@ -114,6 +114,7 @@ jobs:
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-glib2
             mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-readline
 
       - name: Build rigctld (Windows MSYS2)
         if: matrix.os == 'windows-latest' && env.RIGCTLD_EXISTS != 'true'
@@ -123,7 +124,7 @@ jobs:
           git clone --depth=1 https://github.com/Hamlib/Hamlib.git hamlib-src
           cd hamlib-src
           autoreconf -fi
-          ./configure --disable-shared --enable-static --without-python --without-lua --without-tcl --without-perl --without-cxx-binding LDFLAGS="-static -static-libgcc -static-libstdc++"
+          PKG_CONFIG="pkg-config --static" ./configure --disable-shared --enable-static --without-tcl --without-cxx-binding LDFLAGS="-static -static-libgcc -static-libstdc++"
           make -j$(nproc)
           mkdir -p ../bin/windows
           BIN=""

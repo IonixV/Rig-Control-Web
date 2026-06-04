@@ -41,13 +41,13 @@ try {
   if (pl === "linux") {
     console.log("[rigctld] Installing Linux build dependencies...");
     if (existsSync("/usr/bin/apt-get")) {
-      execSync("sudo apt-get update -qq && sudo apt-get install -y build-essential autoconf automake libtool pkg-config libglib2.0-dev", { stdio: "inherit" });
+      execSync("sudo apt-get install -y build-essential autoconf automake libtool pkg-config libglib2.0-dev libreadline-dev", { stdio: "inherit" });
     } else if (existsSync("/usr/bin/dnf")) {
-      execSync("sudo dnf install -y gcc gcc-c++ make autoconf automake libtool pkgconf-pkg-config glib2-devel", { stdio: "inherit" });
+      execSync("sudo dnf install -y gcc gcc-c++ make autoconf automake libtool pkgconf-pkg-config glib2-devel readline-devel", { stdio: "inherit" });
     } else if (existsSync("/usr/bin/yum")) {
-      execSync("sudo yum install -y gcc gcc-c++ make autoconf automake libtool pkgconfig glib2-devel", { stdio: "inherit" });
+      execSync("sudo yum install -y gcc gcc-c++ make autoconf automake libtool pkgconfig glib2-devel readline-devel", { stdio: "inherit" });
     } else if (existsSync("/usr/bin/pacman")) {
-      execSync("sudo pacman -S --noconfirm base-devel autoconf automake libtool pkg-config glib2", { stdio: "inherit" });
+      execSync("sudo pacman -S --noconfirm base-devel autoconf automake libtool pkg-config glib2 readline", { stdio: "inherit" });
     } else {
       console.warn("[rigctld] Unknown package manager — ensure gcc, make, autoconf, automake, libtool, pkg-config, and glib2 dev headers are installed.");
     }
@@ -64,7 +64,7 @@ try {
 
   console.log("[rigctld] Configuring...");
   execSync(
-    "./configure --disable-shared --enable-static --without-python --without-lua --without-tcl --without-perl --without-cxx-binding",
+    "./configure --disable-shared --enable-static --without-tcl --without-cxx-binding",
     { cwd: srcDir, stdio: "inherit" }
   );
 
