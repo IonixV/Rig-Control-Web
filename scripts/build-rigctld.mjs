@@ -33,7 +33,17 @@ const srcDir = "hamlib-src";
 try {
   if (pl === "linux") {
     console.log("[rigctld] Installing Linux build dependencies...");
-    execSync("sudo apt-get update -qq && sudo apt-get install -y build-essential autoconf automake libtool pkg-config libglib2.0-dev", { stdio: "inherit" });
+    if (existsSync("/usr/bin/apt-get")) {
+      execSync("sudo apt-get update -qq && sudo apt-get install -y build-essential autoconf automake libtool pkg-config libglib2.0-dev", { stdio: "inherit" });
+    } else if (existsSync("/usr/bin/dnf")) {
+      execSync("sudo dnf install -y gcc gcc-c++ make autoconf automake libtool pkgconf-pkg-config glib2-devel", { stdio: "inherit" });
+    } else if (existsSync("/usr/bin/yum")) {
+      execSync("sudo yum install -y gcc gcc-c++ make autoconf automake libtool pkgconfig glib2-devel", { stdio: "inherit" });
+    } else if (existsSync("/usr/bin/pacman")) {
+      execSync("sudo pacman -S --noconfirm base-devel autoconf automake libtool pkg-config glib2", { stdio: "inherit" });
+    } else {
+      console.warn("[rigctld] Unknown package manager — ensure gcc, make, autoconf, automake, libtool, pkg-config, and glib2 dev headers are installed.");
+    }
   } else if (pl === "darwin") {
     console.log("[rigctld] Installing macOS build dependencies via Homebrew...");
     execSync("brew install autoconf automake libtool pkg-config glib", { stdio: "inherit" });
