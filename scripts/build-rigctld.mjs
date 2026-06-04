@@ -71,11 +71,15 @@ try {
   console.log(`[rigctld] Building with ${jobs} parallel jobs...`);
   execSync(`make -j${jobs}`, { cwd: srcDir, stdio: "inherit" });
 
-  const builtBin = existsSync(`${srcDir}/src/rigctld`)
-    ? `${srcDir}/src/rigctld`
-    : `${srcDir}/src/.libs/rigctld`;
-  if (!existsSync(builtBin)) {
-    throw new Error(`Built binary not found at src/rigctld or src/.libs/rigctld`);
+  const candidates = [
+    `${srcDir}/tests/rigctld`,
+    `${srcDir}/tests/.libs/rigctld`,
+    `${srcDir}/src/rigctld`,
+    `${srcDir}/src/.libs/rigctld`,
+  ];
+  const builtBin = candidates.find(existsSync);
+  if (!builtBin) {
+    throw new Error(`Built binary not found in any of: ${candidates.join(", ")}`);
   }
 
   const outDir = pl === "linux" ? "bin/linux" : "bin/mac";
