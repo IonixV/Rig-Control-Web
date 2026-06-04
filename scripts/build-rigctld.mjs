@@ -30,6 +30,13 @@ if (pl === "win32") {
 const jobs = cpus().length;
 const srcDir = "hamlib-src";
 
+// Clean up any leftover source tree from a previous failed run
+if (existsSync(srcDir)) {
+  console.log(`[rigctld] Removing leftover ${srcDir} from previous run...`);
+  rmSync(srcDir, { recursive: true, force: true });
+}
+
+let buildFailed = false;
 try {
   if (pl === "linux") {
     console.log("[rigctld] Installing Linux build dependencies...");
@@ -79,9 +86,11 @@ try {
   console.log(`[rigctld] Installed to ${binPath}`);
 } catch (err) {
   console.error(`[rigctld] Build failed: ${err.message}`);
-  process.exit(1);
+  buildFailed = true;
 } finally {
   if (existsSync(srcDir)) {
     rmSync(srcDir, { recursive: true, force: true });
   }
 }
+
+if (buildFailed) process.exit(1);
