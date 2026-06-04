@@ -1,4 +1,5 @@
 import dgram from "dgram";
+import os from "os";
 import { ServerContext } from "./context.ts";
 import { vlogSpectrum } from "./vlog.ts";
 
@@ -69,22 +70,42 @@ export function startSpectrumListener(ctx: ServerContext): void {
   });
 
   sock.bind(ctx.spectrumSettings.multicastPort, () => {
-    try {
-      const iface =
-        ctx.clientHost && ctx.clientHost !== "127.0.0.1" && ctx.clientHost !== "localhost"
-          ? ctx.clientHost
-          : undefined;
-      vlogSpectrum(`[SPECTRUM] Joining multicast group ${ctx.spectrumSettings.multicastAddr} on interface ${iface ?? "(OS default)"}`);
-      sock.addMembership(ctx.spectrumSettings.multicastAddr, iface);
-      const addr = sock.address();
-      console.log(
-        `[SPECTRUM] Listening on multicast ${ctx.spectrumSettings.multicastAddr}:${ctx.spectrumSettings.multicastPort}` +
-          (iface ? ` (interface ${iface})` : ""),
-      );
-      vlogSpectrum(`[SPECTRUM] Socket bound to ${addr.address}:${addr.port} family=${addr.family}`);
-    } catch (err: any) {
-      console.error(`[SPECTRUM] Failed to join multicast group: ${err.message}`);
+    const addr = sock.address();
+    vlogSpectrum(`[SPECTRUM] Socket bound to ${addr.address}:${addr.port} family=${addr.family}`);
+
+    const joined: string[] = [];
+    const failed: string[] = [];
+
+    const tryJoin = (iface: string | undefined, label: string) => {
+      try {
+        sock.addMembership(ctx.spectrumSettings.multicastAddr, iface);
+        joined.push(label);
+        vlogSpectrum(`[SPECTRUM] Joined multicast on ${label}`);
+      } catch (err: any) {
+        failed.push(`${label} (${err.message})`);
+        vlogSpectrum(`[SPECTRUM] Failed to join on ${label}: ${err.message}`);
+      }
+    };
+
+    // Join on every non-loopback IPv4 interface so we receive regardless of
+    // which adapter rigctld chooses for its multicast send.
+    const ifaces = os.networkInterfaces();
+    for (const [name, addrs] of Object.entries(ifaces)) {
+      if (!addrs) continue;
+      for (const a of addrs) {
+        if (a.family !== "IPv4" || a.internal) continue;
+        tryJoin(a.address, `${name}/${a.address}`);
+      }
     }
+
+    // Also join on the OS-chosen default interface as a fallback.
+    tryJoin(undefined, "(default)");
+
+    console.log(
+      `[SPECTRUM] Listening on multicast ${ctx.spectrumSettings.multicastAddr}:${ctx.spectrumSettings.multicastPort} — ` +
+        `joined: [${joined.join(", ")}]` +
+        (failed.length ? `  failed: [${failed.join(", ")}]` : ""),
+    );
   });
 
   ctx.spectrumSocket = sock;
