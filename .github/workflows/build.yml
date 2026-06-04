@@ -86,6 +86,50 @@ jobs:
         shell: cmd
         run: cl cw-key-helper.c /Fe:bin\windows\cw-key-helper.exe /O2 /nologo
 
+      - name: Build rigctld (Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        run: node scripts/build-rigctld.mjs
+
+      - name: Check rigctld binary (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          if (Test-Path "bin\windows\rigctld.exe") {
+            Write-Host "[rigctld] Binary already exists at bin\windows\rigctld.exe — skipping build."
+            echo "RIGCTLD_EXISTS=true" >> $env:GITHUB_ENV
+          } else {
+            Write-Host "[rigctld] Binary not found — will build via MSYS2."
+            echo "RIGCTLD_EXISTS=false" >> $env:GITHUB_ENV
+          }
+
+      - name: Set up MSYS2 for rigctld build (Windows)
+        if: matrix.os == 'windows-latest' && env.RIGCTLD_EXISTS != 'true'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: false
+          install: >-
+            base-devel
+            git
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-glib2
+            mingw-w64-x86_64-pkg-config
+
+      - name: Build rigctld (Windows MSYS2)
+        if: matrix.os == 'windows-latest' && env.RIGCTLD_EXISTS != 'true'
+        shell: msys2 {0}
+        run: |
+          set -e
+          git clone --depth=1 https://github.com/Hamlib/Hamlib.git hamlib-src
+          cd hamlib-src
+          autoreconf -fi
+          ./configure --disable-shared --enable-static --without-python --without-lua --without-tcl --without-perl --without-cxx-binding LDFLAGS="-static -static-libgcc -static-libstdc++"
+          make -j$(nproc)
+          mkdir -p ../bin/windows
+          cp src/rigctld.exe ../bin/windows/rigctld.exe
+          cd ..
+          rm -rf hamlib-src
+
       # --publish never prevents electron-builder from trying to upload to GitHub
       # Releases itself (it lacks a token). The next two steps handle publishing.
       - name: Build

@@ -222,10 +222,9 @@ export async function startRigctld(ctx: ServerContext): Promise<void> {
 
   if (ctx.spectrumSettings.enabled) {
     args.push(
-      "--multicast-addr", ctx.spectrumSettings.multicastAddr,
-      "--multicast-port", String(ctx.spectrumSettings.multicastPort),
+      `--set-conf=multicast_data_addr=${ctx.spectrumSettings.multicastAddr}`,
+      `--set-conf=multicast_data_port=${ctx.spectrumSettings.multicastPort}`,
       "--set-conf=async=1",
-      "--set-conf=transceive=POLL",
     );
   }
 
