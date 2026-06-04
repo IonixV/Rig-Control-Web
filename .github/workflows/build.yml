@@ -126,7 +126,8 @@ jobs:
           ./configure --disable-shared --enable-static --without-python --without-lua --without-tcl --without-perl --without-cxx-binding LDFLAGS="-static -static-libgcc -static-libstdc++"
           make -j$(nproc)
           mkdir -p ../bin/windows
-          cp src/rigctld.exe ../bin/windows/rigctld.exe
+          BIN=src/rigctld.exe; [ -f "$BIN" ] || BIN=src/.libs/rigctld.exe
+          cp "$BIN" ../bin/windows/rigctld.exe
           cd ..
           rm -rf hamlib-src
 

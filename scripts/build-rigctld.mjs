@@ -64,9 +64,16 @@ try {
   console.log(`[rigctld] Building with ${jobs} parallel jobs...`);
   execSync(`make -j${jobs}`, { cwd: srcDir, stdio: "inherit" });
 
+  const builtBin = existsSync(`${srcDir}/src/rigctld`)
+    ? `${srcDir}/src/rigctld`
+    : `${srcDir}/src/.libs/rigctld`;
+  if (!existsSync(builtBin)) {
+    throw new Error(`Built binary not found at src/rigctld or src/.libs/rigctld`);
+  }
+
   const outDir = pl === "linux" ? "bin/linux" : "bin/mac";
   mkdirSync(outDir, { recursive: true });
-  copyFileSync(`${srcDir}/src/rigctld`, binPath);
+  copyFileSync(builtBin, binPath);
   chmodSync(binPath, 0o755);
 
   console.log(`[rigctld] Installed to ${binPath}`);
