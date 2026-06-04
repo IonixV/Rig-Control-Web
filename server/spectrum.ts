@@ -29,6 +29,9 @@ export function startSpectrumListener(ctx: ServerContext): void {
     try {
       packet = JSON.parse(msg.toString("utf8"));
       vlogSpectrum(`[SPECTRUM] JSON parsed OK: app=${packet.app} seq=${packet.seq} dataLen=${(packet.data ?? "").length} type=${packet.type}`);
+      if (packetCount === 0) {
+        vlogSpectrum(`[SPECTRUM] First packet structure: ${JSON.stringify(packet).slice(0, 1000)}`);
+      }
     } catch (e: any) {
       console.error(`[SPECTRUM] JSON parse failed: ${e.message}`);
       vlogSpectrum(`[SPECTRUM] Raw message (first 200 bytes): ${msg.toString("utf8").slice(0, 200)}`);
