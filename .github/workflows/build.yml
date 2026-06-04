@@ -109,7 +109,10 @@ jobs:
           msystem: MINGW64
           update: false
           install: >-
-            base-devel
+            autoconf
+            automake
+            libtool
+            make
             git
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-glib2
