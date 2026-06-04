@@ -57322,12 +57322,9 @@ async function startRigctld(ctx) {
   ];
   if (ctx.spectrumSettings.enabled) {
     args.push(
-      "--multicast-addr",
-      ctx.spectrumSettings.multicastAddr,
-      "--multicast-port",
-      String(ctx.spectrumSettings.multicastPort),
-      "--set-conf=async=1",
-      "--set-conf=transceive=POLL"
+      `--set-conf=multicast_data_addr=${ctx.spectrumSettings.multicastAddr}`,
+      `--set-conf=multicast_data_port=${ctx.spectrumSettings.multicastPort}`,
+      "--set-conf=async=1"
     );
   }
   console.log(`Starting rigctld: ${rigctldPath} ${args.join(" ")}`);
@@ -57340,8 +57337,10 @@ async function startRigctld(ctx) {
     vlogRig(`rigctld stdout: ${str}`);
     addLog(ctx, str);
   });
+  let stderrBuf = "";
   ctx.rigctldProcess.stderr?.on("data", (data) => {
     const str = data.toString();
+    stderrBuf += str;
     console.error(`rigctld stderr: ${str}`);
     addLog(ctx, str);
   });
@@ -57350,6 +57349,14 @@ async function startRigctld(ctx) {
     addLog(ctx, `rigctld exited with code ${code}`);
     ctx.rigctldProcess = null;
     ctx.rigctldStatus = code === 0 ? "stopped" : "error";
+    if (code !== 0 && code !== null && ctx.spectrumSettings.enabled && stderrBuf.includes("unknown option")) {
+      const msg = "CI-V Spectrum Scope auto-disabled: this rigctld build does not support --multicast-addr. Upgrade Hamlib or use a bundled binary compiled with multicast support.";
+      console.warn(`[SPECTRUM] ${msg}`);
+      addLog(ctx, `Warning: ${msg}`);
+      ctx.spectrumSettings = { ...ctx.spectrumSettings, enabled: false };
+      ctx.saveSettings();
+      ctx.io.emit("settings-data", { spectrumSettings: ctx.spectrumSettings });
+    }
     emitRigctldStatus(ctx);
   });
   ctx.rigctldProcess.on("error", (err) => {
@@ -61491,9 +61498,6 @@ function registerSettingsHandlers(socket, ctx, radiosFile, startPolling2, syncKe
     const oldRigNumber = ctx.rigctldSettings.rigNumber;
     if (data.settings) {
       ctx.rigctldSettings = { ...ctx.rigctldSettings, ...data.settings };
-    } else {
-      const { pollRate: pr, clientHost: ch, clientPort: cp, ...rest } = data;
-      ctx.rigctldSettings = { ...ctx.rigctldSettings, ...rest };
     }
     if (data.pollRate !== void 0) {
       ctx.pollRate = Number(data.pollRate);
@@ -61515,6 +61519,7 @@ function registerSettingsHandlers(socket, ctx, radiosFile, startPolling2, syncKe
       if (onSpectrumEnabledChanged && ctx.spectrumSettings.enabled !== wasEnabled) {
         onSpectrumEnabledChanged(ctx.spectrumSettings.enabled);
       }
+      socket.emit("settings-data", { spectrumSettings: ctx.spectrumSettings });
     }
     ctx.saveSettings();
   });

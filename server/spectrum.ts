@@ -45,8 +45,15 @@ export function startSpectrumListener(ctx: ServerContext): void {
 
   sock.bind(ctx.spectrumSettings.multicastPort, () => {
     try {
-      sock.addMembership(ctx.spectrumSettings.multicastAddr);
-      console.log(`[SPECTRUM] Listening on multicast ${ctx.spectrumSettings.multicastAddr}:${ctx.spectrumSettings.multicastPort}`);
+      const iface =
+        ctx.clientHost && ctx.clientHost !== "127.0.0.1" && ctx.clientHost !== "localhost"
+          ? ctx.clientHost
+          : undefined;
+      sock.addMembership(ctx.spectrumSettings.multicastAddr, iface);
+      console.log(
+        `[SPECTRUM] Listening on multicast ${ctx.spectrumSettings.multicastAddr}:${ctx.spectrumSettings.multicastPort}` +
+          (iface ? ` (interface ${iface})` : ""),
+      );
     } catch (err: any) {
       console.error(`[SPECTRUM] Failed to join multicast group: ${err.message}`);
     }
