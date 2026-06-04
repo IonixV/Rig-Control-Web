@@ -127,7 +127,7 @@ jobs:
           git clone --depth=1 https://github.com/Hamlib/Hamlib.git hamlib-src
           cd hamlib-src
           autoreconf -fi
-          PKG_CONFIG="pkg-config --static" ./configure --disable-shared --enable-static --without-tcl --without-cxx-binding LDFLAGS="-static -static-libgcc -static-libstdc++"
+          ./configure --disable-shared --enable-static --without-tcl --without-cxx-binding LDFLAGS="-static-libgcc -static-libstdc++"
           make -j$(nproc)
           mkdir -p ../bin/windows
           BIN=""
@@ -136,6 +136,8 @@ jobs:
           done
           [ -n "$BIN" ] || { echo "[rigctld] Binary not found after build"; exit 1; }
           cp "$BIN" ../bin/windows/rigctld.exe
+          # Bundle all MINGW64 runtime DLLs that rigctld.exe depends on
+          ldd "$BIN" | grep '/mingw64/bin/' | awk '{print $3}' | xargs -I{} cp {} ../bin/windows/
           cd ..
           rm -rf hamlib-src
 
