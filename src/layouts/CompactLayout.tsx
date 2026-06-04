@@ -953,6 +953,8 @@ function CompactLayout({
     isConsoleCollapsed, consoleLogs, rawCommand,
     solarData, requestSolarData, isSolarCollapsed, isMufMapCollapsed,
     compactLayout, isEditMode, gridCallbacks,
+    spectrumSettings, spectrumEnabled, spectrumSupported,
+    isSpectrumHamlibCollapsed, isSpectrumAudioCollapsed,
   ]);
 
   const columnLayout = useMemo(() => {

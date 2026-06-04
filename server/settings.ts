@@ -79,10 +79,8 @@ export function registerSettingsHandlers(
 
     if (data.settings) {
       ctx.rigctldSettings = { ...ctx.rigctldSettings, ...data.settings };
-    } else {
-      const { pollRate: pr, clientHost: ch, clientPort: cp, ...rest } = data;
-      ctx.rigctldSettings = { ...ctx.rigctldSettings, ...rest };
     }
+    // else: individual key saves (e.g. spectrumSettings) — never merge into ctx.rigctldSettings
 
     if (data.pollRate !== undefined) {
       ctx.pollRate = Number(data.pollRate);
@@ -104,6 +102,7 @@ export function registerSettingsHandlers(
       if (onSpectrumEnabledChanged && ctx.spectrumSettings.enabled !== wasEnabled) {
         onSpectrumEnabledChanged(ctx.spectrumSettings.enabled);
       }
+      socket.emit("settings-data", { spectrumSettings: ctx.spectrumSettings });
     }
 
     ctx.saveSettings();

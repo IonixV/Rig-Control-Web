@@ -243,8 +243,10 @@ export async function startRigctld(ctx: ServerContext): Promise<void> {
     addLog(ctx, str);
   });
 
+  let stderrBuf = "";
   ctx.rigctldProcess.stderr?.on("data", (data) => {
     const str = data.toString();
+    stderrBuf += str;
     console.error(`rigctld stderr: ${str}`);
     addLog(ctx, str);
   });
@@ -254,6 +256,16 @@ export async function startRigctld(ctx: ServerContext): Promise<void> {
     addLog(ctx, `rigctld exited with code ${code}`);
     ctx.rigctldProcess = null;
     ctx.rigctldStatus = code === 0 ? "stopped" : "error";
+
+    if (code !== 0 && code !== null && ctx.spectrumSettings.enabled && stderrBuf.includes("unknown option")) {
+      const msg = "CI-V Spectrum Scope auto-disabled: this rigctld build does not support --multicast-addr. Upgrade Hamlib or use a bundled binary compiled with multicast support.";
+      console.warn(`[SPECTRUM] ${msg}`);
+      addLog(ctx, `Warning: ${msg}`);
+      ctx.spectrumSettings = { ...ctx.spectrumSettings, enabled: false };
+      ctx.saveSettings();
+      ctx.io.emit("settings-data", { spectrumSettings: ctx.spectrumSettings });
+    }
+
     emitRigctldStatus(ctx);
   });
 
