@@ -24,6 +24,7 @@ Developers who want to run from source will find build instructions in the [Deve
 
 - **User Authentication**: Every browser client must log in before accessing any controls. JWT-based, bcrypt-hashed passwords, per-user layout namespacing, and a full admin panel for user management, session monitoring, and an audit log.
 - **Real-time Dashboard**: Frequency, mode, and meter displays (S-Meter, SWR, ALC, Power, VDD) polled live from the rig.
+- **CI-V Spectrum Scope** (Icom IC-7300 and compatible): Live panadapter display fed directly from the radio's CI-V bus via Hamlib's UDP multicast. Enable the toggle in **General Settings → RIGCTLD → CI-V Spectrum Scope**. Requires the bundled `rigctld` binary or a Hamlib 4.7.x build compiled with multicast support.
 - **Bidirectional Audio**: Full transmit and receive audio over the network using the Opus 1.5 codec. Works for remote SSB, AM, and FM contacts.
   - Multi-client support.
   - Audio device lists show the host API (MME, DirectSound, WASAPI, ALSA, Pipewire/PulseAudio) and native sample rate so you can pick the right entry for your hardware.
@@ -72,9 +73,9 @@ Developers who want to run from source will find build instructions in the [Deve
 
 ### Common
 - **Operating Systems**:
-  - **Windows 10 or higher** (tested on Windows 11 23H2) - Requires Hamlib 4.7.0 or later installed.
+  - **Windows 10 or higher** (tested on Windows 11 23H2) — The Electron installer includes a bundled `rigctld` compiled from Hamlib 4.7.x with multicast support. No separate Hamlib installation required.
     - For audio, use MME or DirectSound devices from the backend audio device selector. WASAPI requires the Windows audio device to be configured at 48 kHz in Sound settings (for example, FT-710 only works at 44,100).
-  - **Linux kernel 6.0 or higher** (tested on Fedora 43) - Requires Hamlib 4.7.0 or later installed
+  - **Linux kernel 6.0 or higher** (tested on Fedora 43) — The Electron AppImage includes a bundled `rigctld`. For `npm run dev` (web server mode), Hamlib 4.7.0+ must be installed separately — see the warning below.
     - Most Linux distros, including extremely modern ones seem to still be bundling Hamlib 4.6.5.  This will NOT work.  Install from the Hamlib GitHub page.
   - **macOS**
     - Requires externally installed Hamlib 4.7.0 in the system PATH.
@@ -83,7 +84,7 @@ Developers who want to run from source will find build instructions in the [Deve
 ### Compile from Source
 - **Node.js**: Version 24 or higher.
 - **Hamlib**: 4.7.0 or higher.
-  - **Electron Apps**: Bundle `rigctld` by placing the binary in `bin/[linux|windows|mac]/`.  Not required.  Will fall back to system Hamlib binaries.
+  - **Electron Apps**: A bundled `rigctld` is auto-provisioned at build time by `scripts/build-rigctld.mjs` (runs as part of `npm run electron:build`). It will skip the build if a binary is already present in `bin/[linux|windows|mac]/`. The app falls back to the system `rigctld` if no bundled binary is found.
 
 ### Installing Hamlib (if required, 4.7.0 or higher)
 - **Linux**: `sudo apt install libhamlib-utils`, `sudo dnf install hamlib`

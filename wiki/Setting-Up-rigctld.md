@@ -89,3 +89,24 @@ If `rigctld` is already running on your computer from another program (WSJT-X, f
 ## Using rigctld With Other Software
 
 Because `rigctld` exposes a standard network interface, you can configure any Hamlib-compatible logging or digital mode program to connect to it alongside RigControl Web. In programs like WSJT-X, FLDigi, VarAC, or JS8Call, choose **Hamlib NET rigctl** as the rig type and set the network address to `127.0.0.1:4532`. All programs will share the same radio connection without needing separate serial port splitters.
+
+---
+
+## CI-V Spectrum Scope
+
+Some Icom radios — most notably the **IC-7300** and compatible models — can stream live spectrum data over their CI-V bus while `rigctld` is connected. RigControl Web can receive and display this data as a panadapter in the **CI-V Spectrum Scope** panel.
+
+### Requirements
+
+- **Hamlib 4.7.x with multicast support.** The bundled `rigctld` included in the Electron installer meets this requirement. If you are running `rigctld` from your system PATH, check that it is at least version 4.7.0 and was compiled with multicast support — most Linux distribution packages are 4.6.x and **will not work**. The RIGCTLD tab shows the detected version. If the version is shown as unsupported, use the bundled binary.
+- **An IC-7300 or other Icom radio with CI-V spectrum output** connected and `rigctld` running normally.
+
+### Enabling the Spectrum Scope
+
+In **General Settings → RIGCTLD**, scroll down to find the **CI-V Spectrum Scope** toggle. Enable it, then click **Stop** and **Start** (or **Kill and Restart**) to restart `rigctld` with multicast arguments. Once `rigctld` restarts, add the **CI-V Spectrum** panel to your layout via **Add Panel**.
+
+> If the spectrum scope toggle is enabled but your `rigctld` binary does not support multicast, `rigctld` will exit immediately with an error. RigControl Web detects this and **automatically disables the toggle** so rig control resumes on the next start. Check the Process Logs panel for the error message.
+
+### Multicast Address and Port
+
+The default multicast address (`224.0.0.1`) and port (`4531`) match Hamlib's defaults and work for single-machine setups. Advanced users running `rigctld` on a separate machine from the app can change these to route spectrum data across a network.
