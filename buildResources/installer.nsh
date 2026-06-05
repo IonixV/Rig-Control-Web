@@ -29,36 +29,60 @@
   !insertmacro MUI_PAGE_FINISH
 !macroend
 
-; ── Windows Defender Firewall rule ───────────────────────────────────────────
-; Adds an inbound UDP 4531 allow rule on all profiles (required for the CI-V
-; spectrum scope multicast stream from rigctld).  Skipped silently if the rule
-; already exists.  If the installer is running without admin rights (per-user
-; install), a targeted UAC prompt is shown just for this step.
+; ── Windows Defender Firewall rules ──────────────────────────────────────────
+; Two inbound allow rules are added post-install:
+;   TCP 3000 — HTTPS web server, scoped to the app executable only
+;   UDP 4531 — CI-V spectrum scope multicast from rigctld (not app-scoped;
+;              the multicast receiver runs inside the app process but netsh
+;              program= filtering is unreliable for multicast UDP)
+; Each rule is skipped silently if it already exists.  If the installer is
+; running without admin rights (per-user install), a single targeted UAC
+; prompt is shown to cover both rules.
 
 !macro customInstall
-  nsExec::ExecToStack `"$SYSDIR\netsh.exe" advfirewall firewall show rule name="RigControl Web - UDP 4531"`
-  Pop $0  ; exit code: 0 = rule already exists
+  ; Check whether the TCP 3000 rule already exists.
+  nsExec::ExecToStack `"$SYSDIR\netsh.exe" advfirewall firewall show rule name="RigControl Web - TCP 3000"`
+  Pop $0  ; 0 = exists
   Pop $1  ; stdout (discard)
+  StrCpy $2 $0  ; save result for TCP rule
 
-  ${If} $0 != 0
+  ; Check whether the UDP 4531 rule already exists.
+  nsExec::ExecToStack `"$SYSDIR\netsh.exe" advfirewall firewall show rule name="RigControl Web - UDP 4531"`
+  Pop $0  ; 0 = exists
+  Pop $1  ; stdout (discard)
+  StrCpy $3 $0  ; save result for UDP rule
+
+  ${If} $2 != 0
+  ${OrIf} $3 != 0
     ${If} ${UAC_IsAdmin}
-      ; Already elevated (per-machine install) — add the rule directly.
-      nsExec::Exec `"$SYSDIR\netsh.exe" advfirewall firewall add rule name="RigControl Web - UDP 4531" description="RigControl Web CI-V spectrum scope" protocol=UDP dir=in localport=4531 action=allow profile=any`
+      ; Already elevated — add whichever rules are missing directly.
+      ${If} $2 != 0
+        nsExec::Exec `"$SYSDIR\netsh.exe" advfirewall firewall add rule name="RigControl Web - TCP 3000" description="RigControl Web HTTPS server" program="$INSTDIR\RIGCONTROL WEB.exe" protocol=TCP dir=in localport=3000 action=allow profile=any`
+      ${EndIf}
+      ${If} $3 != 0
+        nsExec::Exec `"$SYSDIR\netsh.exe" advfirewall firewall add rule name="RigControl Web - UDP 4531" description="RigControl Web CI-V spectrum scope" protocol=UDP dir=in localport=4531 action=allow profile=any`
+      ${EndIf}
     ${Else}
-      ; Per-user install — request admin only for this one command.
-      MessageBox MB_ICONINFORMATION|MB_OK "A Windows UAC prompt will appear to add a firewall rule that allows the CI-V spectrum scope to receive UDP multicast on port 4531. Please approve it."
-      ExecShell "runas" "$SYSDIR\netsh.exe" `advfirewall firewall add rule name="RigControl Web - UDP 4531" description="RigControl Web CI-V spectrum scope" protocol=UDP dir=in localport=4531 action=allow profile=any`
+      ; Per-user install — one UAC prompt covers both missing rules.
+      MessageBox MB_ICONINFORMATION|MB_OK "A Windows UAC prompt will appear to add firewall rules for RigControl Web (inbound TCP 3000 for the web interface and/or UDP 4531 for the CI-V spectrum scope). Please approve it."
+      ${If} $2 != 0
+        ExecShell "runas" "$SYSDIR\netsh.exe" `advfirewall firewall add rule name="RigControl Web - TCP 3000" description="RigControl Web HTTPS server" program="$INSTDIR\RIGCONTROL WEB.exe" protocol=TCP dir=in localport=3000 action=allow profile=any`
+      ${EndIf}
+      ${If} $3 != 0
+        ExecShell "runas" "$SYSDIR\netsh.exe" `advfirewall firewall add rule name="RigControl Web - UDP 4531" description="RigControl Web CI-V spectrum scope" protocol=UDP dir=in localport=4531 action=allow profile=any`
+      ${EndIf}
     ${EndIf}
   ${EndIf}
 !macroend
 
 ; ── Firewall cleanup on uninstall ────────────────────────────────────────────
-; Removes the rule when the uninstaller has admin rights.  For per-user
-; uninstalls without elevation the rule is left in place; users can remove it
-; manually via Windows Defender Firewall.
+; Removes both rules when the uninstaller has admin rights.  For per-user
+; uninstalls without elevation the rules are left in place; users can remove
+; them manually via Windows Defender Firewall.
 
 !macro customUnInstall
   ${If} ${UAC_IsAdmin}
+    nsExec::Exec `"$SYSDIR\netsh.exe" advfirewall firewall delete rule name="RigControl Web - TCP 3000"`
     nsExec::Exec `"$SYSDIR\netsh.exe" advfirewall firewall delete rule name="RigControl Web - UDP 4531"`
   ${EndIf}
 !macroend
