@@ -240,8 +240,38 @@ function SettingsModal({
         </div>
 
         <div className="space-y-1">
+          <label className="text-[0.625rem] uppercase text-[#8e9299]">PTT Type</label>
+          <div className="flex gap-2 flex-wrap">
+            {([
+              { id: 'rig', label: 'CI-V / CAT' },
+              { id: 'dtr', label: 'DTR' },
+              { id: 'rts', label: 'RTS' },
+              { id: 'none', label: 'None' },
+            ] as const).map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => setRigctldSettings(prev => ({ ...prev, pttType: id }))}
+                className={cn(
+                  "px-3 py-1 rounded text-xs font-bold border transition-colors",
+                  (rigctldSettings.pttType ?? 'rig') === id
+                    ? "bg-emerald-500/20 border-emerald-500 text-emerald-400"
+                    : "border-[#2a2b2e] text-[#8e9299] bg-[#1a1b1e]"
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {(rigctldSettings.pttType === 'dtr' || rigctldSettings.pttType === 'rts') && (
+            <p className="text-[0.625rem] text-amber-400/80 mt-1">
+              For IC-7300: set USB Keying (CW) and USB Send to {rigctldSettings.pttType.toUpperCase()} in the radio menu, then select <span className="font-bold">CAT PTT</span> as the keying method in the CW tab.
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-1">
           <label className="text-[0.625rem] uppercase text-[#8e9299]">Listen Address</label>
-          <input 
+          <input
             type="text"
             value={rigctldSettings.ipAddress}
             onChange={(e) => setRigctldSettings(prev => ({ ...prev, ipAddress: e.target.value }))}
@@ -411,7 +441,10 @@ function SettingsModal({
         {cwSettings.keyingMethod === 'rigctld-ptt' && (
           <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[0.625rem] text-amber-300 space-y-1">
             <div className="font-bold uppercase">CAT PTT Mode</div>
-            <div>Radio must be in CW mode with full or semi break-in (QSK) enabled. T-R switching is handled by the radio's internal QSK/break-in timing. No serial port required.</div>
+            <div>Radio must be in CW mode with full or semi break-in (QSK) enabled. T-R switching is handled by the radio's internal QSK/break-in timing.</div>
+            <div className="mt-1 pt-1 border-t border-amber-500/20">
+              <span className="font-bold">IC-7300 single-port setup:</span> Set PTT Type to DTR (or RTS) in the RIGCTLD tab, then set USB Keying (CW) and USB Send to the same line in the radio's SET → Connectors menu. No separate keyer serial port needed.
+            </div>
           </div>
         )}
 

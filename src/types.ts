@@ -108,6 +108,7 @@ export interface RigctldSettings {
   nrLevelRange: { min: number; max: number; step: number };
   rfPowerRange: { min: number; max: number; step: number };
   anfSupported: boolean;
+  pttType: "rig" | "dtr" | "rts" | "none";
 }
 
 export interface ConsoleLog {

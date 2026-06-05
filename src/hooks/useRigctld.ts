@@ -22,6 +22,7 @@ export function useRigctld({ socket }: UseRigctldOptions) {
     nrLevelRange: { min: 0, max: 1, step: 0.1 },
     rfPowerRange: { min: 0, max: 1, step: 0.01 },
     anfSupported: false,
+    pttType: "rig" as "rig" | "dtr" | "rts" | "none",
   });
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [statusLoaded, setStatusLoaded] = useState(false);

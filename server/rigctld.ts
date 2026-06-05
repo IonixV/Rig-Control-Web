@@ -220,6 +220,11 @@ export async function startRigctld(ctx: ServerContext): Promise<void> {
     "-s", serialPortSpeed,
   ];
 
+  const pttType = ctx.rigctldSettings.pttType ?? "rig";
+  if (pttType !== "rig") {
+    args.push("-p", pttType.toUpperCase());
+  }
+
   if (ctx.spectrumSettings.enabled) {
     args.push(
       `--set-conf=multicast_data_addr=${ctx.spectrumSettings.multicastAddr}`,

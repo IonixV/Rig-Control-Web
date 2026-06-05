@@ -77,6 +77,7 @@ export interface ServerContext {
     nrLevelRange: { min: number; max: number; step: number };
     rfPowerRange: { min: number; max: number; step: number };
     anfSupported: boolean;
+    pttType: "rig" | "dtr" | "rts" | "none";
   };
   audioSettings: {
     inputDevice: string;
@@ -243,6 +244,7 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
       nrLevelRange: { min: 0, max: 1, step: 0.1 },
       rfPowerRange: { min: 0, max: 1, step: 0.01 },
       anfSupported: false,
+      pttType: "rig",
     },
     audioSettings: {
       inputDevice: "",
