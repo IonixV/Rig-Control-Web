@@ -5,8 +5,8 @@ import { COLORMAPS, COLORMAP_NAMES, amplitudeToPixel } from "../utils/spectrumCo
 
 const DEFAULT_HEIGHT = 350;
 const SPECTRUM_RATIO = 0.3;
-const FLOOR_DEFAULT = -120;
-const CEILING_DEFAULT = -20;
+const FLOOR_DEFAULT = -55;
+const CEILING_DEFAULT = 0;
 const WATERFALL_MAX_LINES = 300;
 const LS_PREFIX = "spectrum-audio-";
 
@@ -40,9 +40,10 @@ interface Props {
 }
 
 function computeDisplayBandwidth(bandwidth: number, mode: string, maxHz: number): number {
+  const isCw = mode === "CW" || mode === "CWR" || mode === "CW-R";
+  if (isCw) return Math.min(1400, maxHz);
   const bw = bandwidth === 0 ? 3000 : bandwidth;
-  const isCw = mode === "CW" || mode === "CWR";
-  return Math.min(isCw ? bw * 2 : bw, maxHz);
+  return Math.min(bw + 300, maxHz);
 }
 
 function lsGet(key: string, fallback: string): string {
