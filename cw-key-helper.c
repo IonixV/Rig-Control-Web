@@ -170,15 +170,15 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    cfmakeraw(&tty);
-    cfsetispeed(&tty, B9600);
-    cfsetospeed(&tty, B9600);
-
     /*
-     * Disable hardware flow control and HUPCL.
-     * HUPCL would drop DTR/RTS on close; we manage line state ourselves.
-     * CRTSCTS would engage CTS/RTS flow control, which must be off.
-     * CLOCAL ignores modem status lines (no carrier-detect blocking).
+     * We only need modem control line access, not data I/O. Touch only
+     * the three flags that affect DTR/RTS toggling; leave baud rate and
+     * data framing exactly as-is so we don't disrupt any other process
+     * (e.g. rigctld) that may have the same port open.
+     *
+     * CRTSCTS: if set, the kernel owns RTS for flow control — must be off.
+     * HUPCL:   if set, DTR/RTS drop when the last fd closes — must be off.
+     * CLOCAL:  ignores modem status lines; prevents blocking on DCD.
      */
 #ifdef CRTSCTS
     tty.c_cflag &= ~CRTSCTS;
