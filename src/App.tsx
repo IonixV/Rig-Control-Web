@@ -259,6 +259,7 @@ export default function App() {
     vfoA, setVfoA,
     vfoB, setVfoB,
     error,
+    rigConnecting,
     opError,
     rawCommand, setRawCommand,
     consoleLogs,
@@ -563,33 +564,23 @@ export default function App() {
           </div>
         </header>
 
+        {rigConnecting && !error && (
+          <div className="bg-blue-500/10 border border-blue-500/30 px-4 py-3 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4">
+            <div className="w-3.5 h-3.5 rounded-full border-2 border-blue-400 border-t-transparent animate-spin shrink-0" />
+            <span className="text-xs text-blue-300">
+              {rigConnecting.attempt === 1
+                ? "Connecting to rigctld…"
+                : `Connecting to rigctld… (retry ${rigConnecting.attempt - 1} of ${rigConnecting.maxAttempts - 1})`}
+            </span>
+          </div>
+        )}
+
         {error && (
-          <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-xl flex items-start gap-4 animate-in fade-in slide-in-from-top-4">
-            <div className="p-2 bg-red-500/20 rounded-full text-red-500">
-              <Settings size={20} />
+          <div className="bg-red-500/10 border border-red-500/50 px-4 py-3 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4">
+            <div className="p-1.5 bg-red-500/20 rounded-full text-red-500 shrink-0">
+              <Settings size={16} />
             </div>
-            <div className="flex-1">
-              <h3 className="text-red-500 font-bold text-sm uppercase tracking-tight">Connection Error</h3>
-              <p className="text-xs text-red-400/80 mt-1 leading-relaxed">{error}</p>
-              <div className="mt-4 p-3 bg-black/40 rounded border border-red-500/20 space-y-2">
-                <p className="text-[0.625rem] text-[#8e9299] uppercase font-bold">How to fix this:</p>
-                <ul className="text-[0.6875rem] list-disc list-inside space-y-1 text-red-300/70">
-                  <li><strong>Use ngrok:</strong> Run <code className="bg-black px-1">ngrok tcp 4532</code> on your radio computer and use the provided <code className="text-white">0.tcp.ngrok.io</code> address.</li>
-                  <li><strong>Port Forwarding:</strong> Forward port <code className="text-white">4532</code> on your router to <code className="text-white">192.168.86.34</code>.</li>
-                  <li><strong>Public IP:</strong> Ensure you use your <em>Public</em> IP (search "What is my IP") and not your local 192.168.x.x address.</li>
-                </ul>
-              </div>
-              <div className="mt-3 flex gap-4">
-                <a
-                  href="https://github.com/Hamlib/Hamlib/wiki/rigctld"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[0.625rem] uppercase font-bold text-emerald-500 hover:underline"
-                >
-                  Rigctld Setup Guide
-                </a>
-              </div>
-            </div>
+            <p className="text-xs text-red-400/90">{error}</p>
           </div>
         )}
 

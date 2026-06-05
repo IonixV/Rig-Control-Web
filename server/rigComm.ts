@@ -441,7 +441,10 @@ export function resetRigState(ctx: ServerContext): void {
   };
 }
 
-export function connectToRig(ctx: ServerContext, host: string, port: number, socket?: Socket): void {
+const CONNECT_MAX_ATTEMPTS = 5;
+const CONNECT_RETRY_DELAY_MS = 1000;
+
+export function connectToRig(ctx: ServerContext, host: string, port: number, socket?: Socket, attempt = 1): void {
   if (ctx.isConnected && ctx.rigConfig.host === host && ctx.rigConfig.port === port) {
     console.log(`Already connected to rigctld at ${host}:${port}. Informing client.`);
     if (socket) {
@@ -452,15 +455,21 @@ export function connectToRig(ctx: ServerContext, host: string, port: number, soc
     return;
   }
 
-  if (ctx.rigSocket) {
-    ctx.rigSocket.destroy();
-    ctx.rigSocket = null;
+  if (attempt === 1) {
+    if (ctx.rigSocket) {
+      ctx.rigSocket.destroy();
+      ctx.rigSocket = null;
+    }
+    ctx.rigConfig = { host, port };
   }
 
-  ctx.rigConfig = { host, port };
-  ctx.rigSocket = new net.Socket();
+  ctx.io.emit("rig-connecting", { attempt, maxAttempts: CONNECT_MAX_ATTEMPTS });
 
-  ctx.rigSocket.connect(port, host, async () => {
+  const sock = new net.Socket();
+  ctx.rigSocket = sock;
+  let retrying = false;
+
+  sock.connect(port, host, async () => {
     console.log(`Connected to rigctld at ${host}:${port}`);
     ctx.isConnected = true;
     await probeVfoCapability(ctx);
@@ -477,13 +486,25 @@ export function connectToRig(ctx: ServerContext, host: string, port: number, soc
     startPolling(ctx);
   });
 
-  ctx.rigSocket.on("error", (err) => {
-    console.error("Rig socket error:", err);
-    ctx.isConnected = false;
-    ctx.io.emit("rig-error", `Connection Error: ${err.message}`);
+  sock.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "ECONNREFUSED" && attempt < CONNECT_MAX_ATTEMPTS) {
+      retrying = true;
+      sock.destroy();
+      ctx.rigSocket = null;
+      console.log(`Rig connection refused at ${host}:${port}, retry ${attempt}/${CONNECT_MAX_ATTEMPTS - 1}...`);
+      setTimeout(() => connectToRig(ctx, host, port, socket, attempt + 1), CONNECT_RETRY_DELAY_MS);
+    } else {
+      console.error("Rig socket error:", err);
+      ctx.isConnected = false;
+      const msg = err.code === "ECONNREFUSED"
+        ? `Could not connect to rigctld at ${host}:${port} — connection refused after ${CONNECT_MAX_ATTEMPTS} attempts`
+        : `Could not connect to rigctld at ${host}:${port} — ${err.message}`;
+      ctx.io.emit("rig-error", msg);
+    }
   });
 
-  ctx.rigSocket.on("close", () => {
+  sock.on("close", () => {
+    if (retrying) return;
     console.log("Rig connection closed");
     ctx.isConnected = false;
     ctx.io.emit("rig-disconnected");

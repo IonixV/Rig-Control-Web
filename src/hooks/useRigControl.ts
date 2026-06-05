@@ -47,6 +47,7 @@ export function useRigControl({
   const [vfoA, setVfoA] = useState(() => localStorage.getItem("last-vfoA") || "14074000");
   const [vfoB, setVfoB] = useState(() => localStorage.getItem("last-vfoB") || "7074000");
   const [error, setError] = useState<string | null>(null);
+  const [rigConnecting, setRigConnecting] = useState<{ attempt: number; maxAttempts: number } | null>(null);
   const [opError, setOpError] = useState<string | null>(null);
   const opErrorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [rawCommand, setRawCommand] = useState("");
@@ -383,8 +384,14 @@ export function useRigControl({
       }
     };
 
+    const onRigConnecting = (data: { attempt: number; maxAttempts: number }) => {
+      setRigConnecting(data);
+      setError(null);
+    };
+
     const onRigConnected = ({ vfoSupported: vfoSup }: { vfoSupported?: boolean } = {}) => {
       console.log("[RIG] Connected successfully, vfoSupported:", vfoSup !== false);
+      setRigConnecting(null);
       setConnected(true);
       setVfoSupported(vfoSup !== false);
       setError(null);
@@ -397,6 +404,7 @@ export function useRigControl({
 
     const onRigDisconnected = () => {
       console.log("[RIG] Disconnected");
+      setRigConnecting(null);
       setConnected(false);
       setVfoSupported(true);
       if (isAutoconnectAttempt.current) {
@@ -407,6 +415,7 @@ export function useRigControl({
 
     const onRigError = (msg: string) => {
       console.log("[RIG] Error:", msg);
+      setRigConnecting(null);
       setError(msg);
       setConnected(false);
       if (isAutoconnectAttempt.current) {
@@ -498,6 +507,7 @@ export function useRigControl({
     const onDebugFlags = ({ rig }: { rig: boolean }) => { rigVerbose = rig; };
 
     socket.on("settings-data", onSettingsData);
+    socket.on("rig-connecting", onRigConnecting);
     socket.on("rig-connected", onRigConnected);
     socket.on("available-modes", onAvailableModes);
     socket.on("rig-disconnected", onRigDisconnected);
@@ -512,6 +522,7 @@ export function useRigControl({
 
     return () => {
       socket.off("settings-data", onSettingsData);
+      socket.off("rig-connecting", onRigConnecting);
       socket.off("rig-connected", onRigConnected);
       socket.off("available-modes", onAvailableModes);
       socket.off("rig-disconnected", onRigDisconnected);
@@ -535,6 +546,7 @@ export function useRigControl({
     vfoA, setVfoA,
     vfoB, setVfoB,
     error,
+    rigConnecting,
     opError,
     rawCommand, setRawCommand,
     consoleLogs,
