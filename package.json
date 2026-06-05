@@ -43,6 +43,12 @@
       "**/*.node",
       "**/node_modules/libopus-node/**/*.wasm"
     ],
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "include": "buildResources/installer.nsh"
+    },
     "win": {
       "target": "nsis",
       "icon": "assets/icons/rcw.ico",
