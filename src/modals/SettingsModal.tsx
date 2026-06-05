@@ -264,7 +264,7 @@ function SettingsModal({
           </div>
           {(rigctldSettings.pttType === 'dtr' || rigctldSettings.pttType === 'rts') && (
             <p className="text-[0.625rem] text-amber-400/80 mt-1">
-              For IC-7300: set USB Keying (CW) and USB Send to {rigctldSettings.pttType.toUpperCase()} in the radio menu, then select <span className="font-bold">CAT PTT</span> as the keying method in the CW tab.
+              For IC-7300: set USB Send to {rigctldSettings.pttType.toUpperCase()} in the radio's SET → Connectors menu. USB Keying (CW) must be set to a <span className="font-bold">different</span> line.
             </p>
           )}
         </div>
@@ -443,7 +443,7 @@ function SettingsModal({
             <div className="font-bold uppercase">CAT PTT Mode</div>
             <div>Radio must be in CW mode with full or semi break-in (QSK) enabled. T-R switching is handled by the radio's internal QSK/break-in timing.</div>
             <div className="mt-1 pt-1 border-t border-amber-500/20">
-              <span className="font-bold">IC-7300 single-port setup:</span> Set PTT Type to DTR (or RTS) in the RIGCTLD tab, then set USB Keying (CW) and USB Send to the same line in the radio's SET → Connectors menu. No separate keyer serial port needed.
+              <span className="font-bold">IC-7300 note:</span> CAT PTT only toggles the transmitter; it does not assert the CW key input. The IC-7300 will go into TX but produce no CW tone. For IC-7300 CW keying, use DTR or RTS mode with a dedicated serial port (see below).
             </div>
           </div>
         )}
