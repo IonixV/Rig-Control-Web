@@ -20,14 +20,10 @@ export const PANEL_CONFIG_OPTIONS: Partial<Record<string, PanelConfigOptions>> =
   spectrum_hamlib: {
     hasHeightSlider: true,
     defaultHeightPx: 350,
-    hasFullWidth: true,
-    defaultFullWidth: false,
   },
   spectrum_audio: {
     hasHeightSlider: true,
     defaultHeightPx: 350,
-    hasFullWidth: true,
-    defaultFullWidth: false,
   },
 };
 
@@ -110,8 +106,8 @@ export const PANEL_MIN_SIZES: Partial<Record<PanelType, { minW: number; minH: nu
   audio_feed: { minW: 1, minH: 1 },
   commandconsole: { minW: 1, minH: 1 },
   mufmap: { minW: 1, minH: 1 },
-  spectrum_hamlib: { minW: 2, minH: 2 },
-  spectrum_audio: { minW: 2, minH: 2 },
+  spectrum_hamlib: { minW: 1, minH: 2 },
+  spectrum_audio: { minW: 1, minH: 2 },
 };
 
 export interface GridLayoutCallbacks {

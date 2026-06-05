@@ -732,6 +732,13 @@ export default function App() {
             handleSendRaw={handleSendRaw}
             solarData={solarData}
             requestSolarData={requestSolarData}
+            latestSpectrumRef={latestSpectrumRef}
+            waterfallHistoryRef={waterfallHistoryRef}
+            spectrumSupported={spectrumSupported}
+            spectrumEnabled={spectrumEnabled}
+            spectrumSettings={spectrumSettings}
+            setSpectrumSettings={setSpectrumSettings}
+            analyserNodeRef={analyserNodeRef}
             phoneLayout={phoneLayout}
             isEditMode={isPhoneEditMode}
             gridCallbacks={phoneGridCallbacks}

@@ -11,6 +11,8 @@ import type {
   AnfCapabilities,
   RfPowerCapabilities,
   ConsoleLog,
+  SpectrumData,
+  SpectrumSettings,
 } from "../types";
 import type { GridItem, GridLayoutCallbacks, PanelType, ViewLayout } from "../types/layout";
 import { PANEL_LABELS } from "../types/layout";
@@ -34,10 +36,13 @@ import ControlsPanel from "../panels/ControlsPanel";
 import TabbedMeterPanel, {
   TabbedMeterHeaderContent,
 } from "../panels/TabbedMeterPanel";
+import SpectrumHamlibPanel from "../panels/SpectrumHamlibPanel";
+import SpectrumAudioPanel from "../panels/SpectrumAudioPanel";
 
 const PHONE_PANEL_TYPES: PanelType[] = [
   'vfo', 'video_feed', 'audio_feed', 'smeter', 'controls',
   'spots_pota', 'spots_sota', 'spots_wwff', 'spots_combo', 'cwdecode', 'commandconsole', 'solar', 'mufmap',
+  'spectrum_hamlib', 'spectrum_audio',
 ];
 
 export interface PhoneLayoutProps {
@@ -199,6 +204,17 @@ export interface PhoneLayoutProps {
   solarData: SolarData | null;
   requestSolarData: () => void;
 
+  // Spectrum scope (CI-V)
+  latestSpectrumRef: React.MutableRefObject<SpectrumData | null>;
+  waterfallHistoryRef: React.MutableRefObject<number[][]>;
+  spectrumSupported: boolean;
+  spectrumEnabled: boolean;
+  spectrumSettings: SpectrumSettings;
+  setSpectrumSettings: React.Dispatch<React.SetStateAction<SpectrumSettings>>;
+
+  // Audio waterfall
+  analyserNodeRef: React.MutableRefObject<AnalyserNode | null>;
+
   // Grid layout
   phoneLayout: ViewLayout;
   isEditMode: boolean;
@@ -336,6 +352,13 @@ function PhoneLayout({
   handleSendRaw,
   solarData,
   requestSolarData,
+  latestSpectrumRef,
+  waterfallHistoryRef,
+  spectrumSupported,
+  spectrumEnabled,
+  spectrumSettings,
+  setSpectrumSettings,
+  analyserNodeRef,
   phoneLayout,
   isEditMode,
   gridCallbacks,
@@ -350,6 +373,8 @@ function PhoneLayout({
   const [isSolarCollapsed, setIsSolarCollapsed] = useState(false);
   const [isMufMapCollapsed, setIsMufMapCollapsed] = useState(false);
   const [isCwDecodeCollapsed, setIsCwDecodeCollapsed] = useState(false);
+  const [isSpectrumHamlibCollapsed, setIsSpectrumHamlibCollapsed] = useState(false);
+  const [isSpectrumAudioCollapsed, setIsSpectrumAudioCollapsed] = useState(false);
 
   const existingPhonePanelTypes = useMemo(() => {
     const types = new Set<PanelType>();
@@ -732,6 +757,37 @@ function PhoneLayout({
           >
             <MufMapPanel heightPx={item.heightPx} />
           </PanelChrome>
+        );
+
+      case 'spectrum_hamlib':
+        return (
+          <SpectrumHamlibPanel
+            latestSpectrumRef={latestSpectrumRef}
+            waterfallHistoryRef={waterfallHistoryRef}
+            spectrumSupported={spectrumSupported}
+            spectrumEnabled={spectrumEnabled}
+            spectrumSettings={spectrumSettings}
+            setSpectrumSettings={setSpectrumSettings}
+            socket={socket}
+            connected={connected}
+            handleSetFreq={handleSetFreq}
+            isCollapsed={isSpectrumHamlibCollapsed}
+            setIsCollapsed={setIsSpectrumHamlibCollapsed}
+            heightPx={item.heightPx}
+          />
+        );
+
+      case 'spectrum_audio':
+        return (
+          <SpectrumAudioPanel
+            analyserNodeRef={analyserNodeRef}
+            audioStatus={audioStatus}
+            isCollapsed={isSpectrumAudioCollapsed}
+            setIsCollapsed={setIsSpectrumAudioCollapsed}
+            heightPx={item.heightPx}
+            bandwidth={parseInt(status?.bandwidth ?? "0", 10) || 0}
+            mode={status?.mode ?? ""}
+          />
         );
 
       default:
