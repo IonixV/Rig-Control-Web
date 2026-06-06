@@ -261,8 +261,8 @@ export async function startRigctld(ctx: ServerContext): Promise<void> {
     ctx.rigctldProcess = null;
     ctx.rigctldStatus = code === 0 ? "stopped" : "error";
 
-    if (code !== 0 && code !== null && ctx.spectrumSettings.enabled && stderrBuf.includes("unknown option")) {
-      const msg = "Spectrum Scope (Hamlib UDP) auto-disabled: this rigctld build does not support --multicast-addr. Upgrade Hamlib or use a bundled binary compiled with multicast support.";
+    if (code !== 0 && code !== null && ctx.spectrumSettings.enabled && ctx.spectrumSettings.source === "hamlib" && stderrBuf.includes("unknown option")) {
+      const msg = "Spectrum Scope (Hamlib UDP) auto-disabled: this rigctld build does not support --set-conf=multicast_data_addr. Upgrade to Hamlib 4.7.x or use the bundled rigctld binary.";
       console.warn(`[SPECTRUM] ${msg}`);
       addLog(ctx, `Warning: ${msg}`);
       ctx.spectrumSettings = { ...ctx.spectrumSettings, enabled: false };
