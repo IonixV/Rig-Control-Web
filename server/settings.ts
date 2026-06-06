@@ -97,9 +97,8 @@ export function registerSettingsHandlers(
       syncKeyerPort(polarityChanged);
     }
     if (data.spectrumSettings !== undefined) {
-      const wasEnabled = ctx.spectrumSettings.enabled;
       ctx.spectrumSettings = { ...ctx.spectrumSettings, ...data.spectrumSettings };
-      if (onSpectrumEnabledChanged && ctx.spectrumSettings.enabled !== wasEnabled) {
+      if (onSpectrumEnabledChanged) {
         onSpectrumEnabledChanged(ctx.spectrumSettings.enabled);
       }
       socket.emit("settings-data", { spectrumSettings: ctx.spectrumSettings });

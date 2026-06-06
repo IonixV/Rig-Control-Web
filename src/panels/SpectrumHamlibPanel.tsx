@@ -58,6 +58,14 @@ export default function SpectrumHamlibPanel({
   const [floor, setFloor] = useState(() => Number(lsGet("floor", String(FLOOR_DEFAULT))));
   const [ceiling, setCeiling] = useState(() => Number(lsGet("ceiling", String(CEILING_DEFAULT))));
   const [tooltip, setTooltip] = useState<{ x: number; y: number; label: string } | null>(null);
+  const [yaesuStatus, setYaesuStatus] = useState<{ running: boolean; error: string | null }>({ running: false, error: null });
+
+  useEffect(() => {
+    if (!socket) return;
+    const handler = (s: { running: boolean; error: string | null }) => setYaesuStatus(s);
+    socket.on("yaesu-scope-status", handler);
+    return () => { socket.off("yaesu-scope-status", handler); };
+  }, [socket]);
 
   const spectrumHeight = Math.floor(heightPx * SPECTRUM_RATIO);
   const waterfallHeight = heightPx - spectrumHeight - 20;
@@ -243,7 +251,7 @@ export default function SpectrumHamlibPanel({
             <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400">
               <Activity size={18} />
             </div>
-            <h2 className="text-sm font-bold tracking-tight uppercase italic">CI-V Spectrum Settings</h2>
+            <h2 className="text-sm font-bold tracking-tight uppercase italic">Spectrum Settings</h2>
           </div>
           <button
             onClick={() => setIsSettingsOpen(false)}
@@ -254,11 +262,39 @@ export default function SpectrumHamlibPanel({
         </div>
 
         <div className="p-5 space-y-5">
+          {/* Source selector */}
+          <div className="space-y-2">
+            <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Spectrum Source</label>
+            <div className="grid grid-cols-2 gap-1 bg-[#0a0a0a] rounded-lg p-1 border border-[#2a2b2e]">
+              {(["hamlib", "ft4222"] as const).map(src => (
+                <button
+                  key={src}
+                  onClick={() => {
+                    const next = { ...spectrumSettings, source: src };
+                    setSpectrumSettings(next);
+                    socket?.emit("save-settings", { spectrumSettings: next });
+                  }}
+                  className={`py-1.5 px-2 rounded text-[0.625rem] font-semibold transition-colors ${
+                    spectrumSettings.source === src
+                      ? "bg-emerald-600 text-white"
+                      : "text-[#8e9299] hover:text-[#e0e0e0]"
+                  }`}
+                >
+                  {src === "hamlib" ? "Hamlib UDP" : "FT-710 via USB"}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Enable / disable */}
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-xs font-semibold text-[#e0e0e0]">Enable CI-V Spectrum Scope</div>
-              <div className="text-[0.625rem] text-[#8e9299] mt-0.5">Receives spectrum data via rigctld UDP multicast</div>
+              <div className="text-xs font-semibold text-[#e0e0e0]">Enable Spectrum Scope</div>
+              <div className="text-[0.625rem] text-[#8e9299] mt-0.5">
+                {spectrumSettings.source === "hamlib"
+                  ? "Receives spectrum data via rigctld UDP multicast"
+                  : "Reads spectrum via FT4222 USB-SPI bridge"}
+              </div>
             </div>
             <button
               onClick={() => {
@@ -272,8 +308,8 @@ export default function SpectrumHamlibPanel({
             </button>
           </div>
 
-          {/* Multicast config */}
-          {spectrumSettings.enabled && (
+          {/* Hamlib: multicast config */}
+          {spectrumSettings.source === "hamlib" && spectrumSettings.enabled && (
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <label className="text-xs text-[#e0e0e0] shrink-0">Multicast Address</label>
@@ -295,6 +331,21 @@ export default function SpectrumHamlibPanel({
                   className="bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-3 py-2 text-xs text-[#e0e0e0] w-24 focus:outline-none focus:border-emerald-500 transition-all"
                 />
               </div>
+            </div>
+          )}
+
+          {/* FT4222: status indicator */}
+          {spectrumSettings.source === "ft4222" && spectrumSettings.enabled && (
+            <div className="rounded-lg bg-[#1a1b1e] border border-[#2a2b2e] p-3 space-y-1">
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${yaesuStatus.running ? "bg-emerald-400" : "bg-gray-600"}`} />
+                <span className="text-xs text-[#e0e0e0]">
+                  {yaesuStatus.running ? "Reader running" : "Reader stopped"}
+                </span>
+              </div>
+              {yaesuStatus.error && (
+                <div className="text-[0.625rem] text-red-400 leading-relaxed mt-1">{yaesuStatus.error}</div>
+              )}
             </div>
           )}
 
@@ -343,10 +394,21 @@ export default function SpectrumHamlibPanel({
           {/* Requirements */}
           <div className="rounded-lg bg-[#1a1b1e] border border-[#2a2b2e] p-3 text-[0.625rem] text-[#8e9299] space-y-1 leading-relaxed">
             <div className="font-semibold text-[#b0b3b8]">Requirements</div>
-            <div>• Radio with CI-V spectrum scope: IC-7300, IC-7610, IC-705, IC-9700</div>
-            <div>• Serial speed must be 115200 baud for spectrum data</div>
-            <div>• CI-V Transceive must remain OFF on the radio</div>
-            <div>• CI-V USB Echo must be ON in radio settings</div>
+            {spectrumSettings.source === "hamlib" ? (
+              <>
+                <div>• Radio with CI-V spectrum scope: IC-7300, IC-7610, IC-705, IC-9700</div>
+                <div>• Serial speed must be 115200 baud for spectrum data</div>
+                <div>• CI-V Transceive must remain OFF on the radio</div>
+                <div>• CI-V USB Echo must be ON in radio settings</div>
+              </>
+            ) : (
+              <>
+                <div>• Yaesu FT-710 connected via USB</div>
+                <div>• libft4222 must be installed (FTDI FT4222 driver)</div>
+                <div>• On Linux: udev rule for VID 0403 / PID 601c (MODE=&quot;0666&quot;)</div>
+                <div>• ft4222-scope-reader binary must be present in bin/</div>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -357,11 +419,11 @@ export default function SpectrumHamlibPanel({
     if (!spectrumEnabled) {
       return (
         <div className="flex items-center justify-center h-24 text-gray-400 text-xs">
-          CI-V Spectrum Scope is disabled. Enable it in the panel settings.
+          Spectrum Scope is disabled. Enable it in the panel settings.
         </div>
       );
     }
-    if (!spectrumSupported && connected) {
+    if (spectrumSettings.source === "hamlib" && !spectrumSupported && connected) {
       return (
         <div className="flex items-center justify-center h-24 text-gray-400 text-xs">
           This radio does not report spectrum data via Hamlib.
@@ -420,7 +482,7 @@ export default function SpectrumHamlibPanel({
     <>
       {settingsModal}
       <PanelChrome
-        title="CI-V Spectrum Scope"
+        title="Spectrum Scope"
         icon={<Activity size={14} />}
         isCollapsed={isCollapsed}
         setIsCollapsed={setIsCollapsed}

@@ -15,6 +15,7 @@ import { syncKeyerPort, closeKeyerPort, cwSetKey, stopCwTick, registerCwHandlers
 import { registerVideoHandlers } from "./server/video.ts";
 import { registerSolarHandlers } from "./server/solar.ts";
 import { startSpectrumListener, stopSpectrumListener } from "./server/spectrum.ts";
+import { startYaesuScope, stopYaesuScope } from "./server/yaesuScope.ts";
 import {
   initAuth,
   issueToken,
@@ -85,9 +86,13 @@ export async function startServer(appPath?: string, userDataPath?: string) {
     startRigctld(ctx);
   }
 
-  // Start spectrum multicast listener if enabled
+  // Start spectrum listener if enabled
   if (ctx.spectrumSettings.enabled) {
-    startSpectrumListener(ctx);
+    if (ctx.spectrumSettings.source === "ft4222") {
+      startYaesuScope(ctx);
+    } else {
+      startSpectrumListener(ctx);
+    }
   }
 
   // Open CW keyer serial port if needed
@@ -197,11 +202,16 @@ export async function startServer(appPath?: string, userDataPath?: string) {
       RADIOS_FILE,
       () => startPolling(ctx),
       (forceReopen) => syncKeyerPort(ctx, forceReopen),
-      (enabled) => {
-        if (enabled) {
-          startSpectrumListener(ctx);
-        } else {
-          stopSpectrumListener(ctx);
+      (_enabled) => {
+        /* Always stop both sources first, then start whichever is now active */
+        stopSpectrumListener(ctx);
+        stopYaesuScope(ctx);
+        if (ctx.spectrumSettings.enabled) {
+          if (ctx.spectrumSettings.source === "ft4222") {
+            startYaesuScope(ctx);
+          } else {
+            startSpectrumListener(ctx);
+          }
         }
       },
     );
@@ -380,6 +390,10 @@ export async function startServer(appPath?: string, userDataPath?: string) {
 
     done = step("stopSpectrumListener");
     stopSpectrumListener(ctx);
+    done();
+
+    done = step("stopYaesuScope");
+    stopYaesuScope(ctx);
     done();
 
     done = step("destroy rigSocket");

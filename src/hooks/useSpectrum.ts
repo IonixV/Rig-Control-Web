@@ -8,6 +8,7 @@ export function useSpectrum(socket: Socket | null) {
   const [spectrumSupported, setSpectrumSupported] = useState(false);
   const [spectrumSettings, setSpectrumSettings] = useState<SpectrumSettings>({
     enabled: false,
+    source: "hamlib",
     multicastAddr: "224.0.0.1",
     multicastPort: 4531,
   });

@@ -24,7 +24,10 @@ Developers who want to run from source will find build instructions in the [Deve
 
 - **User Authentication**: Every browser client must log in before accessing any controls. JWT-based, bcrypt-hashed passwords, per-user layout namespacing, and a full admin panel for user management, session monitoring, and an audit log.
 - **Real-time Dashboard**: Frequency, mode, and meter displays (S-Meter, SWR, ALC, Power, VDD) polled live from the rig.
-- **CI-V Spectrum Scope** (Icom IC-7300 and compatible): Live panadapter display fed directly from the radio's CI-V bus via Hamlib's UDP multicast. Enable the toggle in **General Settings → RIGCTLD → CI-V Spectrum Scope**. Requires 115200 baud serial speed, CI-V Transceive OFF, and CI-V USB Echo ON in radio settings.
+- **Spectrum Scope**: Live panadapter and waterfall display. Two independent source modes:
+  - **Hamlib UDP** (Icom IC-7300, IC-7610, IC-705, IC-9700): Receives spectrum data from Hamlib's built-in UDP multicast stream. Requires 115200 baud serial speed, CI-V Transceive OFF, and CI-V USB Echo ON in radio settings.
+  - **FT-710 via USB** (Yaesu FT-710): Reads spectrum data directly from the radio's FTDI FT4222H USB-to-SPI bridge chip — a dedicated second USB device separate from the CAT serial port. Requires `libft4222` from FTDI to be installed on the host. See [docs/ft4222-spectrum-setup.md](docs/ft4222-spectrum-setup.md) for full setup instructions.
+  - Select the source and enable the scope in the **Spectrum Scope** panel settings (gear icon).
 - **Bidirectional Audio**: Full transmit and receive audio over the network using the Opus 1.5 codec. Works for remote SSB, AM, and FM contacts.
   - Multi-client support.
   - Audio device lists show the host API (MME, DirectSound, WASAPI, ALSA, Pipewire/PulseAudio) and native sample rate so you can pick the right entry for your hardware.
@@ -165,6 +168,7 @@ By default the app runs quietly — only errors and key status messages are prin
 | `--debug-audio` | Audio pipeline — encoding, decoding, device selection, jitter buffer |
 | `--debug-video` | Video chunk relay, encoder/decoder events |
 | `--debug-cw` | CW keyer state machine, DTR/RTS line changes |
+| `--debug-spectrum` | FT4222 spectrum reader lifecycle, frame parse errors, restart events |
 | `--debug-infra` | Server startup, shutdown steps, TLS certificate, settings I/O |
 | `--debug-all` | All subsystems at once |
 

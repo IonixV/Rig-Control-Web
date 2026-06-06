@@ -158,6 +158,7 @@ export interface SpectrumData {
 
 export interface SpectrumSettings {
   enabled: boolean;
+  source: "hamlib" | "ft4222";
   multicastAddr: string;
   multicastPort: number;
 }

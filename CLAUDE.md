@@ -21,7 +21,8 @@ npm run build            # Build Vite frontend to dist/
 npm run lint             # TypeScript type-check (tsc --noEmit)
 npm run test             # Run Vitest tests
 npm run clean            # Remove dist/, dist-electron/, build/
-npm run build:cw-helper  # Compile cw-key-helper.c for the current platform (scripts/build-cw-helper.mjs)
+npm run build:cw-helper      # Compile cw-key-helper.c for the current platform (scripts/build-cw-helper.mjs)
+npm run build:ft4222-reader  # Compile ft4222-scope-reader.c for the current platform (scripts/build-ft4222-reader.mjs)
 
 # Electron
 npm run electron:dev     # Run as Electron desktop app in dev mode
@@ -39,10 +40,12 @@ There is no hot-reload for `server.ts` or any module under `server/` — restart
 Browser / Electron Renderer
       ↕ Socket.io (WSS — HTTPS)
 Express + Socket.io Server  (server.ts orchestrator + server/ modules)
-      ↕ TCP socket         ↕ child_process.spawn   ↕ naudiodon (native)   ↕ child_process.spawn
-   rigctld (Hamlib)         (unused — FFmpeg        libopus-node            cw-key-helper (C binary)
-      ↕ Serial/USB           removed from all        (Opus codec)            DTR/RTS serial line
-   Radio Hardware            paths)
+      ↕ TCP socket         ↕ child_process.spawn   ↕ naudiodon (native)   ↕ child_process.spawn   ↕ child_process.spawn
+   rigctld (Hamlib)         (unused — FFmpeg        libopus-node            cw-key-helper (C binary) ft4222-scope-reader (C binary)
+      ↕ Serial/USB           removed from all        (Opus codec)            DTR/RTS serial line      ↕ libft4222 (dlopen)
+   Radio Hardware            paths)                                                                   FT4222H USB-SPI chip
+                                                                                                      ↕ SPI
+                                                                                                   FT-710 DSP
 ```
 
 **Video pipeline:** The Electron renderer (always the video source) captures via `getUserMedia` + `MediaStreamTrackProcessor`, encodes H.264 (AVCC, avc1.42001F / OpenH264 Baseline Profile) with `VideoEncoder`, and emits chunks through the Socket.io server. The server buffers the latest keyframe (with its AVCC SPS/PPS description) and relays all chunks to remote browser clients, which decode with `VideoDecoder` and render to a `<canvas>`. FFmpeg is **not** used in any path.
@@ -59,7 +62,8 @@ Express + Socket.io Server  (server.ts orchestrator + server/ modules)
 - **`server/cw.ts`** — Server-side iambic state machine (A/B/straight); drives DTR/RTS via the `cw-key-helper` C binary subprocess; 5 s stuck-key watchdog.
 - **`server/video.ts`** — Relays WebCodecs H.264 chunks from the Electron source to remote clients; buffers the latest keyframe.
 - **`server/solar.ts`** — Fetches solar/propagation data from hamqsl.com (HF band conditions, VHF phenomena, SFI, SSN); caches server-side and pushes `solar-data` events to clients.
-- **`server/spectrum.ts`** — Binds a UDP socket on the configured multicast port and joins the multicast group on every non-loopback IPv4 interface (so packets are received regardless of which adapter `rigctld` uses). Parses Hamlib 5.x JSON (`packet.spectra[0]`) and emits `spectrum-data` Socket.io events to all clients. Started/stopped by `onSpectrumEnabledChanged` in `server/settings.ts`. Gated by `spectrumSettings.enabled`.
+- **`server/spectrum.ts`** — Binds a UDP socket on the configured multicast port and joins the multicast group on every non-loopback IPv4 interface (so packets are received regardless of which adapter `rigctld` uses). Parses Hamlib 5.x JSON (`packet.spectra[0]`) and emits `spectrum-data` Socket.io events to all clients. Started/stopped by `onSpectrumEnabledChanged` in `server/settings.ts`. Gated by `spectrumSettings.enabled` and `spectrumSettings.source === "hamlib"`.
+- **`server/yaesuScope.ts`** — Spawns `ft4222-scope-reader` (C binary) and reads its NDJSON stdout line-by-line. Parses span, center frequency, mode variant, and 850-point amplitude array from each frame. Emits `spectrum-data` and `yaesu-scope-status` Socket.io events. Auto-restarts with a 3 s delay after unexpected exit while enabled. Activated when `spectrumSettings.source === "ft4222"`. `getYaesuScopeHelperPath()` resolves the binary path the same way as `getCwHelperPath()`.
 - **`server/vlog.ts`** — Per-subsystem debug logging; exports `vlogRig`, `vlogAudio`, `vlogVideo`, `vlogCw`, `vlogInfra`, `vlogSpectrum` helpers gated by the corresponding `--debug-*` CLI flag (`--debug-spectrum` for `vlogSpectrum`).
 
 ### Key Files — Frontend
@@ -86,6 +90,7 @@ Express + Socket.io Server  (server.ts orchestrator + server/ modules)
 - **`public/audio-processor.js`** — Static file loaded by `AudioWorklet.addModule()`. Defines two `AudioWorkletProcessor` classes: `PlaybackProcessor` (inbound jitter buffer, 60 ms min / 240 ms max at 48 kHz) and `CaptureProcessor` (posts mic PCM frames to the main thread). Must be a static URL-addressable file; cannot be bundled.
 - **`cw-key-helper.c`** — C source for the CW keyer serial line helper. Compiled to `bin/linux/cw-key-helper`, `bin/mac/cw-key-helper`, and `bin/windows/cw-key-helper.exe` per platform. Spawned by `server/cw.ts` (`openKeyerPort`) to drive DTR or RTS. Opens the port with `O_RDWR | O_NOCTTY | O_NONBLOCK`, configures raw termios (no flow control, `HUPCL` cleared), deasserts the line before printing `OPEN_OK`, then reads `0`/`1` from stdin and toggles the line via `TIOCMBIS`/`TIOCMBIC` (POSIX) or `EscapeCommFunction` (Windows). Replaces the Python/`pyserial` approach; the Node.js `serialport` package asserts DTR before JS can run on Linux with CP210x adapters, causing stuck-key failures. Run `npm run build:cw-helper` to compile for the local platform in dev.
 - **`cw-key-helper.py`** — Original Python/`pyserial` helper. **Superseded by `cw-key-helper.c`**; retained for reference only. No longer bundled or spawned.
+- **`ft4222-scope-reader.c`** — C source for the FT-710 spectrum scope reader. Compiled to `bin/linux/ft4222-scope-reader`, `bin/mac/ft4222-scope-reader`, and `bin/windows/ft4222-scope-reader.exe` per platform. Spawned by `server/yaesuScope.ts`. Loads `libft4222` at runtime via `dlopen` (Linux/macOS) or `LoadLibrary` (Windows) — zero link-time dependency; reports a clear error if the library is not installed. Reads 4096-byte SPI frames (FT4222 SPI master, `CLK_DIV_64`, `CLK_IDLE_HIGH`, single I/O), verifies the 4-byte sync pattern at offset 4092 (`FF 01 EE 01`), extracts the 850-byte `wf1` amplitude array at offset 0 (bitwise inverted — higher byte = stronger signal), and reads span/center/mode from the 150-byte metadata block at offset 2900. Outputs `OPEN_OK\n` then one NDJSON line per frame: `{"spanHz":N,"modeVariant":N,"centerHz":N,"lowHz":N,"highHz":N,"wf1":"<1700 hex chars>"}`. Run `npm run build:ft4222-reader` to compile for the local platform in dev. Requires `libft4222` on the host — see `docs/ft4222-spectrum-setup.md`.
 - **`src/types/solar.ts`** — TypeScript interfaces for solar/propagation data: `HfBandCondition`, `VhfCondition`, `SolarData` (SFI, SSN, A/K-index, X-ray, geomagnetic field, solar wind, aurora, proton/electron flux).
 - **`electron/main.ts`** — Electron main process; spawns the Express server, manages `BrowserWindow`, grants camera/mic permissions. Calls `setElectronWindow(win)` and `shutdown()` exported from `server.ts` for lifecycle management.
 - **`electron/preload.ts`** — Exposes `window.electron.resizeWindow(width, height)` via `contextBridge`.
@@ -117,6 +122,8 @@ Per-message deflate compression (`perMessageDeflate: false`) is explicitly disab
 - `settings-data` — Full settings object on connect or change
 - `video-chunk` — Encoded H.264 chunks relayed to remote clients
 - `solar-data` — HF band conditions, VHF phenomena, SFI, SSN from hamqsl.com
+- `spectrum-data` — Live spectrum frame (shared by both Hamlib UDP and FT4222 paths): `{ id, name, type, length, amplitudes, minLevel, maxLevel, centerFreq, span, lowFreq, highFreq, timestamp }`
+- `yaesu-scope-status` — FT4222 reader process state: `{ running: boolean, error: string | null }`
 - `debug-flags` — Mirrors server `--debug-*` flags as a `DebugFlags` object to browser clients
 
 ### Audio Pipeline
@@ -146,9 +153,15 @@ All functional UI sections live in `src/panels/` as independent components, each
 
 POTA, SOTA, and WWFF spots are fetched **browser-side** via `setInterval` (no server relay). Each spot type: deduplicates by activator, applies age/mode/band filters, and supports click-to-tune (SSB resolves to USB/LSB by the 10 MHz ITU boundary). Settings persisted to `settings.json`. Available as individual panels (`spots_pota`, `spots_sota`, `spots_wwff`) or the unified `spots_combo` panel (`SpotComboPanel` with `ComboSpotSettingsModal`).
 
-### CI-V Spectrum Scope
+### Spectrum Scope
 
-`server/spectrum.ts` receives Hamlib's UDP multicast spectrum stream and relays it to browser clients as `spectrum-data` Socket.io events. On bind, it joins the multicast group on every non-loopback IPv4 interface via `os.networkInterfaces()` to handle machines where `rigctld`'s send interface differs from the OS routing default (common on Windows with VPN adapters). Hamlib 5.x wraps spectrum data in a `spectra[]` array at the packet root; the parser reads from `packet.spectra[0]` and maps `minStrength`/`maxStrength` (dBm) as the level range. Radio requirements: serial speed 115200 baud, CI-V Transceive OFF, CI-V USB Echo ON.
+Two mutually exclusive source modes, selected via `spectrumSettings.source`:
+
+**Hamlib UDP** (`source: "hamlib"`, `server/spectrum.ts`): Receives Hamlib's UDP multicast spectrum stream and relays it as `spectrum-data` events. Joins the multicast group on every non-loopback IPv4 interface via `os.networkInterfaces()` to handle machines where `rigctld`'s send interface differs from the OS routing default (common on Windows with VPN adapters). Hamlib 5.x wraps spectrum data in a `spectra[]` array at the packet root; the parser reads from `packet.spectra[0]` and maps `minStrength`/`maxStrength` (dBm) as the level range. Radio requirements: serial speed 115200 baud, CI-V Transceive OFF, CI-V USB Echo ON. Compatible radios: IC-7300, IC-7610, IC-705, IC-9700.
+
+**FT-710 USB** (`source: "ft4222"`, `server/yaesuScope.ts`): Spawns `ft4222-scope-reader` (C binary at `bin/<platform>/ft4222-scope-reader[.exe]`), which opens the FT4222H USB-SPI device via `libft4222` (loaded at runtime with `dlopen`/`LoadLibrary` — no link-time dependency). The binary reads 4096-byte SPI frames from the FT-710 DSP, extracts the 850-point `wf1` amplitude array (bytes 0–849, bitwise inverted), parses the 150-byte metadata block at offset 2900 for span/center/mode, and emits one NDJSON line per frame to stdout. The server parses these and emits `spectrum-data` events. Sync pattern at bytes 4092–4095 (`FF 01 EE 01`) is verified per frame; 5 consecutive failures trigger a device re-initialize. Auto-restarts with 3 s delay on unexpected exit. Requires `libft4222` installed on the host — see `docs/ft4222-spectrum-setup.md`.
+
+`ft4222-scope-reader.c` is compiled by `scripts/build-ft4222-reader.mjs` (`npm run build:ft4222-reader`) and placed in `bin/<platform>/`. Like `cw-key-helper`, it is in `asarUnpack` and bundled in all Electron installers.
 
 ### Solar / Propagation Data
 

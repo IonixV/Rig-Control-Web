@@ -208,11 +208,13 @@ export interface ServerContext {
   // Spectrum scope
   spectrumSettings: {
     enabled: boolean;
+    source: "hamlib" | "ft4222";
     multicastAddr: string;
     multicastPort: number;
   };
   spectrumSocket: dgram.Socket | null;
   spectrumSupported: boolean;
+  yaesuScopeProcess: ChildProcess | null;
 
   // Cross-module callbacks (wired in orchestrator after modules init)
   saveSettings: () => void;
@@ -366,11 +368,13 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
 
     spectrumSettings: {
       enabled: false,
+      source: "hamlib",
       multicastAddr: "224.0.0.1",
       multicastPort: 4531,
     },
     spectrumSocket: null,
     spectrumSupported: false,
+    yaesuScopeProcess: null,
 
     saveSettings: () => {},
     sendToRig: () => Promise.reject("sendToRig not yet initialized"),
