@@ -262,7 +262,7 @@ export async function startRigctld(ctx: ServerContext): Promise<void> {
     ctx.rigctldStatus = code === 0 ? "stopped" : "error";
 
     if (code !== 0 && code !== null && ctx.spectrumSettings.enabled && stderrBuf.includes("unknown option")) {
-      const msg = "CI-V Spectrum Scope auto-disabled: this rigctld build does not support --multicast-addr. Upgrade Hamlib or use a bundled binary compiled with multicast support.";
+      const msg = "Spectrum Scope (Hamlib UDP) auto-disabled: this rigctld build does not support --multicast-addr. Upgrade Hamlib or use a bundled binary compiled with multicast support.";
       console.warn(`[SPECTRUM] ${msg}`);
       addLog(ctx, `Warning: ${msg}`);
       ctx.spectrumSettings = { ...ctx.spectrumSettings, enabled: false };

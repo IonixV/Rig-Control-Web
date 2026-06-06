@@ -96,7 +96,7 @@ export const PANEL_LABELS: Record<PanelType, string> = {
   spots_combo: 'All Spots',
   solar: 'Solar Conditions',
   mufmap: 'MUF Map',
-  spectrum_hamlib: 'CI-V Spectrum Scope',
+  spectrum_hamlib: 'Spectrum Scope',
   spectrum_audio: 'Audio Waterfall',
 };
 
