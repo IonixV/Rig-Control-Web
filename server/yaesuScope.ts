@@ -51,6 +51,11 @@ export function startYaesuScope(ctx: ServerContext): void {
 
   let started = false;
   let lineBuffer = "";
+  let frameCount = 0;
+  let intervalFrameCount = 0;
+  let lastLogTime = Date.now();
+  let lastFrameTime = 0;
+  let watchdogTimer: ReturnType<typeof setInterval> | null = null;
 
   proc.stdout!.setEncoding("utf8");
   proc.stdout!.on("data", (chunk: string) => {
@@ -64,8 +69,15 @@ export function startYaesuScope(ctx: ServerContext): void {
       if (!started) {
         if (line.startsWith("OPEN_OK")) {
           started = true;
+          lastFrameTime = Date.now();
           console.log("[YAESU-SCOPE] Device opened, receiving spectrum data");
           ctx.io.emit("yaesu-scope-status", { running: true, error: null });
+          watchdogTimer = setInterval(() => {
+            const silence = Date.now() - lastFrameTime;
+            if (silence > 15000) {
+              console.warn(`[YAESU-SCOPE] No frames received for ${Math.round(silence / 1000)}s — process may be stuck in re-init loop`);
+            }
+          }, 5000);
         } else if (line.startsWith("OPEN_ERROR:")) {
           const msg = line.slice("OPEN_ERROR:".length).trim();
           console.error(`[YAESU-SCOPE] ${msg}`);
@@ -100,7 +112,16 @@ export function startYaesuScope(ctx: ServerContext): void {
       const highHz:   number = frame.highHz   ?? 0;
       const modeVariant: number = frame.modeVariant ?? 0;
 
-      vlogSpectrum(`[YAESU-SCOPE] frame: span=${spanHz}Hz center=${centerHz}Hz mode=${modeVariant}`);
+      frameCount++;
+      intervalFrameCount++;
+      lastFrameTime = Date.now();
+      if (lastFrameTime - lastLogTime >= 1000) {
+        const elapsed = (lastFrameTime - lastLogTime) / 1000;
+        const fps = Math.round(intervalFrameCount / elapsed);
+        vlogSpectrum(`[YAESU-SCOPE] ${fps} fps (${frameCount} total); span=${spanHz}Hz center=${centerHz}Hz mode=${modeVariant}`);
+        intervalFrameCount = 0;
+        lastLogTime = lastFrameTime;
+      }
 
       ctx.io.emit("spectrum-data", {
         id: 0,
@@ -125,6 +146,7 @@ export function startYaesuScope(ctx: ServerContext): void {
   });
 
   proc.on("close", (code) => {
+    if (watchdogTimer) { clearInterval(watchdogTimer); watchdogTimer = null; }
     console.log(`[YAESU-SCOPE] Process exited (code=${code})`);
     ctx.yaesuScopeProcess = null;
     ctx.io.emit("yaesu-scope-status", { running: false, error: null });

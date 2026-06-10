@@ -130,6 +130,8 @@ static void cleanup(void) {
 static void sig_handler(int sig) {
     (void)sig;
     g_running = 0;
+    fprintf(stderr, "[FT4222] Signal received, shutting down\n");
+    fflush(stderr);
     cleanup();
     _exit(0);
 }
@@ -269,20 +271,23 @@ int main(void) {
     fflush(stdout);
 
     int sync_fails = 0;
+    int reinit_count = 0;
 
     while (g_running) {
         uint16_t bytes_read = 0;
         FT_STATUS st = pFT4222_SingleRead(g_device, g_frame, FRAME_SIZE, &bytes_read, 0);
 
         if (st != FT_OK || bytes_read != FRAME_SIZE) {
-            fprintf(stderr, "[FT4222] Read error: status=%u bytes=%u\n",
-                    (unsigned)st, (unsigned)bytes_read);
             if (++sync_fails >= 5) {
-                fprintf(stderr, "[FT4222] Re-initializing device after repeated read failures\n");
+                reinit_count++;
+                fprintf(stderr, "[FT4222] Re-initializing after repeated read failures"
+                                " (status=%u bytes=%u attempt=%d)\n",
+                        (unsigned)st, (unsigned)bytes_read, reinit_count);
                 if (!setup_device()) {
-                    fprintf(stderr, "[FT4222] Re-init failed, exiting\n");
+                    fprintf(stderr, "[FT4222] Re-init #%d failed, exiting\n", reinit_count);
                     break;
                 }
+                fprintf(stderr, "[FT4222] Re-init #%d succeeded, resuming reads\n", reinit_count);
                 sync_fails = 0;
             }
             continue;
@@ -291,11 +296,14 @@ int main(void) {
         /* Validate sync bytes at end of frame */
         if (memcmp(g_frame + SYNC_OFFSET, SYNC_BYTES, 4) != 0) {
             if (++sync_fails >= 5) {
-                fprintf(stderr, "[FT4222] Re-initializing device after repeated sync failures\n");
+                reinit_count++;
+                fprintf(stderr, "[FT4222] Re-initializing after repeated sync failures"
+                                " (attempt=%d)\n", reinit_count);
                 if (!setup_device()) {
-                    fprintf(stderr, "[FT4222] Re-init failed, exiting\n");
+                    fprintf(stderr, "[FT4222] Re-init #%d failed, exiting\n", reinit_count);
                     break;
                 }
+                fprintf(stderr, "[FT4222] Re-init #%d succeeded, resuming reads\n", reinit_count);
                 sync_fails = 0;
             }
             continue;
@@ -348,6 +356,8 @@ int main(void) {
         fflush(stdout);
     }
 
+    fprintf(stderr, "[FT4222] Exiting: re-init #%d failed, giving up\n", reinit_count);
+    fflush(stderr);
     cleanup();
     return 0;
 }
