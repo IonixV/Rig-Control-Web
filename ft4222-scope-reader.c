@@ -265,29 +265,52 @@ fail:
  * Returns 1 with g_frame populated on confirmed alignment, 0 on read error or
  * scan limit exceeded.
  */
+/*
+ * Returns:
+ *   1  — g_frame holds a verified, metadata-valid frame
+ *   0  — scan limit exhausted without confirming alignment
+ *  -1  — SPI read error mid-scan
+ */
 static int resync_frame(int *resync_count) {
     uint8_t window[4] = {0, 0, 0, 0};
     uint8_t b;
     uint16_t got;
     int scanned = 0;
+    int candidates_found  = 0;  /* times FF 01 EE 01 matched in sliding window */
+    int sync_confirmed    = 0;  /* times verification frame also had sync at SYNC_OFFSET */
+    int metadata_rejected = 0;  /* times sync confirmed but metadata out of range */
     const int max_scan = FRAME_SIZE * 20;
 
     while (scanned < max_scan) {
         FT_STATUS st = pFT4222_SingleRead(g_device, &b, 1, &got, 0);
-        if (st != FT_OK || got != 1) return 0;
+        if (st != FT_OK || got != 1) {
+            fprintf(stderr,
+                    "[FT4222] Resync read error after %d bytes scanned "
+                    "(candidates=%d sync_confirmed=%d metadata_rejected=%d)\n",
+                    scanned, candidates_found, sync_confirmed, metadata_rejected);
+            return -1;
+        }
 
         window[0] = window[1]; window[1] = window[2];
         window[2] = window[3]; window[3] = b;
         scanned++;
 
         if (memcmp(window, SYNC_BYTES, 4) == 0) {
+            candidates_found++;
             /* Candidate found — verify by reading the next full frame */
             uint16_t bytes_read = 0;
             st = pFT4222_SingleRead(g_device, g_frame, FRAME_SIZE, &bytes_read, 0);
-            if (st != FT_OK || bytes_read != FRAME_SIZE) return 0;
+            if (st != FT_OK || bytes_read != FRAME_SIZE) {
+                fprintf(stderr,
+                        "[FT4222] Resync read error after %d bytes scanned "
+                        "(candidates=%d sync_confirmed=%d metadata_rejected=%d)\n",
+                        scanned, candidates_found, sync_confirmed, metadata_rejected);
+                return -1;
+            }
             scanned += FRAME_SIZE;
 
             if (memcmp(g_frame + SYNC_OFFSET, SYNC_BYTES, 4) == 0) {
+                sync_confirmed++;
                 /* Sync bytes confirmed — validate metadata to reject false alignments.
                  * A false sync match (e.g. the doubled FF 01 EE 01 at bytes 4088-4091)
                  * is self-consistent across frames, so sync-only verification is
@@ -298,22 +321,35 @@ static int resync_frame(int *resync_count) {
                                ((uint32_t)g_frame[DATA_OFFSET + 134] << 8)  |
                                 (uint32_t)g_frame[DATA_OFFSET + 135];
                 if (raw_span_idx > 9 || chz < 1000000 || chz > 60000000) {
+                    metadata_rejected++;
                     fprintf(stderr,
                             "[FT4222] False alignment: span_idx=%u center=%lu Hz; continuing scan\n",
                             (unsigned)raw_span_idx, (unsigned long)chz);
                     /* fall through to continue scanning */
                 } else {
                     (*resync_count)++;
-                    fprintf(stderr, "[FT4222] Resync #%d: alignment confirmed after %d bytes\n",
-                            *resync_count, scanned);
+                    fprintf(stderr,
+                            "[FT4222] Resync #%d: alignment confirmed after %d bytes "
+                            "(candidates=%d sync_confirmed=%d metadata_rejected=%d)\n",
+                            *resync_count, scanned,
+                            candidates_found, sync_confirmed, metadata_rejected);
                     return 1;  /* g_frame holds a verified frame */
                 }
+            } else {
+                /* Sync not at expected offset — log the actual bytes around it */
+                fprintf(stderr,
+                        "[FT4222] False sync candidate: bytes[4088..4095]="
+                        "%02X %02X %02X %02X  %02X %02X %02X %02X; continuing scan\n",
+                        g_frame[4088], g_frame[4089], g_frame[4090], g_frame[4091],
+                        g_frame[4092], g_frame[4093], g_frame[4094], g_frame[4095]);
             }
-            fprintf(stderr, "[FT4222] False sync candidate discarded; continuing scan\n");
         }
     }
 
-    fprintf(stderr, "[FT4222] Resync failed: alignment not confirmed within %d bytes\n", max_scan);
+    fprintf(stderr,
+            "[FT4222] Resync failed: scanned=%d candidates=%d "
+            "sync_confirmed=%d metadata_rejected=%d\n",
+            scanned, candidates_found, sync_confirmed, metadata_rejected);
     return 0;
 }
 
@@ -344,7 +380,8 @@ int main(void) {
     int sync_fails = 0;
     int reinit_count = 0;
     int resync_count = 0;
-    int frame_ready = 0;  /* 1 if g_frame already holds a verified frame from resync */
+    int frame_ready = 0;          /* 1 if g_frame already holds a verified frame from resync */
+    int log_next_frame_bytes = 1; /* log bytes[4088..4095] of the first frame after (re-)init */
 
     while (g_running) {
         if (!frame_ready) {
@@ -362,6 +399,7 @@ int main(void) {
                         break;
                     }
                     fprintf(stderr, "[FT4222] Re-init #%d succeeded, resuming reads\n", reinit_count);
+                    log_next_frame_bytes = 1;
                     sync_fails = 0;
                 }
                 continue;
@@ -369,22 +407,34 @@ int main(void) {
         }
         frame_ready = 0;
 
+        /* One-shot: log the raw bytes around the sync position after every (re-)init */
+        if (log_next_frame_bytes) {
+            fprintf(stderr,
+                    "[FT4222] First frame after init — bytes[4088..4095]: "
+                    "%02X %02X %02X %02X  %02X %02X %02X %02X\n",
+                    g_frame[4088], g_frame[4089], g_frame[4090], g_frame[4091],
+                    g_frame[4092], g_frame[4093], g_frame[4094], g_frame[4095]);
+            log_next_frame_bytes = 0;
+        }
+
         /* Validate sync bytes at end of frame */
         if (memcmp(g_frame + SYNC_OFFSET, SYNC_BYTES, 4) != 0) {
             if (++sync_fails >= 5) {
                 fprintf(stderr, "[FT4222] Sync lost; scanning for frame boundary\n");
-                if (resync_frame(&resync_count)) {
+                int rsync_ret = resync_frame(&resync_count);
+                if (rsync_ret == 1) {
                     frame_ready = 1;  /* g_frame verified; process it next iteration */
                 } else {
-                    /* Read error during resync — fall back to device re-init */
                     reinit_count++;
-                    fprintf(stderr, "[FT4222] Resync read error; re-initializing (attempt=%d)\n",
-                            reinit_count);
+                    const char *reason = (rsync_ret == -1) ? "read error" : "scan limit exceeded";
+                    fprintf(stderr, "[FT4222] Resync failed (%s); re-initializing (attempt=%d)\n",
+                            reason, reinit_count);
                     if (!setup_device()) {
                         fprintf(stderr, "[FT4222] Re-init #%d failed, exiting\n", reinit_count);
                         break;
                     }
                     fprintf(stderr, "[FT4222] Re-init #%d succeeded\n", reinit_count);
+                    log_next_frame_bytes = 1;
                 }
                 sync_fails = 0;
             }
