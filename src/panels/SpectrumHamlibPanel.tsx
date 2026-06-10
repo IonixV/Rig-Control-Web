@@ -334,7 +334,7 @@ export default function SpectrumHamlibPanel({
             </div>
           )}
 
-          {/* FT4222: status indicator */}
+          {/* FT4222: status indicator + span control */}
           {spectrumSettings.source === "ft4222" && spectrumSettings.enabled && (
             <div className="rounded-lg bg-[#1a1b1e] border border-[#2a2b2e] p-3 space-y-1">
               <div className="flex items-center gap-2">
@@ -348,6 +348,55 @@ export default function SpectrumHamlibPanel({
               )}
             </div>
           )}
+
+          {/* FT4222: span selector */}
+          {spectrumSettings.source === "ft4222" && (() => {
+            const SPAN_OPTIONS = [
+              { index: 0, label: "1 kHz" },
+              { index: 1, label: "2 kHz" },
+              { index: 2, label: "5 kHz" },
+              { index: 3, label: "10 kHz" },
+              { index: 4, label: "20 kHz" },
+              { index: 5, label: "50 kHz" },
+              { index: 6, label: "100 kHz" },
+              { index: 7, label: "200 kHz" },
+              { index: 8, label: "500 kHz" },
+              { index: 9, label: "1 MHz" },
+            ];
+            const liveSpanHz = latestSpectrumRef.current?.span ?? null;
+            return (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Scope Span</label>
+                  {liveSpanHz !== null && (
+                    <span className="text-[0.625rem] text-emerald-400 font-mono">
+                      Live: {liveSpanHz >= 1_000_000 ? `${liveSpanHz / 1_000_000} MHz` : `${liveSpanHz / 1000} kHz`}
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-5 gap-1">
+                  {SPAN_OPTIONS.map(({ index, label }) => (
+                    <button
+                      key={index}
+                      onClick={() => {
+                        const next = { ...spectrumSettings, ft4222SpanIndex: index };
+                        setSpectrumSettings(next);
+                        socket?.emit("save-settings", { spectrumSettings: next });
+                        socket?.emit("set-ft710-span", index);
+                      }}
+                      className={`py-1.5 px-1 rounded text-[0.5625rem] font-semibold transition-colors ${
+                        spectrumSettings.ft4222SpanIndex === index
+                          ? "bg-emerald-600 text-white"
+                          : "bg-[#0a0a0a] border border-[#2a2b2e] text-[#8e9299] hover:text-[#e0e0e0]"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Color map */}
           <div className="space-y-2">

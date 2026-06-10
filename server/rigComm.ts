@@ -697,4 +697,14 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
       socket.emit("raw-response", { cmd, resp: `Error: ${err}` });
     }
   });
+
+  socket.on("set-ft710-span", async (spanIndex: number) => {
+    if (typeof spanIndex !== "number" || spanIndex < 0 || spanIndex > 9) return;
+    const catCmd = `SS05${spanIndex}0000;`;
+    try {
+      await sendToRig(ctx, `send_raw 0 ${catCmd}`, true, true);
+    } catch (err) {
+      console.warn("[SPECTRUM] Failed to set FT-710 span:", err);
+    }
+  });
 }

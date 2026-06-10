@@ -211,6 +211,7 @@ export interface ServerContext {
     source: "hamlib" | "ft4222";
     multicastAddr: string;
     multicastPort: number;
+    ft4222SpanIndex: number;
   };
   spectrumSocket: dgram.Socket | null;
   spectrumSupported: boolean;
@@ -371,6 +372,7 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
       source: "hamlib",
       multicastAddr: "224.0.0.1",
       multicastPort: 4531,
+      ft4222SpanIndex: 5,
     },
     spectrumSocket: null,
     spectrumSupported: false,

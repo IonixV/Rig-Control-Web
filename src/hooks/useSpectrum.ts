@@ -11,6 +11,7 @@ export function useSpectrum(socket: Socket | null) {
     source: "hamlib",
     multicastAddr: "224.0.0.1",
     multicastPort: 4531,
+    ft4222SpanIndex: 5,
   });
 
   const latestSpectrumRef = useRef<SpectrumData | null>(null);
