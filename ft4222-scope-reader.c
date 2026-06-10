@@ -257,12 +257,13 @@ fail:
 
 /*
  * Reads the SPI byte stream one byte at a time through a 4-byte sliding window
- * until the sync pattern FF 01 EE 01 appears (candidate), then immediately reads
- * one full FRAME_SIZE frame into g_frame and verifies that sync appears at
- * SYNC_OFFSET. If verified, returns 1 with g_frame populated. If the candidate
- * was a false match (sync appears elsewhere in the data at the same 4-byte
- * sequence), logs the false positive and continues scanning. Returns 0 on read
- * error or if the scan limit is exceeded.
+ * until the sync pattern FF 01 EE 01 appears (candidate), then reads one full
+ * FRAME_SIZE frame into g_frame and verifies that (a) sync appears at SYNC_OFFSET
+ * and (b) metadata is sane: raw_span_idx 0-9, center_hz 1 MHz-60 MHz. Both checks
+ * are required because the FT-710 DSP emits a doubled sync pattern (FF 01 EE 01
+ * appears at both 4088 and 4092), making sync-only verification tautological.
+ * Returns 1 with g_frame populated on confirmed alignment, 0 on read error or
+ * scan limit exceeded.
  */
 static int resync_frame(int *resync_count) {
     uint8_t window[4] = {0, 0, 0, 0};
@@ -287,10 +288,26 @@ static int resync_frame(int *resync_count) {
             scanned += FRAME_SIZE;
 
             if (memcmp(g_frame + SYNC_OFFSET, SYNC_BYTES, 4) == 0) {
-                (*resync_count)++;
-                fprintf(stderr, "[FT4222] Resync #%d: alignment confirmed after %d bytes\n",
-                        *resync_count, scanned);
-                return 1;  /* g_frame holds a verified frame */
+                /* Sync bytes confirmed — validate metadata to reject false alignments.
+                 * A false sync match (e.g. the doubled FF 01 EE 01 at bytes 4088-4091)
+                 * is self-consistent across frames, so sync-only verification is
+                 * tautological. Metadata range-checks distinguish true from false. */
+                uint8_t raw_span_idx = g_frame[DATA_OFFSET + 32];
+                uint32_t chz = ((uint32_t)g_frame[DATA_OFFSET + 132] << 24) |
+                               ((uint32_t)g_frame[DATA_OFFSET + 133] << 16) |
+                               ((uint32_t)g_frame[DATA_OFFSET + 134] << 8)  |
+                                (uint32_t)g_frame[DATA_OFFSET + 135];
+                if (raw_span_idx > 9 || chz < 1000000 || chz > 60000000) {
+                    fprintf(stderr,
+                            "[FT4222] False alignment: span_idx=%u center=%lu Hz; continuing scan\n",
+                            (unsigned)raw_span_idx, (unsigned long)chz);
+                    /* fall through to continue scanning */
+                } else {
+                    (*resync_count)++;
+                    fprintf(stderr, "[FT4222] Resync #%d: alignment confirmed after %d bytes\n",
+                            *resync_count, scanned);
+                    return 1;  /* g_frame holds a verified frame */
+                }
             }
             fprintf(stderr, "[FT4222] False sync candidate discarded; continuing scan\n");
         }
