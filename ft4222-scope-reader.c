@@ -200,6 +200,13 @@ static int setup_device(void) {
         pFT4222_UnInitialize(g_device);
         pFT_Close(g_device);
         g_device = NULL;
+        /* Hold CS deasserted long enough (> one frame period ≈ 87 ms at 375 kHz)
+         * for the DSP's SPI state machine to reset its frame byte counter. */
+#ifdef _WIN32
+        Sleep(150);
+#else
+        usleep(150000);
+#endif
     }
 
     FT_STATUS st = pFT_OpenEx((void *)"FT4222 A", FT_OPEN_BY_DESCRIPTION, &g_device);
@@ -246,6 +253,42 @@ fail:
     return 0;
 }
 
+/* ---------- Frame resync ---------- */
+
+/*
+ * Reads the SPI byte stream one byte at a time, maintaining a 4-byte sliding
+ * window, until the sync pattern FF 01 EE 01 appears. At that point the next
+ * byte from the DSP is byte 0 of a new frame, so the caller can resume normal
+ * FRAME_SIZE reads. Scans at most 10 frame-lengths before giving up.
+ * Returns 1 on success (aligned), 0 on read error or scan limit exceeded.
+ */
+static int resync_frame(int *resync_count) {
+    uint8_t window[4] = {0, 0, 0, 0};
+    uint8_t b;
+    uint16_t got;
+    int scanned = 0;
+    const int max_scan = FRAME_SIZE * 10;
+
+    while (scanned < max_scan) {
+        FT_STATUS st = pFT4222_SingleRead(g_device, &b, 1, &got, 0);
+        if (st != FT_OK || got != 1) return 0;
+
+        window[0] = window[1]; window[1] = window[2];
+        window[2] = window[3]; window[3] = b;
+        scanned++;
+
+        if (memcmp(window, SYNC_BYTES, 4) == 0) {
+            (*resync_count)++;
+            fprintf(stderr, "[FT4222] Resync #%d: alignment restored after %d bytes\n",
+                    *resync_count, scanned);
+            return 1;
+        }
+    }
+
+    fprintf(stderr, "[FT4222] Resync failed: sync pattern not found in %d bytes\n", max_scan);
+    return 0;
+}
+
 /* ---------- Main ---------- */
 
 int main(void) {
@@ -272,6 +315,7 @@ int main(void) {
 
     int sync_fails = 0;
     int reinit_count = 0;
+    int resync_count = 0;
 
     while (g_running) {
         uint16_t bytes_read = 0;
@@ -296,14 +340,18 @@ int main(void) {
         /* Validate sync bytes at end of frame */
         if (memcmp(g_frame + SYNC_OFFSET, SYNC_BYTES, 4) != 0) {
             if (++sync_fails >= 5) {
-                reinit_count++;
-                fprintf(stderr, "[FT4222] Re-initializing after repeated sync failures"
-                                " (attempt=%d)\n", reinit_count);
-                if (!setup_device()) {
-                    fprintf(stderr, "[FT4222] Re-init #%d failed, exiting\n", reinit_count);
-                    break;
+                fprintf(stderr, "[FT4222] Sync lost; scanning for frame boundary\n");
+                if (!resync_frame(&resync_count)) {
+                    /* Read error during resync — fall back to device re-init */
+                    reinit_count++;
+                    fprintf(stderr, "[FT4222] Resync read error; re-initializing (attempt=%d)\n",
+                            reinit_count);
+                    if (!setup_device()) {
+                        fprintf(stderr, "[FT4222] Re-init #%d failed, exiting\n", reinit_count);
+                        break;
+                    }
+                    fprintf(stderr, "[FT4222] Re-init #%d succeeded\n", reinit_count);
                 }
-                fprintf(stderr, "[FT4222] Re-init #%d succeeded, resuming reads\n", reinit_count);
                 sync_fails = 0;
             }
             continue;
