@@ -138,6 +138,7 @@ export async function startServer(appPath?: string, userDataPath?: string) {
       spectrumSettings: ctx.spectrumSettings,
     });
     socket.emit("spectrum-supported", ctx.spectrumSupported);
+    socket.emit("yaesu-scope-status", { running: ctx.yaesuScopeRunning, error: ctx.yaesuScopeError });
     socket.emit("rigctld-status", {
       status: ctx.rigctldStatus,
       logs: ctx.rigctldLogs,

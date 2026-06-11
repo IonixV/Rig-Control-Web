@@ -217,6 +217,8 @@ export interface ServerContext {
   spectrumSocket: dgram.Socket | null;
   spectrumSupported: boolean;
   yaesuScopeProcess: ChildProcess | null;
+  yaesuScopeRunning: boolean;
+  yaesuScopeError: string | null;
 
   // Cross-module callbacks (wired in orchestrator after modules init)
   saveSettings: () => void;
@@ -379,6 +381,8 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
     spectrumSocket: null,
     spectrumSupported: false,
     yaesuScopeProcess: null,
+    yaesuScopeRunning: false,
+    yaesuScopeError: null,
 
     saveSettings: () => {},
     sendToRig: () => Promise.reject("sendToRig not yet initialized"),

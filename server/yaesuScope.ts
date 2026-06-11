@@ -71,6 +71,8 @@ export function startYaesuScope(ctx: ServerContext): void {
           started = true;
           lastFrameTime = Date.now();
           console.log("[YAESU-SCOPE] Device opened, receiving spectrum data");
+          ctx.yaesuScopeRunning = true;
+          ctx.yaesuScopeError = null;
           ctx.io.emit("yaesu-scope-status", { running: true, error: null });
           watchdogTimer = setInterval(() => {
             const silence = Date.now() - lastFrameTime;
@@ -81,6 +83,8 @@ export function startYaesuScope(ctx: ServerContext): void {
         } else if (line.startsWith("OPEN_ERROR:")) {
           const msg = line.slice("OPEN_ERROR:".length).trim();
           console.error(`[YAESU-SCOPE] ${msg}`);
+          ctx.yaesuScopeRunning = false;
+          ctx.yaesuScopeError = msg;
           ctx.io.emit("yaesu-scope-status", { running: false, error: msg });
         }
         continue;
@@ -147,8 +151,16 @@ export function startYaesuScope(ctx: ServerContext): void {
 
   proc.on("close", (code) => {
     if (watchdogTimer) { clearInterval(watchdogTimer); watchdogTimer = null; }
+
+    /* If stopYaesuScope already nulled our slot and a new process was started,
+       this close event belongs to the old process — don't touch ctx state or
+       schedule a restart, which would create a second concurrent reader. */
+    if (ctx.yaesuScopeProcess !== proc) return;
+
     console.log(`[YAESU-SCOPE] Process exited (code=${code})`);
     ctx.yaesuScopeProcess = null;
+    ctx.yaesuScopeRunning = false;
+    ctx.yaesuScopeError = null;
     ctx.io.emit("yaesu-scope-status", { running: false, error: null });
 
     /* Auto-restart if spectrum is still enabled and source is still ft4222 */
@@ -174,5 +186,7 @@ export function stopYaesuScope(ctx: ServerContext): void {
     ctx.yaesuScopeProcess.kill("SIGTERM");
     ctx.yaesuScopeProcess = null;
   }
+  ctx.yaesuScopeRunning = false;
+  ctx.yaesuScopeError = null;
   ctx.io.emit("yaesu-scope-status", { running: false, error: null });
 }
