@@ -6,8 +6,6 @@ This page covers the radio controls available in RigControl Web. Controls are or
 
 ![RigControl Web — Compact View](https://raw.githubusercontent.com/jbdubbs/Rig-Control-Web/main/assets/compact%20view%2006.11.2026.png)
 
-![RigControl Web — Compact View (alternate)](https://raw.githubusercontent.com/jbdubbs/Rig-Control-Web/main/assets/RigControlWeb-Compact.png)
-
 ---
 
 ## VFO and Frequency
