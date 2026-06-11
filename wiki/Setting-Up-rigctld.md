@@ -112,7 +112,9 @@ These Icom radios can stream live spectrum data over their CI-V bus while `rigct
 
 #### Enabling
 
-In the Spectrum Scope settings modal, set **Source** to **Hamlib UDP**, then enable the scope. Click **Stop** and **Start** (or **Kill and Restart**) in the RIGCTLD settings to restart `rigctld` with multicast arguments.
+See the [Hamlib UDP Spectrum Scope Setup](Hamlib-UDP-Spectrum-Scope) page for complete radio menu settings and step-by-step instructions.
+
+In brief: in the Spectrum Scope settings modal, set **Source** to **Hamlib UDP**, then enable the scope. Click **Stop** and **Start** (or **Kill and Restart**) in the RIGCTLD settings to restart `rigctld` with multicast enabled.
 
 > If the spectrum scope toggle is enabled but your `rigctld` binary does not support multicast, `rigctld` will exit immediately with an error. RigControl Web detects this and **automatically disables the toggle** so rig control resumes on the next start. Check the Process Logs panel for the error message.
 
