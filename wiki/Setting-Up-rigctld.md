@@ -92,23 +92,49 @@ Because `rigctld` exposes a standard network interface, you can configure any Ha
 
 ---
 
-## CI-V Spectrum Scope
+## Spectrum Scope
 
-Some Icom radios — most notably the **IC-7300** and compatible models — can stream live spectrum data over their CI-V bus while `rigctld` is connected. RigControl Web can receive and display this data as a panadapter in the **CI-V Spectrum Scope** panel.
+RigControl Web can display a live panadapter and waterfall from your radio in the **Spectrum Scope** panel. Two independent source modes are supported — select the one that matches your radio.
 
-### Requirements
+Add the **Spectrum Scope** panel to your layout via **Add Panel**, then click its gear icon to open the Spectrum Scope settings modal, where you choose the source and enable the scope.
 
-- **An IC-7300 or other Icom radio with CI-V spectrum output** connected and `rigctld` running normally.
+---
+
+### Hamlib UDP (Icom IC-7300, IC-7610, IC-705, IC-9700)
+
+These Icom radios can stream live spectrum data over their CI-V bus while `rigctld` is connected. RigControl Web receives the data via Hamlib's UDP multicast stream.
+
+#### Requirements
+
 - **Serial speed set to 115200 baud.** The IC-7300 and similar radios only stream spectrum data at this baud rate.
 - **CI-V Transceive OFF** in the radio's CI-V menu. The app uses polling; transceive mode sends unsolicited data that can interfere.
 - **CI-V USB Echo ON** in the radio's CI-V menu. This allows Hamlib to verify CI-V commands are received by the radio.
 
-### Enabling the Spectrum Scope
+#### Enabling
 
-In **General Settings → RIGCTLD**, scroll down to find the **CI-V Spectrum Scope** toggle. Enable it, then click **Stop** and **Start** (or **Kill and Restart**) to restart `rigctld` with multicast arguments. Once `rigctld` restarts, add the **CI-V Spectrum** panel to your layout via **Add Panel**.
+In the Spectrum Scope settings modal, set **Source** to **Hamlib UDP**, then enable the scope. Click **Stop** and **Start** (or **Kill and Restart**) in the RIGCTLD settings to restart `rigctld` with multicast arguments.
 
 > If the spectrum scope toggle is enabled but your `rigctld` binary does not support multicast, `rigctld` will exit immediately with an error. RigControl Web detects this and **automatically disables the toggle** so rig control resumes on the next start. Check the Process Logs panel for the error message.
 
-### Multicast Address and Port
+#### Multicast Address and Port
 
 The default multicast address (`224.0.0.1`) and port (`4531`) match Hamlib's defaults and work for single-machine setups. Advanced users running `rigctld` on a separate machine from the app can change these to route spectrum data across a network.
+
+---
+
+### FT-710 via USB (Yaesu FT-710)
+
+The Yaesu FT-710 exposes its internal waterfall data through a dedicated **FTDI FT4222H USB-to-SPI bridge chip** — a second USB device that appears on your computer separately from the radio's CAT serial port. This path does not use Hamlib and works whether or not CI-V spectrum output is available.
+
+#### Requirements
+
+- **`libft4222`** from FTDI must be installed on your computer. See [FT-710 Spectrum Scope Setup](https://github.com/jbdubbs/Rig-Control-Web/blob/main/docs/ft4222-spectrum-setup.md) for full platform-specific setup instructions (Linux, macOS, Windows).
+- The FT4222H USB device must be visible to the app. On Linux, a udev rule is needed to grant non-root access. On Windows, the default FTDI driver must be replaced with WinUSB using Zadig.
+
+#### Enabling
+
+In the Spectrum Scope settings modal, set **Source** to **FT-710 USB (FT4222)** and enable the scope. The app spawns the `ft4222-scope-reader` helper binary, which connects to the FT4222H device and streams frame data. A status indicator in the panel shows whether the reader is running or has encountered an error.
+
+#### Span Control
+
+The settings modal includes a **span selector** with 10 presets from 1 kHz to 1 MHz. Clicking a preset sends a CAT command directly to the radio via `rigctld` and saves the preference. A live readout next to the buttons shows the span currently being reported by the radio's frame data.

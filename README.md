@@ -1,6 +1,6 @@
 # RigControl Web
 
-A web-first app for controlling your radio and making CW and SSB contacts!  Full support for making voice and CW contacts with built-in audio, built-in CW keyer in iambic and straight modes (via keyboard or "vBand adapter"), and video support so you can see the front panel of your radio.  Audio via your radio's virtual USB Audio Device, Digirig or similar.  Video feeding your radio's video output back into your computer with a USB to HDMI adapter (or any old webcam pointed at it).
+A web-first app for controlling your radio and making CW and SSB contacts!  Full support for making voice and CW contacts with built-in audio, built-in CW keyer in iambic and straight modes (via keyboard, "vBand adapter", or Tiny MIDI), and video support so you can see the front panel of your radio.  Audio via your radio's virtual USB Audio Device, Digirig or similar.  Spectrum scope available on supported devices like the IC-7300 and the FT-710.  Front panel view support by feeding DVI/HDMI into your PC with an HDMI to USB capture dongle.
 
 ## Getting Started
 
@@ -27,6 +27,7 @@ Developers who want to run from source will find build instructions in the [Deve
 - **Spectrum Scope**: Live panadapter and waterfall display. Two independent source modes:
   - **Hamlib UDP** (Icom IC-7300, IC-7610, IC-705, IC-9700): Receives spectrum data from Hamlib's built-in UDP multicast stream. Requires 115200 baud serial speed, CI-V Transceive OFF, and CI-V USB Echo ON in radio settings.
   - **FT-710 via USB** (Yaesu FT-710): Reads spectrum data directly from the radio's FTDI FT4222H USB-to-SPI bridge chip — a dedicated second USB device separate from the CAT serial port. Requires `libft4222` from FTDI to be installed on the host. See [docs/ft4222-spectrum-setup.md](docs/ft4222-spectrum-setup.md) for full setup instructions.
+    - **Span control**: A 10-button span selector (1 kHz – 1 MHz) in the Spectrum Scope settings modal sends the span change command directly to the radio via `rigctld`. A live readout shows the span currently reported by incoming frame data.
   - Select the source and enable the scope in the **Spectrum Scope** panel settings (gear icon).
 - **Bidirectional Audio**: Full transmit and receive audio over the network using the Opus 1.5 codec. Works for remote SSB, AM, and FM contacts.
   - Multi-client support.
@@ -63,14 +64,15 @@ Developers who want to run from source will find build instructions in the [Deve
 
 ## TODO
 
-- **macOS Support**: Currently untested — requires externally installed Hamlib 4.7.0 in the system PATH.
-- **Broader Rig Testing**: Currently tested on FT-710 and FT-891, which means other similar modern Yaesu radios should work well. Other Hamlib-supported rigs should work.  Let me know with a bug report.
+- **macOS Support**: Currently untested.
+- **Broader Rig Testing**: Currently tested on FT-710,FT-891,IC-7300. Other similar modern Yaesu radios should work well. Other Hamlib-supported rigs should work.  Let me know with a bug report.
 
 ## What this app is/isn't
 - This app is for modern or the most popular rigs on the market which do not have built-in networking capabilities available, or rigs which require a subscription service to use them.  Examples include FT-710, FT-DX10, IC-7300, IC-7300 Mk II, FTX-1/F, FT-991A, FT-891, Kenwood 590/890/990, and other popular non-networked rigs which are supported by Hamlib.  Rig control will not be reinvented in this app.  I'll leave that to the experts.
-- Audio capabilities are dependant on the radio having a modern and widely used digital sound interface, whether that's with a built-in sound card, Digirig, Allscan URI, Master Communications DRI, or the like.
-- Video capabilities are dependant on the radio having a video output of some kind, which can be fed back into the shack computer with an adapter.  (https://a.co/d/08s41ath + https://a.co/d/00hEobog for example for a modern Yaesu rig).
-- **What it's not!** This app is not for making every rig on earth work 100% correctly with the software.  This software may never work perfectly with your TenTec 506 Rebel, for example.  There will not be 1000 different rig control options, 17 different ways to interface with every CW keyer under the sun, and it will not reverse engineer your SCU-LAN10 interface to get a full live spectrum view like a Web SDR.  Rotators, amplifiers, satellite ops, etc will not likely be supported unless there is broad community impact.  This app is about bringing a simple way to remotely operate your rig to the masses.
+- Audio capabilities are dependent on the radio having a modern and widely used digital sound interface, whether that's with a built-in sound card, Digirig, Allscan URI, Master Communications DRI, or the like.
+- Spectrum scope capabilities require the radio to output that data in some supported way.  Either with USB or CI-V.
+- Video capabilities are dependent on the radio having a video output of some kind, which can be fed back into the shack computer with an adapter.  (https://a.co/d/08s41ath + https://a.co/d/00hEobog for example for a modern Yaesu rig).
+- **What it's not!** This app is not for making every rig on earth work 100% correctly with the software.  This software may never work perfectly with your TenTec 506 Rebel, for example.  There will not be 1000 different rig control options and 17 different ways to interface with every CW keyer under the sun.  Rotators, amplifiers, satellite ops, etc will not likely be supported unless there is broad community impact.  This app is about bringing a simple way to remotely operate your rig to the masses.
 
 ## Prerequisites
 
@@ -81,7 +83,6 @@ Developers who want to run from source will find build instructions in the [Deve
   - **Linux kernel 6.0 or higher** (tested on Fedora 43) — The Electron AppImage includes a bundled `rigctld`. For `npm run dev` (web server mode), Hamlib 4.7.0+ must be installed separately — see the warning below.
     - Most Linux distros, including extremely modern ones seem to still be bundling Hamlib 4.6.5.  This will NOT work.  Install from the Hamlib GitHub page.
   - **macOS**
-    - Requires externally installed Hamlib 4.7.0 in the system PATH.
     - Completely untested.  No testing hardware.
 
 ### Compile from Source
