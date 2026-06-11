@@ -124,12 +124,12 @@ The default multicast address (`224.0.0.1`) and port (`4531`) match Hamlib's def
 
 ### FT-710 via USB (Yaesu FT-710)
 
-The Yaesu FT-710 exposes its internal waterfall data through a dedicated **FTDI FT4222H USB-to-SPI bridge chip** — a second USB device that appears on your computer separately from the radio's CAT serial port. This path does not use Hamlib and works whether or not CI-V spectrum output is available.
+The Yaesu FT-710's single USB cable exposes three devices to your computer: the CP2105 CAT serial port, USB audio, and a dedicated **FTDI FT4222H chip** that streams the live waterfall. This path does not use Hamlib and works independently of `rigctld`.
 
 #### Requirements
 
-- **`libft4222`** from FTDI must be installed on your computer. See [FT-710 Spectrum Scope Setup](https://github.com/jbdubbs/Rig-Control-Web/blob/main/docs/ft4222-spectrum-setup.md) for full platform-specific setup instructions (Linux, macOS, Windows).
-- The FT4222H USB device must be visible to the app. On Linux, a udev rule is needed to grant non-root access. On Windows, the default FTDI driver must be replaced with WinUSB using Zadig.
+- **`libft4222`** from FTDI must be installed on your computer. See the [FT-710 Spectrum Scope Setup](FT-710-Spectrum-Scope-Setup) page for full platform-specific setup instructions (Linux, macOS, Windows).
+- The spectrum output must be enabled in the radio's menu: **OPERATION SETTING → GENERAL → SCU-LAN10: ON**.
 
 #### Enabling
 
