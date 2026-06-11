@@ -481,7 +481,10 @@ int main(void) {
             (unsigned long)low_hz, (unsigned long)high_hz);
 
         for (int i = 0; i < WF1_LENGTH; i++) {
-            fprintf(stdout, "%02x", (uint8_t)~g_frame[WF1_OFFSET + i]);
+            /* Bin 0 is the DC component and carries LO leakage / mixer DC offset
+             * artifacts that the radio's own display suppresses. Substitute bin 1. */
+            int src = (i == 0) ? 1 : i;
+            fprintf(stdout, "%02x", (uint8_t)~g_frame[WF1_OFFSET + src]);
         }
 
         fprintf(stdout, "\"}\n");
