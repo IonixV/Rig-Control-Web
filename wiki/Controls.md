@@ -4,7 +4,9 @@ This page covers the radio controls available in RigControl Web. Controls are or
 
 > **Important:** Not every radio supports every control listed here. RigControl Web probes your radio's capabilities when it connects, and buttons for unsupported functions are hidden or disabled automatically. If a control you expect to see is not there, your radio's Hamlib driver may not support it.
 
-![RigControl Web — Compact View](https://raw.githubusercontent.com/jbdubbs/Rig-Control-Web/main/assets/rigcontrolweb.manual.compactview.main.png)
+![RigControl Web — Compact View](https://raw.githubusercontent.com/jbdubbs/Rig-Control-Web/main/assets/compact%20view%2006.11.2026.png)
+
+![RigControl Web — Compact View (alternate)](https://raw.githubusercontent.com/jbdubbs/Rig-Control-Web/main/assets/RigControlWeb-Compact.png)
 
 ---
 
