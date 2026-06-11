@@ -5,7 +5,7 @@ A web-first app for controlling your radio and making CW and SSB contacts!
 - Full support for making voice and CW contacts (FT8 coming soon)
 - CW keyer in iambic and straight modes (via keyboard, "vBand adapter", or Tiny MIDI).  You can send real CW!  Not macros!
 - Audio via your radio's virtual USB Audio Device, Digirig or similar.  
-- Spectrum scope available on supported devices like the IC-7300 and the FT-710.
+- Spectrum scope available on supported Icom radios (IC-7300, IC-7300MK2, IC-7610, IC-7850/7851, IC-705, IC-9700, IC-905) and the Yaesu FT-710.
 - Video support so you can see the front panel of your radio (by feeding DVI/HDMI into your PC with an HDMI to USB capture dongle).
 
 ## Getting Started
@@ -21,18 +21,22 @@ Developers who want to run from source will find build instructions in the [Deve
 ## Screenshots
 
 ### Compact View (Desktop)
-![RigControl Web — Compact View](assets/rigcontrolweb.manual.compactview.main.png)
+![RigControl Web — Compact View](assets/compact%20view%2006.11.2026.png)
+
+![RigControl Web — Compact View (alternate)](assets/RigControlWeb-Compact.png)
 
 ### Phone View (Mobile)
-<img src="assets/rigcontrolweb.manual.phoneview.main.jpg" alt="RigControl Web — Phone View" width="50%">
+<img src="assets/phone%20view%2006.11.2026.png" alt="RigControl Web — Phone View" width="50%">
+
+<img src="assets/RigControlWeb-Phone.png" alt="RigControl Web — Phone View (alternate)" width="50%">
 
 ## Features
 
 - **User Authentication**: Every browser client must log in before accessing any controls. JWT-based, bcrypt-hashed passwords, per-user layout namespacing, and a full admin panel for user management, session monitoring, and an audit log.
 - **Real-time Dashboard**: Frequency, mode, and meter displays (S-Meter, SWR, ALC, Power, VDD) polled live from the rig.
 - **Spectrum Scope**: Live panadapter and waterfall display. Two independent source modes:
-  - **Hamlib UDP** (Icom IC-7300, IC-7610, IC-705, IC-9700): Receives spectrum data from Hamlib's built-in UDP multicast stream. Requires 115200 baud serial speed, CI-V Transceive OFF, and CI-V USB Echo ON in radio settings.
-  - **FT-710 via USB** (Yaesu FT-710): Reads spectrum data directly from the radio's FTDI FT4222H USB-to-SPI bridge chip — a dedicated second USB device separate from the CAT serial port. Requires `libft4222` from FTDI to be installed on the host. See [docs/ft4222-spectrum-setup.md](docs/ft4222-spectrum-setup.md) for full setup instructions.
+  - **Hamlib UDP** (Icom IC-7300, IC-7300MK2, IC-7610, IC-7850/7851, IC-705, IC-9700, IC-905): Receives spectrum data from Hamlib's built-in UDP multicast stream. Requires 115200 baud serial speed, CI-V Transceive OFF, and CI-V USB Echo ON in radio settings.
+  - **FT-710 via USB** (Yaesu FT-710 only): Reads spectrum data directly from the radio's built-in FTDI FT4222H USB-to-SPI chip — a dedicated second USB device separate from the CAT serial port. Enable the radio's OPERATION SETTING → GENERAL → SCU-LAN10: ON to activate the chip; no physical SCU-LAN10 hardware is required. Requires `libft4222` from FTDI to be installed on the host. See [docs/ft4222-spectrum-setup.md](docs/ft4222-spectrum-setup.md) for full setup instructions. (The FTDX101 and FTDX10 are SCU-LAN10 compatible but route spectrum over Ethernet via the physical SCU-LAN10 device — that path is not supported.)
     - **Span control**: A 10-button span selector (1 kHz – 1 MHz) in the Spectrum Scope settings modal sends the span change command directly to the radio via `rigctld`. A live readout shows the span currently reported by incoming frame data.
   - Select the source and enable the scope in the **Spectrum Scope** panel settings (gear icon).
 - **Bidirectional Audio**: Full transmit and receive audio over the network using the Opus 1.5 codec. Works for remote SSB, AM, and FM contacts.

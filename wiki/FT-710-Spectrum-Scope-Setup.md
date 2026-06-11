@@ -4,6 +4,8 @@ The Yaesu FT-710 can stream its live spectrum waterfall to RigControl Web over U
 
 This guide covers Linux (Fedora/RHEL and Debian/Ubuntu), macOS, and Windows.
 
+> **FT-710 only.** The other Yaesu radios that are marketed as SCU-LAN10 compatible — the FTDX101MP, FTDX101D, and FTDX10 — do **not** expose an FT4222H USB device to the host PC. Those radios route spectrum data through the physical SCU-LAN10 Ethernet bridge accessory using Yaesu's proprietary remote-control protocol. RigControl Web does not support that path; this feature is specific to the FT-710.
+
 ---
 
 ## Before you start
@@ -30,6 +32,8 @@ The spectrum USB output is off by default. Turn it on through the FT-710's menu:
 4. Find **SCU-LAN10** and set it to **ON**.
 5. Press **FUNC** (or wait about 3 seconds) to save the setting.
 6. Touch **BACK** to return to normal operation.
+
+> **Why is it called "SCU-LAN10"?** The SCU-LAN10 is Yaesu's optional Ethernet remote-control accessory. On the FT-710, enabling this menu option activates the radio's built-in FTDI FT4222H USB-to-SPI chip, which streams spectrum data directly over the USB cable — no SCU-LAN10 hardware required. The FTDX101 and FTDX10 have the same menu option but use different hardware; their spectrum data only becomes available through the physical SCU-LAN10 device over Ethernet.
 
 ---
 

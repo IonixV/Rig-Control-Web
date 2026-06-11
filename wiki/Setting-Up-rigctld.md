@@ -100,7 +100,7 @@ Add the **Spectrum Scope** panel to your layout via **Add Panel**, then click it
 
 ---
 
-### Hamlib UDP (Icom IC-7300, IC-7610, IC-705, IC-9700)
+### Hamlib UDP (Icom IC-7300, IC-7300MK2, IC-7610, IC-7850/7851, IC-705, IC-9700, IC-905)
 
 These Icom radios can stream live spectrum data over their CI-V bus while `rigctld` is connected. RigControl Web receives the data via Hamlib's UDP multicast stream.
 
@@ -128,10 +128,12 @@ The default multicast address (`224.0.0.1`) and port (`4531`) match Hamlib's def
 
 The Yaesu FT-710's single USB cable exposes three devices to your computer: the CP2105 CAT serial port, USB audio, and a dedicated **FTDI FT4222H chip** that streams the live waterfall. This path does not use Hamlib and works independently of `rigctld`.
 
+> **FT-710 only.** The FTDX101MP, FTDX101D, and FTDX10 are marketed as SCU-LAN10 compatible but route their spectrum data through the physical SCU-LAN10 Ethernet accessory using Yaesu's proprietary protocol. They do not expose an FT4222H USB device to the host PC and are not supported by this feature.
+
 #### Requirements
 
 - **`libft4222`** from FTDI must be installed on your computer. See the [FT-710 Spectrum Scope Setup](FT-710-Spectrum-Scope-Setup) page for full platform-specific setup instructions (Linux, macOS, Windows).
-- The spectrum output must be enabled in the radio's menu: **OPERATION SETTING → GENERAL → SCU-LAN10: ON**.
+- The spectrum output must be enabled in the radio's menu: **OPERATION SETTING → GENERAL → SCU-LAN10: ON**. (This enables the FT-710's built-in FT4222H chip over USB — no physical SCU-LAN10 device is needed.)
 
 #### Enabling
 

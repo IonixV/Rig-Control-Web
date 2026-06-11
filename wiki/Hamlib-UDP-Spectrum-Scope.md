@@ -2,7 +2,7 @@
 
 RigControl Web can display a live panadapter and waterfall from several Icom radios by receiving spectrum data that Hamlib streams over a local UDP connection while `rigctld` is running.
 
-**Supported radios:** IC-7300, IC-7610, IC-705, IC-9700
+**Supported radios:** IC-7300, IC-7300MK2, IC-7610, IC-7850/7851, IC-705, IC-9700, IC-905
 
 No additional software or drivers are required — setup is entirely through the radio's menu and RigControl Web's settings.
 
@@ -18,11 +18,11 @@ When `rigctld` is connected to one of these radios at 115200 baud, the radio aut
 
 ## Step 1 — Configure the radio
 
-All four supported radios use the same menu path and the same four settings.
+All supported radios use the same menu path and the same four settings.
 
 **Navigate to:** `MENU > SET > Connectors > CI-V`
 
-On touchscreen models (IC-7300, IC-7610, IC-9700, IC-705), tap **MENU**, then tap **SET**, then tap **Connectors**, and scroll down to the CI-V section.
+On touchscreen models (IC-7300, IC-7300MK2, IC-7610, IC-7850/7851, IC-9700, IC-705, IC-905), tap **MENU**, then tap **SET**, then tap **Connectors**, and scroll down to the CI-V section.
 
 Set the following four items:
 

@@ -40,7 +40,7 @@ Both layouts show the same information and controls, just arranged differently f
 
 - [Authentication](Authentication) — Login, user accounts, roles, and the admin panel
 - [Setting Up rigctld](Setting-Up-rigctld) — Configure your radio connection and start the control process
-- [Hamlib UDP Spectrum Scope](Hamlib-UDP-Spectrum-Scope) — Live panadapter for IC-7300, IC-7610, IC-705, and IC-9700
+- [Hamlib UDP Spectrum Scope](Hamlib-UDP-Spectrum-Scope) — Live panadapter for IC-7300, IC-7300MK2, IC-7610, IC-7850/7851, IC-705, IC-9700, and IC-905
 - [FT-710 Spectrum Scope Setup](FT-710-Spectrum-Scope-Setup) — Live panadapter for the Yaesu FT-710 via USB
 - [Connecting the Local Client](Connecting-the-Local-Client) — Connect to your rig and understand the status display
 - [Controls](Controls) — VFO, mode, meters, PTT, and radio function buttons
