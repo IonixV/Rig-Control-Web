@@ -10,6 +10,7 @@ const SPECTRUM_RATIO = 0.3;
 const FLOOR_DEFAULT = -80;
 const CEILING_DEFAULT = -40;
 const LS_PREFIX = "spectrum-hamlib-";
+const TOOLTIP_MAX_WIDTH = 90;
 
 function lsGet(key: string, fallback: string): string {
   try { return localStorage.getItem(LS_PREFIX + key) ?? fallback; } catch { return fallback; }
@@ -96,8 +97,10 @@ export default function SpectrumHamlibPanel({
     if (hz === null) { setTooltip(null); return; }
     const containerRect = canvasContainerRef.current?.getBoundingClientRect();
     if (!containerRect) { setTooltip(null); return; }
+    const cursorX = e.clientX - containerRect.left;
+    const flipLeft = cursorX + 8 + TOOLTIP_MAX_WIDTH > containerRect.width;
     setTooltip({
-      x: e.clientX - containerRect.left,
+      x: flipLeft ? cursorX - TOOLTIP_MAX_WIDTH - 8 : cursorX + 8,
       y: e.clientY - containerRect.top,
       label: freqLabel(hz),
     });
