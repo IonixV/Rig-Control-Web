@@ -5,8 +5,8 @@ A web-first app for controlling your radio and making CW and SSB contacts!
 - Full support for making voice and CW contacts (FT8 coming soon)
 - CW keyer in iambic and straight modes (via keyboard, "vBand adapter", or Tiny MIDI).  You can send real CW!  Not macros!
 - Audio via your radio's virtual USB Audio Device, Digirig or similar.  
-- Spectrum scope available on supported devices like the IC-7300 and the FT-710.  Front panel view support by feeding DVI/HDMI into your PC with an HDMI to USB capture dongle.
-- Video support so you can see the front panel of your radio.
+- Spectrum scope available on supported devices like the IC-7300 and the FT-710.
+- Video support so you can see the front panel of your radio (by feeding DVI/HDMI into your PC with an HDMI to USB capture dongle).
 
 ## Getting Started
 
