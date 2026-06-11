@@ -130,6 +130,7 @@ export async function startServer(appPath?: string, userDataPath?: string) {
       isConnected: ctx.isConnected,
       potaSettings: ctx.potaSettings,
       sotaSettings: ctx.sotaSettings,
+      wwffSettings: ctx.wwffSettings,
       cwSettings: ctx.cwSettings,
       cwPortStatus: (ctx.cwKeyerProcess && !ctx.cwKeyerProcess.killed)
         ? { open: true, port: ctx.cwSettings.keyerPort }

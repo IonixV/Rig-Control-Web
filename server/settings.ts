@@ -32,6 +32,9 @@ export function loadSettings(ctx: ServerContext, settingsFile: string): void {
     if (data.sotaSettings) {
       ctx.sotaSettings = { ...ctx.sotaSettings, ...data.sotaSettings };
     }
+    if (data.wwffSettings) {
+      ctx.wwffSettings = { ...ctx.wwffSettings, ...data.wwffSettings };
+    }
     if (data.cwSettings) {
       ctx.cwSettings = { ...ctx.cwSettings, ...data.cwSettings };
     }
@@ -58,6 +61,7 @@ export function saveSettings(ctx: ServerContext, settingsFile: string): void {
       clientPort: Number(ctx.clientPort),
       potaSettings: ctx.potaSettings,
       sotaSettings: ctx.sotaSettings,
+      wwffSettings: ctx.wwffSettings,
       cwSettings: ctx.cwSettings,
       spectrumSettings: ctx.spectrumSettings,
     }, null, 2));
@@ -90,6 +94,7 @@ export function registerSettingsHandlers(
     if (data.clientPort !== undefined) ctx.clientPort = Number(data.clientPort);
     if (data.potaSettings !== undefined) ctx.potaSettings = { ...ctx.potaSettings, ...data.potaSettings };
     if (data.sotaSettings !== undefined) ctx.sotaSettings = { ...ctx.sotaSettings, ...data.sotaSettings };
+    if (data.wwffSettings !== undefined) ctx.wwffSettings = { ...ctx.wwffSettings, ...data.wwffSettings };
     if (data.cwSettings !== undefined) {
       const oldPolarity = ctx.cwSettings.serialKeyPolarity;
       ctx.cwSettings = { ...ctx.cwSettings, ...data.cwSettings };

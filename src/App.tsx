@@ -386,13 +386,10 @@ export default function App() {
     localStorage.setItem("backend-url", backendUrl);
   }, [backendUrl]);
 
-  // Save settings debounce (skip first mount to avoid overwriting on load)
-  const isFirstMount = useRef(true);
+  // Save settings debounce — only fires after server settings have been loaded to prevent
+  // overwriting persisted values with React's initial default state during startup.
   useEffect(() => {
-    if (isFirstMount.current) {
-      isFirstMount.current = false;
-      return;
-    }
+    if (!settingsLoaded) return;
     const timer = setTimeout(() => {
       socket?.emit("save-settings", {
         settings: rigctldSettings,
@@ -408,7 +405,7 @@ export default function App() {
       localStorage.setItem("last-port", port.toString());
     }, 1000);
     return () => clearTimeout(timer);
-  }, [rigctldSettings, host, port, pollRate, socket, potaPollRate, potaMaxAge, potaModeFilter, potaBandFilter, sotaPollRate, sotaMaxAge, sotaModeFilter, sotaBandFilter, wwffPollRate, wwffMaxAge, wwffModeFilter, wwffBandFilter]);
+  }, [rigctldSettings, host, port, pollRate, socket, settingsLoaded, potaPollRate, potaMaxAge, potaModeFilter, potaBandFilter, sotaPollRate, sotaMaxAge, sotaModeFilter, sotaBandFilter, wwffPollRate, wwffMaxAge, wwffModeFilter, wwffBandFilter]);
 
   // Notify server which meters need computing based on visible layout
   useEffect(() => {

@@ -107,6 +107,7 @@ export interface ServerContext {
   };
   potaSettings: { enabled: boolean; pollRate: number; maxAge: number };
   sotaSettings: { enabled: boolean; pollRate: number; maxAge: number };
+  wwffSettings: { enabled: boolean; pollRate: number; maxAge: number };
   solarData: SolarData | null;
 
   // General settings
@@ -277,6 +278,7 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
     },
     potaSettings: { enabled: false, pollRate: 5, maxAge: 15 },
     sotaSettings: { enabled: false, pollRate: 5, maxAge: 15 },
+    wwffSettings: { enabled: false, pollRate: 5, maxAge: 15 },
     solarData: null,
 
     pollRate: 2000,
