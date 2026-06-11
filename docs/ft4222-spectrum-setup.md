@@ -1,37 +1,43 @@
-# FT-710 Spectrum Scope Setup (FT4222 USB)
+# FT-710 Spectrum Scope Setup
 
-The Yaesu FT-710 exposes its live spectrum waterfall over a dedicated USB connection using an FTDI FT4222H USB-to-SPI bridge chip. This is a separate USB device from the main CAT serial port and requires a proprietary userspace driver (`libft4222`) from FTDI.
+The Yaesu FT-710 can stream its live spectrum waterfall to RigControl Web over USB. This requires installing a small driver library (libft4222) from FTDI on your computer, and enabling the feature in the radio's settings.
 
-This guide covers setup on Linux (Fedora 44 / RHEL-family), macOS, and Windows.
-
----
-
-## How it works
-
-The FT-710 presents two USB devices when connected:
-
-| Device | Chip | Purpose |
-|--------|------|---------|
-| CP2105 (VID `10C4` / PID `EA70`) | Silicon Labs | CAT control serial port |
-| FT4222H (VID `0403` / PID `601C`) | FTDI | Spectrum/waterfall SPI bridge |
-
-RigControl Web's `ft4222-scope-reader` binary opens the FT4222H device directly via `libft4222`, reads 4096-byte SPI frames from the radio's DSP at the configured sweep rate, and streams parsed NDJSON spectrum data to the server. The server emits `spectrum-data` Socket.io events to all connected browser clients, which render the live panadapter and waterfall display.
-
-This path is entirely separate from Hamlib and `rigctld`. The CAT port must still be connected and `rigctld` must be running for frequency/mode display to work alongside the spectrum.
+This guide covers Linux (Fedora/RHEL and Debian/Ubuntu), macOS, and Windows.
 
 ---
 
-## Hardware requirements
+## Before you start
 
-- Yaesu FT-710 (any variant)
-- Two USB cables from the radio to the host: one for CAT (`CP2105`) and one for the spectrum scope (`FT4222H`)
-- The radio's **USB Scope Out** feature must be enabled in the radio's menu (Menu → Scope → USB Scope Out → ON)
+### One USB cable, three devices
+
+Your FT-710 uses a single USB cable. When connected, your computer sees three separate USB devices exposed by that one cable:
+
+| Device | Purpose |
+|--------|---------|
+| CP2105 (Silicon Labs) | CAT control serial port — used by rigctld |
+| FT4222H (FTDI) | Spectrum scope data stream |
+| USB Audio | Radio audio over USB |
+
+You do not need a second cable for the spectrum scope.
+
+### Enable the spectrum output on the radio
+
+The spectrum USB output is off by default. Turn it on through the FT-710's menu:
+
+1. Press the **FUNC** knob to open the menu.
+2. Rotate or touch to **OPERATION SETTING**, then press **FUNC** to enter it.
+3. Navigate to **GENERAL**.
+4. Find **SCU-LAN10** and set it to **ON**.
+5. Press **FUNC** (or wait about 3 seconds) to save the setting.
+6. Touch **BACK** to return to normal operation.
 
 ---
 
-## Step 1 — Verify the FT4222 device is visible
+## Linux
 
-With both USB cables connected and the radio powered on:
+### Step 1 — Confirm the device is visible
+
+With the radio connected and powered on, open a terminal and run:
 
 ```bash
 lsusb | grep -i "0403:601c"
@@ -42,32 +48,29 @@ Expected output:
 Bus 001 Device 003: ID 0403:601c Future Technology Devices International, Ltd FT4222H
 ```
 
-If you see only the CP2105 (VID `10C4`), the spectrum USB cable is not connected or the radio's USB Scope Out is disabled.
-
----
-
-## Linux (Fedora 44 / RHEL-family)
+If nothing appears, check that the USB cable is fully seated and that SCU-LAN10 is enabled in the radio (see above).
 
 ### Step 2 — Download libft4222
 
-FTDI does not publish `libft4222` to any Linux package manager. Download from FTDI directly:
+FTDI does not publish `libft4222` through any Linux package manager — you must download it directly from FTDI.
+
+Go to the [FT4222H Software Examples page](https://ftdichip.com/software-examples/ft4222h-software-examples/) and download the Linux package. Then extract it:
 
 ```bash
 cd ~/Downloads
-wget https://ftdichip.com/wp-content/uploads/2022/06/libft4222-linux-1.4.4.170.tgz
-tar -xzf libft4222-linux-1.4.4.170.tgz
-cd libft4222-linux-1.4.4.170
+tar -xzf libft4222-linux-*.tgz
+cd libft4222-linux-*
 ```
-
-> Check the [FT4222H Software Examples page](https://ftdichip.com/software-examples/ft4222h-software-examples/) to confirm you have the latest version. The filename will differ but the steps are identical.
 
 ### Step 3 — Install the library
 
-Run the included installation script as root. It detects the system architecture (x86_64), copies the correct `.so` to `/usr/local/lib/`, creates symlinks, and runs `ldconfig`.
+Run the included installation script:
 
 ```bash
 sudo ./install4222.sh
 ```
+
+This copies the library to `/usr/local/lib/` and updates the linker cache.
 
 **If the script fails, install manually:**
 
@@ -78,35 +81,28 @@ sudo ln -sf /usr/local/lib/libft4222.so.1          /usr/local/lib/libft4222.so
 sudo ldconfig
 ```
 
-> **Fedora path note:** FTDI's script installs to `/usr/local/lib`. Fedora x86_64 includes this in its ldconfig search path. If you ever get a runtime `libft4222.so not found` error, also copy the file to `/usr/local/lib64/` and re-run `sudo ldconfig`.
-
-### Step 4 — Verify the library is discoverable
+### Step 4 — Verify the library is found
 
 ```bash
 ldconfig -p | grep libft4222
 ```
 
-Expected output:
-```
-libft4222.so.1 (libc6,x86-64) => /usr/local/lib/libft4222.so.1
-```
+You should see at least one line referencing `libft4222.so.1`.
 
-If you see nothing, check that `/usr/local/lib` is in the ldconfig search path:
-
-```bash
-cat /etc/ld.so.conf.d/*.conf | grep local
-```
-
-If it is missing, add it:
+**If you see nothing**, `/usr/local/lib` may not be in the linker's search path — this is common on Debian and Ubuntu. Fix it:
 
 ```bash
 echo "/usr/local/lib" | sudo tee /etc/ld.so.conf.d/local.conf
 sudo ldconfig
 ```
 
-### Step 5 — Fix SELinux context
+Then re-run `ldconfig -p | grep libft4222` to confirm.
 
-Fedora ships with SELinux enforcing by default. After installation, restore the correct file context so the dynamic linker can load the library:
+> **Fedora / RHEL:** If you still get a "not found" error at runtime, also copy the file to `/usr/local/lib64/` and re-run `sudo ldconfig`.
+
+### Step 5 — Fix SELinux context (Fedora / RHEL only)
+
+Fedora and RHEL run SELinux enforcing by default. Apply the correct file context so the library can be loaded:
 
 ```bash
 sudo restorecon /usr/local/lib/libft4222.so*
@@ -119,164 +115,160 @@ ls -lZ /usr/local/lib/libft4222.so*
 # Expected: system_u:object_r:lib_t:s0
 ```
 
-If `restorecon` does not fix it (shows `unlabeled_t`), set it explicitly:
+If `restorecon` does not fix it (context shows `unlabeled_t`):
 
 ```bash
 sudo semanage fcontext -a -t lib_t '/usr/local/lib/libft4222\.so.*'
 sudo restorecon /usr/local/lib/libft4222.so*
 ```
 
-### Step 6 — udev rule for non-root access
+> **Debian / Ubuntu:** SELinux is not used on these distributions — skip this step entirely.
 
-Without this rule, the reader binary needs to run as root to open the USB device.
+### Step 6 — Allow non-root access to the USB device
 
-Create `/etc/udev/rules.d/50-ftdi-ft4222.rules`:
+Without this step, RigControl Web would need to run as root to read from the FT4222H. Create a udev rule to grant access to the logged-in user automatically:
 
 ```bash
 sudo tee /etc/udev/rules.d/50-ftdi-ft4222.rules > /dev/null << 'EOF'
-# FTDI FT4222H (Yaesu FT-710 spectrum scope USB device)
+# FTDI FT4222H (Yaesu FT-710 spectrum scope)
 SUBSYSTEM=="usb", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="601c", MODE="0660", TAG+="uaccess"
 EOF
 ```
 
-Reload rules and trigger:
+Apply the rule:
 
 ```bash
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 ```
 
-Unplug and replug the radio's spectrum USB cable for the new rule to take effect on the existing device node.
-
-> `TAG+="uaccess"` is the modern systemd-udev approach — it grants access to the currently logged-in seat user automatically, without requiring users to be added to a group.
+Unplug and reconnect the USB cable so the rule takes effect on the device.
 
 ---
 
 ## macOS
 
-### Step 2 — Download libft4222
+### Step 1 — Confirm the device is visible
 
-Download the macOS package from FTDI's [FT4222H Software Examples page](https://ftdichip.com/software-examples/ft4222h-software-examples/). The macOS archive is named `libft4222-mac-*.tar.gz` or similar.
+With the radio connected and powered on, open Terminal and run:
 
-Extract it and copy the `.dylib` to a library path:
+```bash
+system_profiler SPUSBDataType | grep -A5 "FT4222"
+```
+
+You should see an entry for the FT4222H. If nothing appears, check the USB connection and confirm SCU-LAN10 is enabled in the radio (see above).
+
+### Step 2 — Download and install libft4222
+
+Go to the [FT4222H Software Examples page](https://ftdichip.com/software-examples/ft4222h-software-examples/) and download the macOS package.
+
+Extract the archive and install the library:
 
 ```bash
 sudo cp libft4222.1.dylib /usr/local/lib/
 sudo ln -sf /usr/local/lib/libft4222.1.dylib /usr/local/lib/libft4222.dylib
 ```
 
-macOS does not use `ldconfig`. The dynamic linker searches `/usr/local/lib` by default. Verify:
+Verify the files are in place:
 
 ```bash
 ls -l /usr/local/lib/libft4222*
 ```
 
-### Step 3 — Allow the library past Gatekeeper
+### Step 3 — Remove the macOS quarantine flag
 
-macOS will quarantine the downloaded `.dylib`. Remove the quarantine attribute:
+macOS marks files downloaded from the internet as quarantined. Remove the flag so the library can be loaded:
 
 ```bash
 sudo xattr -d com.apple.quarantine /usr/local/lib/libft4222.1.dylib
 ```
 
-No udev equivalent is needed on macOS for USB device access. If the binary cannot open the device, check System Preferences → Security & Privacy → Privacy → USB for any blocking entries.
+No further configuration is needed for USB device access on macOS. If the app still cannot open the device, check **System Settings → Privacy & Security** for anything blocking USB access.
 
 ---
 
 ## Windows
 
-### Step 2 — Install the FT4222 driver package
+### Step 1 — Confirm the device is visible
 
-Download the Windows driver from FTDI's [FT4222H Software Examples page](https://ftdichip.com/software-examples/ft4222h-software-examples/). The archive contains:
+With the radio connected and powered on, open **Device Manager** (right-click the Start button → Device Manager).
 
-- `ftd2xx.dll` — FTDI D2XX base driver
-- `LibFT4222-64.dll` — FT4222 high-level library (64-bit)
+Expand **Universal Serial Bus controllers** (or **Universal Serial Bus devices**) and look for **FT4222H**. If it is listed, the device is recognized.
 
-Copy both DLLs to one of:
-- `C:\Windows\System32\` (system-wide), or
-- The directory where `ft4222-scope-reader.exe` lives (app-local)
+If it does not appear, check the USB connection and confirm SCU-LAN10 is enabled in the radio (see above).
 
-The scope reader uses `LoadLibrary` to find these at runtime and will report a clear error if either is missing.
+> The CP2105 CAT serial port will appear separately under **Ports (COM & LPT)** — this is expected.
 
-### Step 3 — Install the FTDI D2XX kernel driver
+### Step 2 — Replace the default FTDI driver
 
-The FT4222 device requires FTDI's D2XX kernel driver instead of the default Windows USB Serial (CDC) driver. Use [Zadig](https://zadig.akeo.ie/) to switch the driver:
+Windows loads the wrong driver for the FT4222H by default. Use [Zadig](https://zadig.akeo.ie/), a free utility, to replace it:
 
-1. Open Zadig.
-2. Options → List All Devices.
+1. Download and open **Zadig**.
+2. From the menu, choose **Options → List All Devices**.
 3. Select **FT4222H** from the dropdown.
-4. Set the driver to **WinUSB** (or **libusbK**).
+4. Set the target driver to **WinUSB**.
 5. Click **Replace Driver**.
 
-> This only affects the FT4222H interface — the CP2105 CAT serial port is unaffected.
+> This only affects the FT4222H spectrum device — the CP2105 CAT serial port is untouched.
 
-No additional access control configuration is needed on Windows beyond the driver swap.
+### Step 3 — Install the FT4222 library files
+
+Go to the [FT4222H Software Examples page](https://ftdichip.com/software-examples/ft4222h-software-examples/) and download the Windows package. It contains two files:
+
+- `ftd2xx.dll`
+- `LibFT4222-64.dll`
+
+Copy both files to **one** of these locations:
+
+- `C:\Windows\System32\` — available to all applications system-wide
+- The folder where `RigControl Web.exe` is installed — keeps them alongside the app
+
+RigControl Web will show a clear error on startup if either file is missing.
 
 ---
 
 ## Enabling the spectrum scope in RigControl Web
 
+Once the library is installed:
+
 1. Open the **Spectrum Scope** panel settings (gear icon in the panel header).
 2. Under **Spectrum Source**, select **FT-710 via USB**.
-3. Toggle **Enable Spectrum Scope** on.
-4. The **Reader running** indicator turns green when the `ft4222-scope-reader` binary has opened the device and is streaming data.
+3. Turn on **Enable Spectrum Scope**.
+4. The **Reader running** indicator turns green when the app has successfully connected to the device.
 
-The panel title and waterfall will populate within one sweep cycle (typically < 1 second at default span).
+The waterfall should appear within a second or two. If it does not, check the error message next to the status indicator.
 
 ---
 
 ## Troubleshooting
 
-### Reader stopped / no green indicator
+### Status indicator is not green
 
-Check the error message shown in the settings modal under the status indicator. Common causes:
+Check the error message shown in the Spectrum Scope settings panel.
 
-| Error | Cause | Fix |
-|-------|-------|-----|
-| `libft4222 not found` | Library not installed or not on ldconfig path | Re-run steps 3–4 above |
-| `No FT4222 device found` | Radio not connected or USB Scope Out disabled | Check USB cable and radio menu |
-| `LIBUSB_ERROR_ACCESS` / permission denied | udev rule not applied | Replug USB cable after reloading rules |
-| `libft4222 not found` on macOS | Quarantine attribute blocking load | Run `xattr -d com.apple.quarantine` on the dylib |
+| Error | Most likely cause | Fix |
+|-------|-------------------|-----|
+| `libft4222 not found` | Library not installed or not on search path | Redo the install steps for your platform |
+| `No FT4222 device found` | Radio not connected, or SCU-LAN10 not enabled | Check USB cable and radio menu |
+| `LIBUSB_ERROR_ACCESS` / permission denied | udev rule missing or not applied (Linux) | Redo Step 6 and replug the USB cable |
+| `libft4222 not found` on macOS | Quarantine flag still set | Run the `xattr -d` command from Step 3 |
 
-### Verify reader binary works independently
+### Check the debug log
 
-Run the binary directly from a terminal:
+Start RigControl Web with `--debug-spectrum` for a detailed trace of the spectrum reader's activity:
 
+**From the command line:**
 ```bash
-./bin/linux/ft4222-scope-reader
+./RigControl-Web-<version>.AppImage --debug-spectrum
 ```
 
-On success you will see:
-
-```
-OPEN_OK
-{"spanHz":200000,"modeVariant":1,"centerHz":14200000,...}
-{"spanHz":200000,"modeVariant":1,"centerHz":14200000,...}
-```
-
-Press `Ctrl+C` to stop.
-
-### Enable debug logging
-
-Start the server with `--debug-spectrum` for detailed FT4222 reader lifecycle output:
-
+**In development:**
 ```bash
 npm run dev -- --debug-spectrum
 ```
 
-In Electron:
-```
-rigcontrol-web --debug-spectrum
-```
+Output appears in the terminal where you launched the app.
 
 ### libft4222 is not available from package managers
 
-FTDI does not publish `libft4222` to any Linux distribution's package repositories (DNF, APT, AUR, etc.) as of mid-2026. It must always be installed from FTDI's website as described above.
-
----
-
-## libftd2xx dependency
-
-On **Linux and macOS**, `libft4222` has D2XX statically linked — a separate `libftd2xx` installation is **not** required.
-
-On **Windows**, `ftd2xx.dll` must be present alongside `LibFT4222-64.dll` as described in the Windows section above.
+FTDI does not publish `libft4222` to any Linux distribution's package repositories (DNF, APT, AUR, etc.) as of mid-2026. It must always be installed manually from FTDI's website as described above.
