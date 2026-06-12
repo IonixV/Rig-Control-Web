@@ -45,9 +45,10 @@ function buildDesktopFile(appImagePath: string): string {
     'Type=Application',
     'Name=RigControl Web',
     'Comment=Amateur radio rig control via Hamlib rigctld',
-    `Exec=${appImagePath} %U`,
+    `Exec="${appImagePath}" --class=rigcontrol-web %U`,
     'Icon=rigcontrol-web',
     'StartupWMClass=rigcontrol-web',
+    'StartupNotify=true',
     'Categories=HamRadio;Utility;',
     'Terminal=false',
   ].join('\n') + '\n';
