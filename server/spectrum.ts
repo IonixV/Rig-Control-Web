@@ -56,7 +56,7 @@ export function startSpectrumListener(ctx: ServerContext): void {
     packetCount++;
     const now = Date.now();
     if (now - lastLogTime >= 10_000) {
-      console.log(`[SPECTRUM] ${packetCount} packets received in last 10s (${amplitudes.length} points each)`);
+      vlogSpectrum(`[SPECTRUM] ${packetCount} packets received in last 10s (${amplitudes.length} points each)`);
       packetCount = 0;
       lastLogTime = now;
     }
@@ -109,7 +109,7 @@ export function startSpectrumListener(ctx: ServerContext): void {
     // Also join on the OS-chosen default interface as a fallback.
     tryJoin(undefined, "(default)");
 
-    console.log(
+    vlogSpectrum(
       `[SPECTRUM] Listening on multicast ${ctx.spectrumSettings.multicastAddr}:${ctx.spectrumSettings.multicastPort} — ` +
         `joined: [${joined.join(", ")}]` +
         (failed.length ? `  failed: [${failed.join(", ")}]` : ""),
@@ -127,6 +127,6 @@ export function stopSpectrumListener(ctx: ServerContext): void {
       // already closed
     }
     ctx.spectrumSocket = null;
-    console.log("[SPECTRUM] Listener stopped");
+    vlogSpectrum("[SPECTRUM] Listener stopped");
   }
 }

@@ -36,7 +36,7 @@ export function startYaesuScope(ctx: ServerContext): void {
   }
 
   const binaryPath = getYaesuScopeHelperPath(ctx.baseDir);
-  console.log(`[YAESU-SCOPE] Starting ${binaryPath}`);
+  vlogSpectrum(`[YAESU-SCOPE] Starting ${binaryPath}`);
 
   let proc: ReturnType<typeof spawn>;
   try {
@@ -70,7 +70,7 @@ export function startYaesuScope(ctx: ServerContext): void {
         if (line.startsWith("OPEN_OK")) {
           started = true;
           lastFrameTime = Date.now();
-          console.log("[YAESU-SCOPE] Device opened, receiving spectrum data");
+          vlogSpectrum("[YAESU-SCOPE] Device opened, receiving spectrum data");
           ctx.yaesuScopeRunning = true;
           ctx.yaesuScopeError = null;
           ctx.io.emit("yaesu-scope-status", { running: true, error: null });
@@ -157,7 +157,7 @@ export function startYaesuScope(ctx: ServerContext): void {
        schedule a restart, which would create a second concurrent reader. */
     if (ctx.yaesuScopeProcess !== proc) return;
 
-    console.log(`[YAESU-SCOPE] Process exited (code=${code})`);
+    vlogSpectrum(`[YAESU-SCOPE] Process exited (code=${code})`);
     ctx.yaesuScopeProcess = null;
     ctx.yaesuScopeRunning = false;
     ctx.yaesuScopeError = null;
@@ -165,7 +165,7 @@ export function startYaesuScope(ctx: ServerContext): void {
 
     /* Auto-restart if spectrum is still enabled and source is still ft4222 */
     if (ctx.spectrumSettings.enabled && ctx.spectrumSettings.source === "ft4222") {
-      console.log(`[YAESU-SCOPE] Restarting in ${RESTART_DELAY_MS}ms`);
+      vlogSpectrum(`[YAESU-SCOPE] Restarting in ${RESTART_DELAY_MS}ms`);
       setTimeout(() => {
         if (ctx.spectrumSettings.enabled && ctx.spectrumSettings.source === "ft4222") {
           startYaesuScope(ctx);
@@ -182,7 +182,7 @@ export function startYaesuScope(ctx: ServerContext): void {
 
 export function stopYaesuScope(ctx: ServerContext): void {
   if (ctx.yaesuScopeProcess && !ctx.yaesuScopeProcess.killed) {
-    console.log("[YAESU-SCOPE] Stopping");
+    vlogSpectrum("[YAESU-SCOPE] Stopping");
     ctx.yaesuScopeProcess.kill("SIGTERM");
     ctx.yaesuScopeProcess = null;
   }

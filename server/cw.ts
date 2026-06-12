@@ -3,6 +3,7 @@ import fs from "fs";
 import { spawn } from "child_process";
 import { Socket } from "socket.io";
 import { ServerContext, CwPaddleEvent } from "./context.ts";
+import { vlogCw as vlog } from "./vlog.ts";
 
 const CW_BUFFER_DEPTH_MS = 60;
 const CW_BUFFER_MAX_MS = 240;
@@ -215,11 +216,11 @@ export async function openKeyerPort(ctx: ServerContext, portPath: string): Promi
           proc.on("close", (code) => {
             if (ctx.cwKeyerProcess === proc) {
               ctx.cwKeyerProcess = null;
-              console.warn(`[CW] Keyer helper exited (code ${code})`);
+              vlog(`[CW] Keyer helper exited (code ${code})`);
               ctx.io.emit("cw-port-status", { open: false, port: portPath, error: "Helper process exited unexpectedly" });
             }
           });
-          console.log(`[CW] Keyer port opened: ${portPath}`);
+          vlog(`[CW] Keyer port opened: ${portPath}`);
           ctx.io.emit("cw-port-status", { open: true, port: portPath });
           settle();
         } else if (line.startsWith("OPEN_ERROR:")) {
@@ -233,7 +234,7 @@ export async function openKeyerPort(ctx: ServerContext, portPath: string): Promi
     });
 
     proc.stderr!.on("data", (chunk: Buffer) => {
-      console.error("[CW] Helper stderr:", chunk.toString().trim());
+      vlog("[CW] Helper stderr:", chunk.toString().trim());
     });
 
     proc.on("error", (err: NodeJS.ErrnoException) => {

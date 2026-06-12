@@ -2,6 +2,7 @@ import os from "os";
 import path from "path";
 import fs from "fs";
 import { X509Certificate } from "crypto";
+import { vlogInfra as vlog } from "./vlog.ts";
 
 export function getLanIPs(): string[] {
   const ips: string[] = [];
@@ -29,15 +30,15 @@ export async function loadOrGenerateCert(dataDir: string): Promise<{ key: string
         const lanIPs = getLanIPs();
         const allCovered = lanIPs.every(ip => san.includes(ip));
         if (allCovered) {
-          console.log(`[TLS] Using existing certificate, valid until ${expiry.toDateString()}`);
+          vlog(`[TLS] Using existing certificate, valid until ${expiry.toDateString()}`);
           return { key: fs.readFileSync(keyPath, "utf8"), cert: certPem };
         }
-        console.log("[TLS] LAN IP changed, regenerating certificate...");
+        vlog("[TLS] LAN IP changed, regenerating certificate...");
       } else {
-        console.log("[TLS] Certificate expires soon, regenerating...");
+        vlog("[TLS] Certificate expires soon, regenerating...");
       }
     } catch {
-      console.log("[TLS] Could not parse existing certificate, regenerating...");
+      vlog("[TLS] Could not parse existing certificate, regenerating...");
     }
   }
 
@@ -52,7 +53,7 @@ export async function loadOrGenerateCert(dataDir: string): Promise<{ key: string
   const notAfterDate = new Date();
   notAfterDate.setFullYear(notAfterDate.getFullYear() + 1);
 
-  console.log(`[TLS] Generating certificate for: localhost, 127.0.0.1${lanIPs.length ? ", " + lanIPs.join(", ") : ""}`);
+  vlog(`[TLS] Generating certificate for: localhost, 127.0.0.1${lanIPs.length ? ", " + lanIPs.join(", ") : ""}`);
 
   const pems = await generate(
     [{ name: "commonName", value: "localhost" }],
@@ -72,7 +73,7 @@ export async function loadOrGenerateCert(dataDir: string): Promise<{ key: string
 
   fs.writeFileSync(keyPath, pems.private, { mode: 0o600 });
   fs.writeFileSync(certPath, pems.cert);
-  console.log(`[TLS] Certificate saved to ${dataDir}`);
+  vlog(`[TLS] Certificate saved to ${dataDir}`);
 
   return { key: pems.private, cert: pems.cert };
 }

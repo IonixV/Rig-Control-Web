@@ -226,7 +226,7 @@ export async function startServer(appPath?: string, userDataPath?: string) {
   io.on("connection", (socket) => {
     const clientId = socket.handshake.auth.clientId || socket.id;
     const token = socket.handshake.auth.token as string | undefined;
-    console.log(`Client connected (Socket ID: ${socket.id}, Client ID: ${clientId})`);
+    vlogInfra(`Client connected (Socket ID: ${socket.id}, Client ID: ${clientId})`);
     ctx.socketConnectTimes.set(socket.id, Date.now());
 
     // Ensure functional handlers are only registered once per socket
@@ -266,7 +266,7 @@ export async function startServer(appPath?: string, userDataPath?: string) {
     }
 
     socket.on("disconnect", () => {
-      console.log(`Client disconnected (Socket ID: ${socket.id}, Client ID: ${clientId})`);
+      vlogInfra(`Client disconnected (Socket ID: ${socket.id}, Client ID: ${clientId})`);
       ctx.socketConnectTimes.delete(socket.id);
       ctx.authenticatedSockets.delete(socket.id);
 
@@ -321,7 +321,7 @@ export async function startServer(appPath?: string, userDataPath?: string) {
         appType: "spa",
       });
       app.use(vite.middlewares);
-      console.log("Vite development middleware loaded.");
+      vlogInfra("Vite development middleware loaded.");
     } catch (e) {
       console.warn("Vite middleware not loaded:", e);
     }
@@ -333,7 +333,7 @@ export async function startServer(appPath?: string, userDataPath?: string) {
       distPath = path.join(process.cwd(), "dist");
     }
 
-    console.log(`Serving static files from: ${distPath}`);
+    vlogInfra(`Serving static files from: ${distPath}`);
 
     if (fs.existsSync(distPath)) {
       app.use(express.static(distPath));

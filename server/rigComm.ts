@@ -225,24 +225,24 @@ function emitCapabilities(ctx: ServerContext): void {
 
 async function probeCapabilities(ctx: ServerContext): Promise<void> {
   const rigNumber = ctx.rigctldSettings.rigNumber;
-  console.log("[RIG] Probing rig capabilities via dump_caps...");
+  vlog("[RIG] Probing rig capabilities via dump_caps...");
 
   try {
     const dump = await probeDumpCaps(ctx);
     parseDumpCapsIntoContext(dump, ctx);
-    console.log("[RIG] Capabilities probed via dump_caps");
+    vlog("[RIG] Capabilities probed via dump_caps");
   } catch (err) {
-    console.warn("[RIG] dump_caps probe failed; trying local rigctld database:", err);
+    vlog("[RIG] dump_caps probe failed; trying local rigctld database:", err);
     try {
       const { fetchRadioCapabilities } = await import("./rigctld.ts");
       const success = await fetchRadioCapabilities(ctx, rigNumber);
       if (success) {
-        console.log("[RIG] Capabilities probed via local rigctld database");
+        vlog("[RIG] Capabilities probed via local rigctld database");
       } else {
-        console.warn("[RIG] Local capability probe also failed; capabilities may be unavailable");
+        vlog("[RIG] Local capability probe also failed; capabilities may be unavailable");
       }
     } catch (importErr) {
-      console.warn("[RIG] Could not load local capability fallback:", importErr);
+      vlog("[RIG] Could not load local capability fallback:", importErr);
     }
   }
 
@@ -253,14 +253,14 @@ export async function probeVfoCapability(ctx: ServerContext): Promise<void> {
   try {
     const result = await sendToRig(ctx, "v", true);
     ctx.vfoSupported = true;
-    console.log(`VFO supported (reported: ${result})`);
+    vlog(`VFO supported (reported: ${result})`);
   } catch (err) {
     ctx.vfoSupported = false;
-    console.log("VFO not supported or probe failed; disabling VFO B and split:", err);
+    vlog("VFO not supported or probe failed; disabling VFO B and split:", err);
     try {
       await sendToRig(ctx, "f", true);
     } catch {
-      console.warn("get_freq also failed after VFO probe — rig may not be responding");
+      vlog("get_freq also failed after VFO probe — rig may not be responding");
     }
   }
 }
@@ -275,7 +275,7 @@ export function stopPolling(ctx: ServerContext): void {
 export async function pollRig(ctx: ServerContext): Promise<void> {
   if (!ctx.isConnected) {
     if (ctx.rigConfig.host && ctx.rigConfig.host !== "mock") {
-      console.log("Attempting background reconnection...");
+      vlog("Attempting background reconnection...");
       connectToRig(ctx, ctx.rigConfig.host, ctx.rigConfig.port);
     }
     return;
@@ -299,7 +299,7 @@ export async function pollRig(ctx: ServerContext): Promise<void> {
         powerMeter = await sendToRig(ctx, "l RFPOWER_METER", true);
         swr = await sendToRig(ctx, "l SWR", true);
       } catch (e) {
-        console.warn("TX levels poll failed, might not be supported");
+        vlog("TX levels poll failed, might not be supported");
       }
     }
 
@@ -446,7 +446,7 @@ const CONNECT_RETRY_DELAY_MS = 1000;
 
 export function connectToRig(ctx: ServerContext, host: string, port: number, socket?: Socket, attempt = 1): void {
   if (ctx.isConnected && ctx.rigConfig.host === host && ctx.rigConfig.port === port) {
-    console.log(`Already connected to rigctld at ${host}:${port}. Informing client.`);
+    vlog(`Already connected to rigctld at ${host}:${port}. Informing client.`);
     if (socket) {
       socket.emit("rig-connected", { host, port });
     } else {
@@ -470,7 +470,7 @@ export function connectToRig(ctx: ServerContext, host: string, port: number, soc
   let retrying = false;
 
   sock.connect(port, host, async () => {
-    console.log(`Connected to rigctld at ${host}:${port}`);
+    vlog(`Connected to rigctld at ${host}:${port}`);
     ctx.isConnected = true;
     await probeVfoCapability(ctx);
     await probeCapabilities(ctx);
@@ -478,7 +478,7 @@ export function connectToRig(ctx: ServerContext, host: string, port: number, soc
     if (ctx.spectrumSettings.enabled && ctx.spectrumSupported) {
       try {
         await sendToRig(ctx, "U SPECTRUM 1", true);
-        console.log("[SPECTRUM] Enabled spectrum output on rig");
+        vlog("[SPECTRUM] Enabled spectrum output on rig");
       } catch (err) {
         console.warn("[SPECTRUM] Failed to enable spectrum output:", err);
       }
@@ -491,7 +491,7 @@ export function connectToRig(ctx: ServerContext, host: string, port: number, soc
       retrying = true;
       sock.destroy();
       ctx.rigSocket = null;
-      console.log(`Rig connection refused at ${host}:${port}, retry ${attempt}/${CONNECT_MAX_ATTEMPTS - 1}...`);
+      vlog(`Rig connection refused at ${host}:${port}, retry ${attempt}/${CONNECT_MAX_ATTEMPTS - 1}...`);
       setTimeout(() => connectToRig(ctx, host, port, socket, attempt + 1), CONNECT_RETRY_DELAY_MS);
     } else {
       console.error("Rig socket error:", err);
@@ -505,7 +505,7 @@ export function connectToRig(ctx: ServerContext, host: string, port: number, soc
 
   sock.on("close", () => {
     if (retrying) return;
-    console.log("Rig connection closed");
+    vlog("Rig connection closed");
     ctx.isConnected = false;
     ctx.io.emit("rig-disconnected");
     stopPolling(ctx);
@@ -527,7 +527,7 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
     ctx.isConnected = false;
     stopPolling(ctx);
     ctx.io.emit("rig-disconnected");
-    console.log("Rig manually disconnected");
+    vlog("Rig manually disconnected");
   });
 
   socket.on("set-func", async ({ func, state }) => {

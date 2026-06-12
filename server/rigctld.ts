@@ -21,11 +21,11 @@ export function getRigctldPath(baseDir: string): string {
   const localPath = platformDir ? path.join(binBase, "bin", platformDir, binaryName) : "";
 
   if (localPath && fs.existsSync(localPath)) {
-    console.log(`[HAMLIB] Using bundled rigctld at: ${localPath}`);
+    vlog(`[HAMLIB] Using bundled rigctld at: ${localPath}`);
     return localPath;
   }
 
-  console.log(`[HAMLIB] Bundled rigctld not found at ${localPath || "unsupported platform"}, falling back to system PATH`);
+  vlog(`[HAMLIB] Bundled rigctld not found at ${localPath || "unsupported platform"}, falling back to system PATH`);
   return "rigctld";
 }
 
@@ -73,7 +73,7 @@ export function addLog(ctx: ServerContext, data: string): void {
 
 export function stopRigctld(ctx: ServerContext): void {
   if (ctx.rigctldProcess) {
-    console.log("Stopping rigctld...");
+    vlog("Stopping rigctld...");
     const pid = ctx.rigctldProcess.pid;
     // On Windows, kill() doesn't terminate child process trees. Use taskkill
     // with /T (tree) and /F (force) to ensure rigctld and any spawned children
@@ -185,7 +185,7 @@ export async function startRigctld(ctx: ServerContext): Promise<void> {
 
   ctx.rigctldVersion = await getRigctldVersion(ctx.baseDir);
   ctx.isRigctldVersionSupported = checkVersionSupported(ctx.rigctldVersion);
-  console.log(`[HAMLIB] rigctld version check: ${ctx.rigctldVersion || "unknown"}`);
+  vlog(`[HAMLIB] rigctld version check: ${ctx.rigctldVersion || "unknown"}`);
   addLog(ctx, `Hamlib (rigctld) version check: ${ctx.rigctldVersion || "unknown"}`);
   if (!ctx.isRigctldVersionSupported) {
     console.warn(`rigctld version ${ctx.rigctldVersion} is less than 4.7.0 and is unsupported.`);
@@ -233,7 +233,7 @@ export async function startRigctld(ctx: ServerContext): Promise<void> {
     );
   }
 
-  console.log(`Starting rigctld: ${rigctldPath} ${args.join(" ")}`);
+  vlog(`Starting rigctld: ${rigctldPath} ${args.join(" ")}`);
 
   ctx.rigctldProcess = spawn(rigctldPath, args, { detached: false });
 
@@ -251,12 +251,12 @@ export async function startRigctld(ctx: ServerContext): Promise<void> {
   ctx.rigctldProcess.stderr?.on("data", (data) => {
     const str = data.toString();
     stderrBuf += str;
-    console.error(`rigctld stderr: ${str}`);
+    vlog(`rigctld stderr: ${str}`);
     addLog(ctx, str);
   });
 
   ctx.rigctldProcess.on("close", (code) => {
-    console.log(`rigctld process exited with code ${code}`);
+    vlog(`rigctld process exited with code ${code}`);
     addLog(ctx, `rigctld exited with code ${code}`);
     ctx.rigctldProcess = null;
     ctx.rigctldStatus = code === 0 ? "stopped" : "error";
@@ -312,7 +312,7 @@ export function registerRigctldHandlers(
 
     ctx.rigctldVersion = await getRigctldVersion(ctx.baseDir);
     ctx.isRigctldVersionSupported = checkVersionSupported(ctx.rigctldVersion);
-    console.log(`[HAMLIB] Test rigctld version check: ${ctx.rigctldVersion || "unknown"}`);
+    vlog(`[HAMLIB] Test rigctld version check: ${ctx.rigctldVersion || "unknown"}`);
     addLog(ctx, `Hamlib (rigctld) version check: ${ctx.rigctldVersion || "unknown"}`);
     emitRigctldStatus(ctx);
 

@@ -10,14 +10,14 @@ export async function initAudioEngine(ctx: ServerContext): Promise<void> {
   try {
     const dynamicImport = new Function('modulePath', 'return import(modulePath)');
 
-    console.log("[AUDIO-INIT] Attempting to load libopus-node...");
+    vlog("[AUDIO-INIT] Attempting to load libopus-node...");
     ctx.libopus = await dynamicImport("libopus-node");
-    console.log("[AUDIO-INIT] libopus-node loaded successfully.");
+    vlog("[AUDIO-INIT] libopus-node loaded successfully.");
 
-    console.log("[AUDIO-INIT] Attempting to load naudiodon...");
+    vlog("[AUDIO-INIT] Attempting to load naudiodon...");
     try {
       ctx.portAudio = await dynamicImport("naudiodon");
-      console.log("[AUDIO-INIT] naudiodon loaded successfully.");
+      vlog("[AUDIO-INIT] naudiodon loaded successfully.");
       try {
         const hostAPIInfo = ctx.portAudio.getHostAPIs();
         vlog("[AUDIO-INIT] Host APIs:", JSON.stringify(hostAPIInfo, null, 2));
@@ -53,7 +53,7 @@ export async function listAudioDevices(ctx: ServerContext): Promise<{ inputs: an
 }
 
 export async function stopAudio(ctx: ServerContext): Promise<void> {
-  console.log("[AUDIO] Stopping audio streaming...");
+  vlog("[AUDIO] Stopping audio streaming...");
   if (ctx.outboundTimer) { clearInterval(ctx.outboundTimer); ctx.outboundTimer = null; }
   ctx.outboundJitterBuffer = [];
   if (ctx.audioInputProcess) {
@@ -71,7 +71,7 @@ export async function stopAudio(ctx: ServerContext): Promise<void> {
 }
 
 export async function startAudio(ctx: ServerContext): Promise<void> {
-  console.log("[AUDIO] Starting audio streaming...");
+  vlog("[AUDIO] Starting audio streaming...");
   await stopAudio(ctx);
 
   if (!ctx.isAudioEngineReady) {
@@ -87,7 +87,7 @@ export async function startAudio(ctx: ServerContext): Promise<void> {
   try {
     ctx.opusEncoder = new ctx.libopus.OpusEncoder(48000, 1);
     ctx.opusDecoder = new ctx.libopus.OpusEncoder(48000, 1);
-    console.log("[AUDIO] Opus encoder/decoder initialized at 48000Hz Mono.");
+    vlog("[AUDIO] Opus encoder/decoder initialized at 48000Hz Mono.");
   } catch (err) {
     console.error("[AUDIO] Failed to initialize Opus:", err);
     return;
@@ -136,7 +136,7 @@ export async function startAudio(ctx: ServerContext): Promise<void> {
       });
 
       ctx.audioInputProcess.start();
-      console.log(`[AUDIO-IN] Started capture from device ${ctx.audioSettings.inputDevice}`);
+      vlog(`[AUDIO-IN] Started capture from device ${ctx.audioSettings.inputDevice}`);
     } catch (err) {
       console.error("[AUDIO-IN] Failed to start capture:", err);
     }
@@ -179,7 +179,7 @@ export async function startAudio(ctx: ServerContext): Promise<void> {
         ctx.audioOutputProcess.write(frame);
       }, 20);
 
-      console.log(`[AUDIO-OUT] Started playback to device ${ctx.audioSettings.outputDevice}`);
+      vlog(`[AUDIO-OUT] Started playback to device ${ctx.audioSettings.outputDevice}`);
     } catch (err) {
       console.error("[AUDIO-OUT] Failed to start playback:", err);
     }
@@ -221,7 +221,7 @@ export function registerAudioHandlers(socket: Socket, ctx: ServerContext, client
 
   socket.on("mic-unmute-request", () => {
     ctx.activeMicClientId = clientId;
-    console.log(`[AUDIO] Mic claimed by client: ${clientId}`);
+    vlog(`[AUDIO] Mic claimed by client: ${clientId}`);
     socket.broadcast.emit("mic-mute-forced");
     ctx.io.emit("mic-active-client", ctx.activeMicClientId);
   });
