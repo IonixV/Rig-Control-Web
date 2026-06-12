@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
@@ -134,6 +134,12 @@ async function createWindow() {
     title: "RigControl Web",
     autoHideMenuBar: true,
     icon: iconPath,
+  });
+
+  // Open target="_blank" links in the system browser instead of Electron
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
   });
 
   // Pass the window reference to the server for device enumeration

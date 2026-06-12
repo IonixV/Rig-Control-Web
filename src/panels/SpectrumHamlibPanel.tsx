@@ -472,8 +472,7 @@ export default function SpectrumHamlibPanel({
               <>
                 <div>• Yaesu FT-710 connected via USB</div>
                 <div>• libft4222 must be installed (FTDI FT4222 driver)</div>
-                <div>• On Linux: udev rule for VID 0403 / PID 601c (MODE=&quot;0666&quot;)</div>
-                <div>• ft4222-scope-reader binary must be present in bin/</div>
+                <div>• <a href="https://github.com/jbdubbs/Rig-Control-Web/blob/main/docs/ft4222-spectrum-setup.md" target="_blank" rel="noreferrer" className="text-emerald-400 underline hover:text-emerald-300">See wiki for setup instructions</a></div>
               </>
             )}
           </div>
