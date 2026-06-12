@@ -1,6 +1,6 @@
 import { Socket } from "socket.io";
 import { ServerContext } from "./context.ts";
-import { vlogAudio as vlog } from "./vlog.ts";
+import { vlogAudio as vlog, DEBUG_AUDIO } from "./vlog.ts";
 
 const OUTBOUND_SILENCE = Buffer.alloc(960 * 2);
 const OUTBOUND_PRE_FILL = 3;
@@ -9,6 +9,8 @@ const OUTBOUND_JITTER_MAX = 8;
 export async function initAudioEngine(ctx: ServerContext): Promise<void> {
   try {
     const dynamicImport = new Function('modulePath', 'return import(modulePath)');
+
+    if (DEBUG_AUDIO) process.env.NAUDIODON_DEBUG = "1";
 
     vlog("[AUDIO-INIT] Attempting to load libopus-node...");
     ctx.libopus = await dynamicImport("libopus-node");
