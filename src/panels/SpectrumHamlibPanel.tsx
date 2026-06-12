@@ -60,6 +60,8 @@ export default function SpectrumHamlibPanel({
   const [ceiling, setCeiling] = useState(() => Number(lsGet("ceiling", String(CEILING_DEFAULT))));
   const [tooltip, setTooltip] = useState<{ x: number; y: number; label: string } | null>(null);
   const [yaesuStatus, setYaesuStatus] = useState<{ running: boolean; error: string | null }>({ running: false, error: null });
+  const [optimisticSpanIndex, setOptimisticSpanIndex] = useState<number | null>(null);
+  const optimisticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!socket) return;
@@ -366,7 +368,14 @@ export default function SpectrumHamlibPanel({
               { index: 8, label: "500 kHz" },
               { index: 9, label: "1 MHz" },
             ];
+            const SPAN_HZ_TABLE = [1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000];
             const liveSpanHz = latestSpectrumRef.current?.span ?? null;
+            const liveSpanIndex = liveSpanHz !== null ? SPAN_HZ_TABLE.indexOf(liveSpanHz) : -1;
+            const displayedSpanIndex = optimisticSpanIndex !== null
+              ? optimisticSpanIndex
+              : liveSpanIndex >= 0
+                ? liveSpanIndex
+                : spectrumSettings.ft4222SpanIndex;
             return (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -386,9 +395,15 @@ export default function SpectrumHamlibPanel({
                         setSpectrumSettings(next);
                         socket?.emit("save-settings", { spectrumSettings: next });
                         socket?.emit("set-ft710-span", index);
+                        if (optimisticTimerRef.current !== null) clearTimeout(optimisticTimerRef.current);
+                        setOptimisticSpanIndex(index);
+                        optimisticTimerRef.current = setTimeout(() => {
+                          setOptimisticSpanIndex(null);
+                          optimisticTimerRef.current = null;
+                        }, 2000);
                       }}
                       className={`py-1.5 px-1 rounded text-[0.5625rem] font-semibold transition-colors ${
-                        spectrumSettings.ft4222SpanIndex === index
+                        displayedSpanIndex === index
                           ? "bg-emerald-600 text-white"
                           : "bg-[#0a0a0a] border border-[#2a2b2e] text-[#8e9299] hover:text-[#e0e0e0]"
                       }`}
