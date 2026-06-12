@@ -503,7 +503,7 @@ export default function App() {
             <span className="text-sm font-bold tracking-tight uppercase italic text-center">RigControl Web</span>
           </div>
           <div className="hidden sm:flex items-center gap-3 min-w-0">
-            <img src="/rcw-logo.svg" className="w-7 h-7 flex-shrink-0" alt="" />
+            <img src="/rcw-r-64.png" className="w-7 h-7 flex-shrink-0" alt="" />
             <h1 className="text-xl font-bold tracking-tighter uppercase italic truncate">RigControl Web</h1>
           </div>
           {isCompact && cwSettings.enabled && connected && !['CW', 'CWR', 'CW-R'].includes(status?.mode || '') && (
