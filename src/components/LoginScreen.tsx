@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Signal, LogIn } from "lucide-react";
+import { LogIn } from "lucide-react";
 import { cn } from "../utils";
 
 interface Props {
@@ -36,7 +36,7 @@ export default function LoginScreen({ onLogin, loginError, retryAfter }: Props) 
       <div className="w-full max-w-sm">
         {/* Header */}
         <div className="flex items-center justify-center gap-3 mb-8">
-          <Signal size={28} className="text-emerald-500" />
+          <img src="/rcw-logo.svg" className="w-8 h-8" alt="" />
           <h1 className="text-2xl font-bold tracking-tighter uppercase italic text-white">
             RigControl Web
           </h1>
