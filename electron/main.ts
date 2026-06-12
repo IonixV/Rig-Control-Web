@@ -6,6 +6,9 @@ import { execSync } from 'child_process';
 import isDev from 'electron-is-dev';
 
 app.setName('RigControl Web');
+if (process.platform === 'linux' && typeof (app as any).setDesktopFileName === 'function') {
+  (app as any).setDesktopFileName('rigcontrol-web.desktop');
+}
 
 if (!isDev) {
   process.env.NODE_ENV = 'production';
@@ -36,6 +39,20 @@ function saveWindowState(state: any) {
   }
 }
 
+function buildDesktopFile(appImagePath: string): string {
+  return [
+    '[Desktop Entry]',
+    'Type=Application',
+    'Name=RigControl Web',
+    'Comment=Amateur radio rig control via Hamlib rigctld',
+    `Exec=${appImagePath} %U`,
+    'Icon=rigcontrol-web',
+    'StartupWMClass=rigcontrol-web',
+    'Categories=HamRadio;Utility;',
+    'Terminal=false',
+  ].join('\n') + '\n';
+}
+
 function installDesktopIntegration(): void {
   const appImagePath = process.env.APPIMAGE;
   const appDir = process.env.APPDIR;
@@ -57,20 +74,7 @@ function installDesktopIntegration(): void {
 
   const iconSrc = path.join(appDir, 'resources', 'app.asar', 'assets', 'icons', 'rcw_512x512.png');
   fs.writeFileSync(iconDest, fs.readFileSync(iconSrc));
-
-  const desktop = [
-    '[Desktop Entry]',
-    'Type=Application',
-    'Name=RigControl Web',
-    'Comment=Amateur radio rig control via Hamlib rigctld',
-    `Exec=${appImagePath} %U`,
-    'Icon=rigcontrol-web',
-    'StartupWMClass=RigControl Web',
-    'Categories=HamRadio;Utility;',
-    'Terminal=false',
-  ].join('\n') + '\n';
-
-  fs.writeFileSync(desktopDest, desktop);
+  fs.writeFileSync(desktopDest, buildDesktopFile(appImagePath));
 
   try { execSync(`update-desktop-database "${desktopDir}"`); } catch {}
   try { execSync(`gtk-update-icon-cache -f -t "${hicolorDir}"`); } catch {}
@@ -79,6 +83,37 @@ function installDesktopIntegration(): void {
   console.log(`  Icon:    ${iconDest}`);
   console.log(`  Desktop: ${desktopDest}`);
   console.log('You can now launch it from your application menu.');
+}
+
+function autoInstallDesktopIntegration(): void {
+  if (process.platform !== 'linux') return;
+  const appImagePath = process.env.APPIMAGE;
+  const appDir = process.env.APPDIR;
+  if (!appImagePath || !appDir) return;
+
+  const home = os.homedir();
+  const desktopDest = path.join(home, '.local', 'share', 'applications', 'rigcontrol-web.desktop');
+  if (fs.existsSync(desktopDest)) return;
+
+  try {
+    const hicolorDir = path.join(home, '.local', 'share', 'icons', 'hicolor');
+    const iconDir = path.join(hicolorDir, '512x512', 'apps');
+    const iconDest = path.join(iconDir, 'rigcontrol-web.png');
+
+    fs.mkdirSync(iconDir, { recursive: true });
+    fs.mkdirSync(path.dirname(desktopDest), { recursive: true });
+
+    const iconSrc = path.join(appDir, 'resources', 'app.asar', 'assets', 'icons', 'rcw_512x512.png');
+    fs.writeFileSync(iconDest, fs.readFileSync(iconSrc));
+    fs.writeFileSync(desktopDest, buildDesktopFile(appImagePath));
+
+    try { execSync(`update-desktop-database "${path.dirname(desktopDest)}"`); } catch {}
+    try { execSync(`gtk-update-icon-cache -f -t "${hicolorDir}"`); } catch {}
+
+    console.log('[desktop] Integration installed automatically.');
+  } catch (err) {
+    console.error('[desktop] Auto-install failed:', err);
+  }
 }
 
 function uninstallDesktopIntegration(): void {
@@ -222,6 +257,7 @@ if (process.argv.includes('--install')) {
   uninstallDesktopIntegration();
   process.exit(0);
 } else {
+  autoInstallDesktopIntegration();
   app.whenReady().then(createWindow);
 }
 

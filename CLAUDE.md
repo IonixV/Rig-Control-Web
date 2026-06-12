@@ -198,8 +198,8 @@ Native `.node` addons (`naudiodon`) and `.wasm` files (`libopus-node`, `ggmorse`
 - `nodeIntegration: false`, `contextIsolation: true` — renderer has no direct Node access.
 - Preload exposes only `window.electron.resizeWindow(width, height)`.
 - Camera/microphone permissions granted via `setPermissionRequestHandler`.
-- `app.setName('RigControl Web')` called before `whenReady()` to set a predictable `WM_CLASS` for GNOME.
-- Linux AppImage supports `--install` / `--uninstall` CLI flags for GNOME desktop integration (copies icon + writes `.desktop` file; exits before `app.whenReady()`).
+- `app.setName('RigControl Web')` sets the human-readable app name. `app.setDesktopFileName('rigcontrol-web.desktop')` (called on Linux before `whenReady()`, guarded with a runtime exists-check since it was not available in all Electron 41.x builds) sets the Wayland `xdg_toplevel app_id` and X11 `_GTK_APPLICATION_ID` so GNOME Shell can match the window to the correct `.desktop` file and show the right dock icon.
+- Linux AppImage auto-installs GNOME desktop integration (icon + `.desktop` file with `StartupWMClass=rigcontrol-web`) on first launch if not already present. The `--install` / `--uninstall` CLI flags provide explicit control; both exit before `app.whenReady()`.
 
 ## Known Issues / Tech Debt
 
