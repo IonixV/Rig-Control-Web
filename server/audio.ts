@@ -160,6 +160,9 @@ export async function startAudio(ctx: ServerContext): Promise<void> {
       ctx.audioOutputProcess.on('error', (err: any) => {
         console.error("[AUDIO-OUT] naudiodon error:", err);
       });
+      ctx.audioOutputProcess.on('pa-status', (msg: string) => {
+        vlog(`[AUDIO-OUT] portAudio status: ${msg.trim()}`);
+      });
 
       ctx.audioOutputProcess.start();
 
