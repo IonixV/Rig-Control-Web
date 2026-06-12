@@ -48,7 +48,7 @@ function buildDesktopFile(appImagePath: string): string {
     `Exec="${appImagePath}" --class=rigcontrol-web %U`,
     'Icon=rigcontrol-web',
     'StartupWMClass=rigcontrol-web',
-    'StartupNotify=true',
+    'StartupNotify=false',
     'Categories=HamRadio;Utility;',
     'Terminal=false',
   ].join('\n') + '\n';
