@@ -10,7 +10,7 @@ No additional software or drivers are required — setup is entirely through the
 
 ## How it works
 
-When `rigctld` is connected to one of these radios at 115200 baud, the radio automatically streams live spectrum data alongside normal CAT commands. RigControl Web captures that stream and renders it in the Spectrum Scope panel. The data path runs entirely on your local machine — nothing is sent over the internet.
+When `rigctld` is connected to one of these radios at 115200 baud, the radio automatically streams live spectrum data alongside normal CAT commands. RigControl Web captures that stream and renders it in the Spectrum Scope panel.
 
 `rigctld` must be running and connected to the radio for the spectrum scope to work. The spectrum and rig control share the same USB connection.
 
