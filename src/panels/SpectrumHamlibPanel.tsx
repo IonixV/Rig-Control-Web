@@ -5,6 +5,10 @@ import PanelChrome from "../components/PanelChrome";
 import type { SpectrumData, SpectrumSettings } from "../types";
 import { COLORMAPS, COLORMAP_NAMES, amplitudeToPixel } from "../utils/spectrumColors";
 
+// The FT-710 wf1 array is 850 bins; only 790 cover the nominal span (395 per half-span),
+// with 30 guard bins on each side. 850/790 maps pixel position to true frequency.
+const FT710_SPAN_SCALE = 850 / 790;
+
 const DEFAULT_HEIGHT = 350;
 const SPECTRUM_RATIO = 0.3;
 const FLOOR_DEFAULT = -80;
@@ -59,6 +63,7 @@ export default function SpectrumHamlibPanel({
   const [floor, setFloor] = useState(() => Number(lsGet("floor", String(FLOOR_DEFAULT))));
   const [ceiling, setCeiling] = useState(() => Number(lsGet("ceiling", String(CEILING_DEFAULT))));
   const [tooltip, setTooltip] = useState<{ x: number; y: number; label: string } | null>(null);
+  const [cursorLineX, setCursorLineX] = useState<number | null>(null);
   const [yaesuStatus, setYaesuStatus] = useState<{ running: boolean; error: string | null }>({ running: false, error: null });
   const [optimisticSpanIndex, setOptimisticSpanIndex] = useState<number | null>(null);
   const optimisticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -79,13 +84,23 @@ export default function SpectrumHamlibPanel({
     return `${hz} Hz`;
   }, []);
 
+  // Tooltip uses 4 decimal places so the displayed value matches the VFO exactly.
+  // 500 Hz snap guarantees the ten-thousandths digit is always 0 or 5.
+  const tooltipFreqLabel = useCallback((hz: number): string => {
+    if (hz >= 1_000_000) return `${(hz / 1_000_000).toFixed(4)} MHz`;
+    if (hz >= 1_000) return `${(hz / 1_000).toFixed(2)} kHz`;
+    return `${hz} Hz`;
+  }, []);
+
   const hzAtCursor = useCallback((e: React.MouseEvent<HTMLCanvasElement>): number | null => {
     const data = latestSpectrumRef.current;
-    if (!data || !data.highFreq || !data.lowFreq) return null;
+    if (!data || !data.span || !data.centerFreq) return null;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
-    const raw = data.lowFreq + (x / rect.width) * (data.highFreq - data.lowFreq);
-    return Math.round(raw / 500) * 500;
+    const fraction = x / rect.width;
+    const scale = data.name === "FT-710" ? FT710_SPAN_SCALE : 1.0;
+    const rawHz = data.centerFreq + (fraction - 0.5) * data.span * scale;
+    return Math.round(rawHz / 100) * 100;
   }, [latestSpectrumRef]);
 
   const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -96,19 +111,20 @@ export default function SpectrumHamlibPanel({
 
   const handleCanvasMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const hz = hzAtCursor(e);
-    if (hz === null) { setTooltip(null); return; }
+    if (hz === null) { setTooltip(null); setCursorLineX(null); return; }
     const containerRect = canvasContainerRef.current?.getBoundingClientRect();
-    if (!containerRect) { setTooltip(null); return; }
+    if (!containerRect) { setTooltip(null); setCursorLineX(null); return; }
     const cursorX = e.clientX - containerRect.left;
+    setCursorLineX(cursorX);
     const flipLeft = cursorX + 8 + TOOLTIP_MAX_WIDTH > containerRect.width;
     setTooltip({
       x: flipLeft ? cursorX - TOOLTIP_MAX_WIDTH - 8 : cursorX + 8,
       y: e.clientY - containerRect.top,
-      label: freqLabel(hz),
+      label: tooltipFreqLabel(hz),
     });
-  }, [hzAtCursor, freqLabel]);
+  }, [hzAtCursor, tooltipFreqLabel]);
 
-  const handleCanvasMouseLeave = useCallback(() => setTooltip(null), []);
+  const handleCanvasMouseLeave = useCallback(() => { setTooltip(null); setCursorLineX(null); }, []);
 
   useEffect(() => {
     if (isCollapsed) return;
@@ -177,6 +193,17 @@ export default function SpectrumHamlibPanel({
         sCtx.closePath();
         sCtx.fill();
         sCtx.stroke();
+
+        // Center frequency marker line
+        sCtx.save();
+        sCtx.strokeStyle = "rgba(255,255,255,0.45)";
+        sCtx.lineWidth = 1;
+        sCtx.setLineDash([4, 4]);
+        sCtx.beginPath();
+        sCtx.moveTo(w / 2, 0);
+        sCtx.lineTo(w / 2, sh);
+        sCtx.stroke();
+        sCtx.restore();
       }
 
       // --- Waterfall ---
@@ -200,6 +227,17 @@ export default function SpectrumHamlibPanel({
         }
 
         wfCtx.putImageData(imageData, 0, 0);
+
+        // Center frequency marker line
+        wfCtx.save();
+        wfCtx.strokeStyle = "rgba(255,255,255,0.35)";
+        wfCtx.lineWidth = 1;
+        wfCtx.setLineDash([4, 4]);
+        wfCtx.beginPath();
+        wfCtx.moveTo(w / 2, 0);
+        wfCtx.lineTo(w / 2, wh);
+        wfCtx.stroke();
+        wfCtx.restore();
       }
 
       animFrameRef.current = requestAnimationFrame(draw);
@@ -211,17 +249,20 @@ export default function SpectrumHamlibPanel({
 
   const freqAxisContent = (() => {
     const data = latestSpectrumRef.current;
-    if (!data || !data.lowFreq || !data.highFreq) return null;
+    if (!data || !data.span || !data.centerFreq) return null;
     const ticks = 5;
+    const centerIdx = Math.floor(ticks / 2);
+    const scale = data.name === "FT-710" ? FT710_SPAN_SCALE : 1.0;
     return (
-      <div className="relative h-5 text-[0.5rem] text-gray-400 select-none">
+      <div className="relative h-6 select-none">
         {Array.from({ length: ticks }, (_, i) => {
           const frac = i / (ticks - 1);
-          const hz = data.lowFreq + frac * (data.highFreq - data.lowFreq);
+          const hz = data.centerFreq + (frac - 0.5) * data.span * scale;
+          const isCenter = i === centerIdx;
           return (
             <span
               key={i}
-              className="absolute -translate-x-1/2"
+              className={`absolute -translate-x-1/2 ${isCenter ? "text-[0.625rem] font-bold text-gray-200" : "text-[0.5rem] text-gray-400"}`}
               style={{ left: `${frac * 100}%` }}
             >
               {freqLabel(hz)}
@@ -511,6 +552,12 @@ export default function SpectrumHamlibPanel({
     };
     return (
       <div ref={canvasContainerRef} className="flex flex-col gap-0 relative">
+        {cursorLineX !== null && (
+          <div
+            className="pointer-events-none absolute top-0 z-10 w-px bg-white/30"
+            style={{ left: cursorLineX, height: spectrumHeight + waterfallHeight }}
+          />
+        )}
         {tooltip && (
           <div
             className="pointer-events-none absolute z-10 px-1.5 py-0.5 rounded bg-black/80 text-[0.6rem] text-emerald-300 whitespace-nowrap"
