@@ -989,9 +989,6 @@ function CompactLayout({
       <div className="relative">
         {content}
         <div className="absolute top-1.5 right-1.5 z-30 flex items-center gap-0.5">
-          <span className="text-[0.5rem] uppercase tracking-widest font-bold text-[#5a5b5e] mr-1 select-none">
-            {PANEL_LABELS[item.panelType!] ?? item.panelType}
-          </span>
           <button
             disabled={idx === 0}
             onMouseDown={(e) => e.stopPropagation()}
