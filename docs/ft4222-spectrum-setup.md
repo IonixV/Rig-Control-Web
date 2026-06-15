@@ -126,14 +126,22 @@ sudo restorecon /usr/local/lib/libft4222.so*
 
 ### Step 6 — Allow non-root access to the USB device
 
-Without this step, RigControl Web would need to run as root to read from the FT4222H. Create a udev rule to grant access to the logged-in user automatically:
+Without this step, RigControl Web would need to run as root to read from the FT4222H. Create a udev rule to grant access automatically:
 
 ```bash
 sudo tee /etc/udev/rules.d/50-ftdi-ft4222.rules > /dev/null << 'EOF'
 # FTDI FT4222H (Yaesu FT-710 spectrum scope)
-SUBSYSTEM=="usb", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="601c", MODE="0660", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="601c", MODE="0660", GROUP="dialout", TAG+="uaccess"
 EOF
 ```
+
+This rule grants access two ways: `TAG+="uaccess"` covers users logged into the local graphical desktop (seat0), and `GROUP="dialout"` covers everyone else — including remote-desktop/RDP sessions, which systemd-logind does not treat as seat sessions and therefore does not grant `uaccess` ACLs to. Make sure your user is in the `dialout` group (the same group used for the radio's CAT serial port):
+
+```bash
+sudo usermod -aG dialout $USER
+```
+
+(Log out and back in for the new group membership to take effect.)
 
 Apply the rule:
 
@@ -143,6 +151,8 @@ sudo udevadm trigger
 ```
 
 Unplug and reconnect the USB cable so the rule takes effect on the device.
+
+> **Remote desktop / headless setups:** If you connect to this machine via a remote desktop session (e.g. GNOME Remote Desktop/RDP, VNC, X11 forwarding), `uaccess` alone is not enough — only `GROUP="dialout"` will grant your session access. If the scope still reports `device not found (status 2)` after confirming the device is connected and the library is installed, check `getfacl /dev/bus/usb/<bus>/<device>` (from `lsusb`) and confirm your user is in `dialout` (`groups`).
 
 ---
 
@@ -251,6 +261,7 @@ Check the error message shown in the Spectrum Scope settings panel.
 | `libft4222 not found` | Library not installed or not on search path | Redo the install steps for your platform |
 | `No FT4222 device found` | Radio not connected, or SCU-LAN10 not enabled | Check USB cable and radio menu |
 | `LIBUSB_ERROR_ACCESS` / permission denied | udev rule missing or not applied (Linux) | Redo Step 6 and replug the USB cable |
+| `device not found (status 2)` despite `lsusb` showing the device | Permission denied on the device node — common over remote desktop/RDP sessions, where `uaccess` ACLs are not granted | Redo Step 6 with `GROUP="dialout"`, confirm your user is in `dialout` (`groups`), then replug the USB cable |
 | `libft4222 not found` on macOS | Quarantine flag still set | Run the `xattr -d` command from Step 3 |
 
 ### Check the debug log
