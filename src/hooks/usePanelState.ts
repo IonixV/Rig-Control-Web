@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect } from "react";
 
 export function usePanelState(callsign = "") {
   const ns = (key: string) =>
@@ -7,7 +7,7 @@ export function usePanelState(callsign = "") {
   const [phoneMeterTab, setPhoneMeterTab] = useState<'signal' | 'swr' | 'alc'>('signal');
   const [activeMeter, setActiveMeter] = useState<'signal' | 'swr' | 'alc' | 'vdd'>('signal');
 
-  const [isPhoneVFOCollapsed, setIsPhoneVFOCollapsed] = useState(true);
+  const [isPhoneVFOCollapsed, setIsPhoneVFOCollapsed] = useState(() => localStorage.getItem(ns("vfo-collapsed")) !== "false");
   const [isPhoneMeterCollapsed, setIsPhoneMeterCollapsed] = useState(true);
   const [isPhoneQuickControlsCollapsed, setIsPhoneQuickControlsCollapsed] = useState(true);
 
@@ -33,6 +33,10 @@ export function usePanelState(callsign = "") {
   }, [isConsoleCollapsed]);
 
   useEffect(() => {
+    localStorage.setItem(ns("vfo-collapsed"), isPhoneVFOCollapsed.toString());
+  }, [isPhoneVFOCollapsed]);
+
+  useEffect(() => {
     localStorage.setItem(ns("solar-collapsed"), isSolarCollapsed.toString());
     localStorage.setItem(ns("mufmap-collapsed"), isMufMapCollapsed.toString());
     localStorage.setItem(ns("cwdecode-collapsed"), isCwDecodeCollapsed.toString());
@@ -46,6 +50,18 @@ export function usePanelState(callsign = "") {
     localStorage.setItem(ns("is-compact-controls-collapsed"), isCompactControlsCollapsed.toString());
     localStorage.setItem(ns("is-compact-rfpower-collapsed"), isCompactRFPowerCollapsed.toString());
   }, [isCompactSMeterCollapsed, isCompactControlsCollapsed, isCompactRFPowerCollapsed]);
+
+  // The initial useState reads above ran before login resolved (callsign === "").
+  // Once callsign becomes known, re-read these two keys from their correctly
+  // prefixed locations so values saved under a previous session are honored.
+  useLayoutEffect(() => {
+    if (!callsign) return;
+    const prefix = callsign.toUpperCase();
+    const storedVfo = localStorage.getItem(`${prefix}:vfo-collapsed`);
+    if (storedVfo !== null) setIsPhoneVFOCollapsed(storedVfo !== "false");
+    const storedCombo = localStorage.getItem(`${prefix}:combospots-collapsed`);
+    if (storedCombo !== null) setIsComboSpotsCollapsed(storedCombo === "true");
+  }, [callsign]);
 
   return {
     showSetupModal, setShowSetupModal,
