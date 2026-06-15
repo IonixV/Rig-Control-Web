@@ -30,7 +30,7 @@ jobs:
             ITEMS+=('{"os":"ubuntu-latest","platform":"linux","artifact":"*.AppImage"}')
           fi
           if [ "$P" = "all" ] || [[ "$P" == *"win"* ]]; then
-            ITEMS+=('{"os":"windows-latest","platform":"win","artifact":"*.exe"}')
+            ITEMS+=('{"os":"windows-2022","platform":"win","artifact":"*.exe"}')
           fi
           if [ "$P" = "all" ] || [[ "$P" == *"mac"* ]]; then
             ITEMS+=('{"os":"macos-latest","platform":"mac","artifact":"*.dmg"}')
@@ -78,20 +78,20 @@ jobs:
         run: clang -O2 -o bin/mac/cw-key-helper cw-key-helper.c
 
       - name: Set up MSVC (Windows)
-        if: matrix.os == 'windows-latest'
+        if: matrix.os == 'windows-2022'
         uses: ilammy/msvc-dev-cmd@v1
 
       - name: Compile CW key helper (Windows)
-        if: matrix.os == 'windows-latest'
+        if: matrix.os == 'windows-2022'
         shell: cmd
         run: cl cw-key-helper.c /Fe:bin\windows\cw-key-helper.exe /O2 /nologo
 
       - name: Build rigctld (Linux/macOS)
-        if: matrix.os != 'windows-latest'
+        if: matrix.os != 'windows-2022'
         run: node scripts/build-rigctld.mjs
 
       - name: Check rigctld binary (Windows)
-        if: matrix.os == 'windows-latest'
+        if: matrix.os == 'windows-2022'
         shell: pwsh
         run: |
           if (Test-Path "bin\windows\rigctld.exe") {
@@ -103,7 +103,7 @@ jobs:
           }
 
       - name: Set up MSYS2 for rigctld build (Windows)
-        if: matrix.os == 'windows-latest' && env.RIGCTLD_EXISTS != 'true'
+        if: matrix.os == 'windows-2022' && env.RIGCTLD_EXISTS != 'true'
         uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW64
@@ -120,7 +120,7 @@ jobs:
             mingw-w64-x86_64-readline
 
       - name: Build rigctld (Windows MSYS2)
-        if: matrix.os == 'windows-latest' && env.RIGCTLD_EXISTS != 'true'
+        if: matrix.os == 'windows-2022' && env.RIGCTLD_EXISTS != 'true'
         shell: msys2 {0}
         run: |
           set -e
