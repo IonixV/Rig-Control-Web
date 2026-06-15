@@ -11,6 +11,10 @@ export interface PanelConfigOptions {
 }
 
 export const PANEL_CONFIG_OPTIONS: Partial<Record<string, PanelConfigOptions>> = {
+  vfo: {
+    hasFullWidth: true,
+    defaultFullWidth: true,
+  },
   mufmap: {
     hasHeightSlider: true,
     defaultHeightPx: 400,
@@ -20,6 +24,8 @@ export const PANEL_CONFIG_OPTIONS: Partial<Record<string, PanelConfigOptions>> =
   spectrum_hamlib: {
     hasHeightSlider: true,
     defaultHeightPx: 350,
+    hasFullWidth: true,
+    defaultFullWidth: false,
   },
   spectrum_audio: {
     hasHeightSlider: true,

@@ -9,7 +9,7 @@ export const DEFAULT_COMPACT_LAYOUT: ViewLayout = {
   cols: 3,
   rows: 6,
   items: [
-    { i: 'vfo',             x: 0, y: 0, w: 3, h: 1, minW: 2, minH: 1, panelType: 'vfo' },
+    { i: 'vfo',             x: 0, y: 0, w: 9999, h: 1, minW: 2, minH: 1, panelType: 'vfo', fullWidth: true },
     { i: 'controls',        x: 0, y: 1, w: 1, h: 1, minW: 1, minH: 1, panelType: 'controls' },
     { i: 'rflevels',        x: 0, y: 2, w: 1, h: 1, minW: 1, minH: 1, panelType: 'rflevels' },
     { i: 'smeter',          x: 1, y: 1, w: 1, h: 1, minW: 1, minH: 1, panelType: 'smeter' },
@@ -136,11 +136,14 @@ export function useLayoutConfig(callsign = "") {
   const setGridSize = useCallback((view: 'compact' | 'phone', cols: number, rows: number) => {
     setConfig(prev => {
       const viewLayout = prev[view];
+      const oldCols = viewLayout.cols;
       const clampedItems = viewLayout.items
         .filter(item => item.x < cols && item.y < rows)
         .map(item => ({
           ...item,
-          w: Math.min(item.w, cols - item.x),
+          // Full-width items keep their (large) w so they stay full-width
+          // regardless of how many columns the grid is resized to.
+          w: item.w >= oldCols ? item.w : Math.min(item.w, cols - item.x),
           h: Math.min(item.h, rows - item.y),
         }));
       const next = { ...prev, [view]: { ...viewLayout, cols, rows, items: clampedItems } };

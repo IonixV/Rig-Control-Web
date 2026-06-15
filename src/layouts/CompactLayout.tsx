@@ -52,6 +52,34 @@ const COMPACT_PANEL_TYPES: PanelType[] = [
   'spectrum_hamlib', 'spectrum_audio',
 ];
 
+type CompactSegment =
+  | { type: 'full'; item: GridItem }
+  | { type: 'cols'; items: GridItem[] };
+
+// Reassigns dense, sequential `y` values based on segment order, preserving
+// the relative row order of items within each cols segment. Used to let
+// full-width panels swap places with the cols block (or another full-width
+// panel) so multiple full-width panels can stack at the top or bottom.
+function renumberSegments(segments: CompactSegment[]): Array<{ i: string; x: number; y: number; w: number; h: number }> {
+  const updates: Array<{ i: string; x: number; y: number; w: number; h: number }> = [];
+  let row = 0;
+  for (const seg of segments) {
+    if (seg.type === 'full') {
+      updates.push({ i: seg.item.i, x: seg.item.x, y: row, w: seg.item.w, h: seg.item.h });
+      row++;
+    } else {
+      const distinctYs = Array.from(new Set(seg.items.map(it => it.y))).sort((a, b) => a - b);
+      const yLookup: Record<number, number> = {};
+      distinctYs.forEach((y, idx) => { yLookup[y] = row + idx; });
+      for (const it of seg.items) {
+        updates.push({ i: it.i, x: it.x, y: yLookup[it.y], w: it.w, h: it.h });
+      }
+      row += distinctYs.length;
+    }
+  }
+  return updates;
+}
+
 export interface CompactLayoutProps {
   // Core rig state
   status: RigStatus;
@@ -903,8 +931,23 @@ function CompactLayout({
   function moveCompactPanel(item: GridItem, direction: 'up' | 'down') {
     const cols = compactLayout.cols;
     const isFullWidth = item.w >= cols;
+
+    if (isFullWidth) {
+      // Swap this full-width panel's segment with the adjacent segment
+      // (another full-width panel, or the whole cols block) so full-width
+      // panels can stack together at the top or bottom.
+      const segments = columnLayout.segments;
+      const segIdx = segments.findIndex(s => s.type === 'full' && s.item.i === item.i);
+      const targetIdx = direction === 'up' ? segIdx - 1 : segIdx + 1;
+      if (segIdx < 0 || targetIdx < 0 || targetIdx >= segments.length) return;
+      const reordered = [...segments];
+      [reordered[segIdx], reordered[targetIdx]] = [reordered[targetIdx], reordered[segIdx]];
+      gridCallbacks?.updateItemPositions(renumberSegments(reordered));
+      return;
+    }
+
     const colItems = compactLayout.items
-      .filter(i => isFullWidth ? i.w >= cols : (i.x === item.x && i.w < cols))
+      .filter(i => i.x === item.x && i.w < cols)
       .sort((a, b) => a.y - b.y);
     const idx = colItems.findIndex(i => i.i === item.i);
     const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
@@ -961,11 +1004,7 @@ function CompactLayout({
     const cols = compactLayout.cols;
     const sorted = [...compactLayout.items].sort((a, b) => a.y - b.y || a.x - b.x);
 
-    type Segment =
-      | { type: 'full'; item: GridItem }
-      | { type: 'cols'; items: GridItem[] };
-
-    const segments: Segment[] = [];
+    const segments: CompactSegment[] = [];
     let i = 0;
     while (i < sorted.length) {
       if (sorted[i].w >= cols) {
@@ -983,7 +1022,7 @@ function CompactLayout({
     return { cols, segments };
   }, [compactLayout.items, compactLayout.cols]);
 
-  function wrapWithEditOverlay(item: GridItem, content: React.ReactNode, idx: number, siblings: GridItem[], isFullWidth: boolean): React.ReactNode {
+  function wrapWithEditOverlay(item: GridItem, content: React.ReactNode, idx: number, siblingsCount: number, isFullWidth: boolean): React.ReactNode {
     if (!isEditMode) return content;
     return (
       <div className="relative">
@@ -997,7 +1036,7 @@ function CompactLayout({
             title="Move up"
           >▲</button>
           <button
-            disabled={idx === siblings.length - 1}
+            disabled={idx === siblingsCount - 1}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => { e.stopPropagation(); moveCompactPanel(item, 'down'); }}
             className="w-6 h-6 flex items-center justify-center rounded bg-[#0a0a0a]/90 border border-[#3a3b3e] text-[#aaaaaa] hover:text-white disabled:opacity-20 disabled:cursor-not-allowed text-[10px] transition-all"
@@ -1037,13 +1076,9 @@ function CompactLayout({
       <div className="flex flex-col gap-2">
         {columnLayout.segments.map((seg, si) => {
           if (seg.type === 'full') {
-            const fullWidthPeers = columnLayout.segments
-              .filter((s): s is { type: 'full'; item: GridItem } => s.type === 'full')
-              .map(s => s.item);
-            const peerIdx = fullWidthPeers.findIndex(i => i.i === seg.item.i);
             return (
               <div key={seg.item.i}>
-                {wrapWithEditOverlay(seg.item, renderPanel(seg.item), peerIdx, fullWidthPeers, true)}
+                {wrapWithEditOverlay(seg.item, renderPanel(seg.item), si, columnLayout.segments.length, true)}
               </div>
             );
           }
@@ -1063,7 +1098,7 @@ function CompactLayout({
               {columns.map((colItems, c) => (
                 <div key={c} className="flex flex-col gap-2">
                   {colItems.map((item, idx) =>
-                    wrapWithEditOverlay(item, renderPanel(item), idx, colItems, false)
+                    wrapWithEditOverlay(item, renderPanel(item), idx, colItems.length, false)
                   )}
                 </div>
               ))}
