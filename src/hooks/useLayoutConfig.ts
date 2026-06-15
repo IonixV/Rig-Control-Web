@@ -6,31 +6,35 @@ import { PANEL_MIN_SIZES, mufMapStorageKey } from '../types/layout';
 const BASE_STORAGE_KEY = 'grid-layout-v1';
 
 export const DEFAULT_COMPACT_LAYOUT: ViewLayout = {
-  cols: 2,
-  rows: 4,
+  cols: 3,
+  rows: 6,
   items: [
-    { i: 'vfo',         x: 0, y: 0, w: 2, h: 1, minW: 2, minH: 1, panelType: 'vfo' },
-    { i: 'smeter',      x: 0, y: 1, w: 1, h: 1, minW: 1, minH: 1, panelType: 'smeter' },
-    { i: 'audio_feed',  x: 1, y: 1, w: 1, h: 1, minW: 1, minH: 1, panelType: 'audio_feed' },
-    { i: 'controls',    x: 0, y: 2, w: 1, h: 1, minW: 1, minH: 1, panelType: 'controls' },
-    { i: 'video_feed',  x: 1, y: 2, w: 1, h: 1, minW: 1, minH: 1, panelType: 'video_feed' },
-    { i: 'rflevels',    x: 0, y: 3, w: 1, h: 1, minW: 1, minH: 1, panelType: 'rflevels' },
-    { i: 'cwdecode',    x: 1, y: 3, w: 1, h: 1, minW: 1, minH: 1, panelType: 'cwdecode' },
+    { i: 'vfo',             x: 0, y: 0, w: 3, h: 1, minW: 2, minH: 1, panelType: 'vfo' },
+    { i: 'controls',        x: 0, y: 1, w: 1, h: 1, minW: 1, minH: 1, panelType: 'controls' },
+    { i: 'rflevels',        x: 0, y: 2, w: 1, h: 1, minW: 1, minH: 1, panelType: 'rflevels' },
+    { i: 'smeter',          x: 1, y: 1, w: 1, h: 1, minW: 1, minH: 1, panelType: 'smeter' },
+    { i: 'audio_feed',      x: 1, y: 2, w: 1, h: 1, minW: 1, minH: 1, panelType: 'audio_feed' },
+    { i: 'video_feed',      x: 1, y: 3, w: 1, h: 1, minW: 1, minH: 1, panelType: 'video_feed' },
+    { i: 'spectrum_hamlib', x: 1, y: 4, w: 1, h: 2, minW: 1, minH: 2, panelType: 'spectrum_hamlib' },
+    { i: 'spots_combo',     x: 2, y: 1, w: 1, h: 1, minW: 1, minH: 1, panelType: 'spots_combo' },
+    { i: 'solar',           x: 2, y: 2, w: 1, h: 1, minW: 1, minH: 1, panelType: 'solar' },
+    { i: 'mufmap',          x: 2, y: 3, w: 1, h: 1, minW: 1, minH: 1, panelType: 'mufmap' },
   ],
 };
 
 export const DEFAULT_PHONE_LAYOUT: ViewLayout = {
   cols: 1,
-  rows: 8,
+  rows: 10,
   items: [
-    { i: 'vfo', x: 0, y: 0, w: 1, h: 1, minW: 1, minH: 1, panelType: 'vfo' },
-    { i: 'video_feed', x: 0, y: 1, w: 1, h: 1, minW: 1, minH: 1, panelType: 'video_feed' },
-    { i: 'audio_feed', x: 0, y: 2, w: 1, h: 1, minW: 1, minH: 1, panelType: 'audio_feed' },
-    { i: 'smeter', x: 0, y: 3, w: 1, h: 1, minW: 1, minH: 1, panelType: 'smeter' },
-    { i: 'controls', x: 0, y: 4, w: 1, h: 2, minW: 1, minH: 1, panelType: 'controls' },
-    { i: 'spots_pota', x: 0, y: 6, w: 1, h: 1, minW: 1, minH: 1, panelType: 'spots_pota' },
-    { i: 'spots_sota', x: 0, y: 7, w: 1, h: 1, minW: 1, minH: 1, panelType: 'spots_sota' },
-    { i: 'commandconsole', x: 0, y: 8, w: 1, h: 1, minW: 1, minH: 1, panelType: 'commandconsole' },
+    { i: 'vfo',             x: 0, y: 0, w: 1, h: 1, minW: 1, minH: 1, panelType: 'vfo' },
+    { i: 'spectrum_hamlib', x: 0, y: 1, w: 1, h: 2, minW: 1, minH: 2, panelType: 'spectrum_hamlib' },
+    { i: 'controls',        x: 0, y: 3, w: 1, h: 1, minW: 1, minH: 1, panelType: 'controls' },
+    { i: 'rflevels',        x: 0, y: 4, w: 1, h: 1, minW: 1, minH: 1, panelType: 'rflevels' },
+    { i: 'audio_feed',      x: 0, y: 5, w: 1, h: 1, minW: 1, minH: 1, panelType: 'audio_feed' },
+    { i: 'video_feed',      x: 0, y: 6, w: 1, h: 1, minW: 1, minH: 1, panelType: 'video_feed' },
+    { i: 'spots_combo',     x: 0, y: 7, w: 1, h: 1, minW: 1, minH: 1, panelType: 'spots_combo' },
+    { i: 'solar',           x: 0, y: 8, w: 1, h: 1, minW: 1, minH: 1, panelType: 'solar' },
+    { i: 'mufmap',          x: 0, y: 9, w: 1, h: 1, minW: 1, minH: 1, panelType: 'mufmap' },
   ],
 };
 
