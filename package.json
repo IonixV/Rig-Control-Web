@@ -61,6 +61,7 @@
       "target": "AppImage",
       "executableName": "rigcontrol-web",
       "icon": "assets/icons/rcw_512x512.png",
+      "category": "Network;HamRadio;",
       "files": [
         "bin/linux/**/*"
       ]
