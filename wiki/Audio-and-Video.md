@@ -138,6 +138,15 @@ Video lets you see your radio's front panel display on screen, which is especial
 
 1. Open Video Settings (gear icon in the **Video Feed** panel header).
 2. Under **Video Device**, select your capture device from the dropdown. If you do not see your device, make sure it is connected and recognized by your operating system.
+
+> **Linux: device not listed?** On most Linux distributions, access to `/dev/video*` devices is restricted to users in the `video` group. If your capture card does not appear in the **Video Device** dropdown, add your user to that group:
+>
+> ```bash
+> sudo usermod -aG video $USER
+> ```
+>
+> Log out and back in (or reboot) for the new group membership to take effect, then reopen Video Settings.
+
 3. Set the **Resolution** — width × height in pixels. Match this to what your capture card supports, or start with `640 × 480` and adjust if needed.
 4. Choose a **Framerate**. Lower framerates (5–10 fps) use less bandwidth and are fine for watching a radio display. Higher framerates (24–30 fps) look smoother but use more resources.
 5. Click **Start Video**. The feed will appear in the **Video Feed** panel on the main screen.

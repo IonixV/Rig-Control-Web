@@ -51,6 +51,14 @@ These settings are passed directly to `rigctld` when the app starts it. You must
 
 > **Finding your serial port on Linux:** Open a terminal and run `ls /dev/serial/by-id/` after connecting your radio. The full path shown there can be pasted directly into the Serial Port field — it is more reliable than `/dev/ttyUSB0` because it stays consistent even if you have other USB devices connected.
 
+> **Linux: permission denied / error opening port?** Serial devices (`/dev/ttyUSB*`, `/dev/ttyACM*`) are owned by the `dialout` group on most distributions. If `rigctld` fails to open the port, add your user to that group:
+>
+> ```bash
+> sudo usermod -aG dialout $USER
+> ```
+>
+> Log out and back in (or reboot) for the new group membership to take effect. This same permission is also required for the CW keyer's DTR/RTS line if you use it.
+
 > **Finding your serial port on Windows:** Open Device Manager and look under "Ports (COM & LPT)" with your radio connected.
 
 ---
