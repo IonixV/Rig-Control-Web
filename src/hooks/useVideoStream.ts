@@ -21,7 +21,6 @@ export function useVideoStream({ socket, settingsLoaded }: UseVideoStreamOptions
   const [videoAutoStart, setVideoAutoStart] = useState(false);
   const [videoDevices, setVideoDevices] = useState<{ id: string; label: string }[]>([]);
   const [isVideoSettingsOpen, setIsVideoSettingsOpen] = useState(false);
-  const [isVideoCollapsed, setIsVideoCollapsed] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
   const [resolutionDraft, setResolutionDraft] = useState({ width: "640", height: "480" });
 
   const isElectronSource = !!(window as any).electron;
@@ -377,7 +376,6 @@ export function useVideoStream({ socket, settingsLoaded }: UseVideoStreamOptions
     videoDevices,
     isElectronSource,
     isVideoSettingsOpen, setIsVideoSettingsOpen,
-    isVideoCollapsed, setIsVideoCollapsed,
     resolutionDraft, setResolutionDraft,
     resolutionDraftRef,
     isResolutionFocusedRef,

@@ -1,4 +1,5 @@
-import { useState, useEffect, useLayoutEffect } from "react";
+import { useState } from "react";
+import { usePersistedCollapsed } from "./usePersistedCollapsed";
 
 export function usePanelState(callsign = "") {
   const ns = (key: string) =>
@@ -7,79 +8,71 @@ export function usePanelState(callsign = "") {
   const [phoneMeterTab, setPhoneMeterTab] = useState<'signal' | 'swr' | 'alc'>('signal');
   const [activeMeter, setActiveMeter] = useState<'signal' | 'swr' | 'alc' | 'vdd'>('signal');
 
-  const [isPhoneVFOCollapsed, setIsPhoneVFOCollapsed] = useState(() => localStorage.getItem(ns("vfo-collapsed")) !== "false");
-  const [isPhoneMeterCollapsed, setIsPhoneMeterCollapsed] = useState(true);
-  const [isPhoneQuickControlsCollapsed, setIsPhoneQuickControlsCollapsed] = useState(true);
+  const [isCompactVFOCollapsed, setIsCompactVFOCollapsed] = usePersistedCollapsed(ns, "compact-vfo-collapsed", "vfo-collapsed", true, callsign);
+  const [isPhoneVFOCollapsed, setIsPhoneVFOCollapsed] = usePersistedCollapsed(ns, "phone-vfo-collapsed", "vfo-collapsed", true, callsign);
 
-  const [isCompactSMeterCollapsed, setIsCompactSMeterCollapsed] = useState(() => localStorage.getItem(ns("is-compact-smeter-collapsed")) === "true");
-  const [isCompactControlsCollapsed, setIsCompactControlsCollapsed] = useState(() => localStorage.getItem(ns("is-compact-controls-collapsed")) === "true");
-  const [isCompactRFPowerCollapsed, setIsCompactRFPowerCollapsed] = useState(() => localStorage.getItem(ns("is-compact-rfpower-collapsed")) === "true");
+  const [isCompactVideoCollapsed, setIsCompactVideoCollapsed] = usePersistedCollapsed(ns, "compact-video-feed-collapsed", "video-feed-collapsed", true, callsign);
+  const [isPhoneVideoCollapsed, setIsPhoneVideoCollapsed] = usePersistedCollapsed(ns, "phone-video-feed-collapsed", "video-feed-collapsed", true, callsign);
 
-  const [isAudioFeedCollapsed, setIsAudioFeedCollapsed] = useState(() => localStorage.getItem(ns("audio-feed-collapsed")) !== "false");
-  const [isConsoleCollapsed, setIsConsoleCollapsed] = useState(() => localStorage.getItem(ns("console-collapsed")) === "true");
-  const [isSolarCollapsed, setIsSolarCollapsed] = useState(() => localStorage.getItem(ns("solar-collapsed")) === "true");
-  const [isMufMapCollapsed, setIsMufMapCollapsed] = useState(() => localStorage.getItem(ns("mufmap-collapsed")) === "true");
-  const [isCwDecodeCollapsed, setIsCwDecodeCollapsed] = useState(() => localStorage.getItem(ns("cwdecode-collapsed")) === "true");
-  const [isComboSpotsCollapsed, setIsComboSpotsCollapsed] = useState(() => localStorage.getItem(ns("combospots-collapsed")) === "true");
-  const [isSpectrumHamlibCollapsed, setIsSpectrumHamlibCollapsed] = useState(() => localStorage.getItem(ns("spectrum-hamlib-collapsed")) === "true");
-  const [isSpectrumAudioCollapsed, setIsSpectrumAudioCollapsed] = useState(() => localStorage.getItem(ns("spectrum-audio-collapsed")) === "true");
+  const [isCompactAudioFeedCollapsed, setIsCompactAudioFeedCollapsed] = usePersistedCollapsed(ns, "compact-audio-feed-collapsed", "audio-feed-collapsed", true, callsign);
+  const [isPhoneAudioFeedCollapsed, setIsPhoneAudioFeedCollapsed] = usePersistedCollapsed(ns, "phone-audio-feed-collapsed", "audio-feed-collapsed", true, callsign);
 
-  useEffect(() => {
-    localStorage.setItem(ns("audio-feed-collapsed"), isAudioFeedCollapsed.toString());
-  }, [isAudioFeedCollapsed]);
+  const [isCompactConsoleCollapsed, setIsCompactConsoleCollapsed] = usePersistedCollapsed(ns, "compact-console-collapsed", "console-collapsed", false, callsign);
+  const [isPhoneConsoleCollapsed, setIsPhoneConsoleCollapsed] = usePersistedCollapsed(ns, "phone-console-collapsed", "console-collapsed", false, callsign);
 
-  useEffect(() => {
-    localStorage.setItem(ns("console-collapsed"), isConsoleCollapsed.toString());
-  }, [isConsoleCollapsed]);
+  const [isCompactComboSpotsCollapsed, setIsCompactComboSpotsCollapsed] = usePersistedCollapsed(ns, "compact-combospots-collapsed", "combospots-collapsed", false, callsign);
+  const [isPhoneComboSpotsCollapsed, setIsPhoneComboSpotsCollapsed] = usePersistedCollapsed(ns, "phone-combospots-collapsed", null, false, callsign);
 
-  useEffect(() => {
-    localStorage.setItem(ns("vfo-collapsed"), isPhoneVFOCollapsed.toString());
-  }, [isPhoneVFOCollapsed]);
+  const [isCompactSolarCollapsed, setIsCompactSolarCollapsed] = usePersistedCollapsed(ns, "compact-solar-collapsed", "solar-collapsed", false, callsign);
+  const [isPhoneSolarCollapsed, setIsPhoneSolarCollapsed] = usePersistedCollapsed(ns, "phone-solar-collapsed", null, false, callsign);
 
-  useEffect(() => {
-    localStorage.setItem(ns("solar-collapsed"), isSolarCollapsed.toString());
-    localStorage.setItem(ns("mufmap-collapsed"), isMufMapCollapsed.toString());
-    localStorage.setItem(ns("cwdecode-collapsed"), isCwDecodeCollapsed.toString());
-    localStorage.setItem(ns("combospots-collapsed"), isComboSpotsCollapsed.toString());
-    localStorage.setItem(ns("spectrum-hamlib-collapsed"), isSpectrumHamlibCollapsed.toString());
-    localStorage.setItem(ns("spectrum-audio-collapsed"), isSpectrumAudioCollapsed.toString());
-  }, [isSolarCollapsed, isMufMapCollapsed, isCwDecodeCollapsed, isComboSpotsCollapsed, isSpectrumHamlibCollapsed, isSpectrumAudioCollapsed]);
+  const [isCompactMufMapCollapsed, setIsCompactMufMapCollapsed] = usePersistedCollapsed(ns, "compact-mufmap-collapsed", "mufmap-collapsed", true, callsign);
+  const [isPhoneMufMapCollapsed, setIsPhoneMufMapCollapsed] = usePersistedCollapsed(ns, "phone-mufmap-collapsed", null, false, callsign);
 
-  useEffect(() => {
-    localStorage.setItem(ns("is-compact-smeter-collapsed"), isCompactSMeterCollapsed.toString());
-    localStorage.setItem(ns("is-compact-controls-collapsed"), isCompactControlsCollapsed.toString());
-    localStorage.setItem(ns("is-compact-rfpower-collapsed"), isCompactRFPowerCollapsed.toString());
-  }, [isCompactSMeterCollapsed, isCompactControlsCollapsed, isCompactRFPowerCollapsed]);
+  const [isCompactCwDecodeCollapsed, setIsCompactCwDecodeCollapsed] = usePersistedCollapsed(ns, "compact-cwdecode-collapsed", "cwdecode-collapsed", false, callsign);
+  const [isPhoneCwDecodeCollapsed, setIsPhoneCwDecodeCollapsed] = usePersistedCollapsed(ns, "phone-cwdecode-collapsed", null, false, callsign);
 
-  // The initial useState reads above ran before login resolved (callsign === "").
-  // Once callsign becomes known, re-read these two keys from their correctly
-  // prefixed locations so values saved under a previous session are honored.
-  useLayoutEffect(() => {
-    if (!callsign) return;
-    const prefix = callsign.toUpperCase();
-    const storedVfo = localStorage.getItem(`${prefix}:vfo-collapsed`);
-    if (storedVfo !== null) setIsPhoneVFOCollapsed(storedVfo !== "false");
-    const storedCombo = localStorage.getItem(`${prefix}:combospots-collapsed`);
-    if (storedCombo !== null) setIsComboSpotsCollapsed(storedCombo === "true");
-  }, [callsign]);
+  const [isCompactSpectrumHamlibCollapsed, setIsCompactSpectrumHamlibCollapsed] = usePersistedCollapsed(ns, "compact-spectrum-hamlib-collapsed", "spectrum-hamlib-collapsed", false, callsign);
+  const [isPhoneSpectrumHamlibCollapsed, setIsPhoneSpectrumHamlibCollapsed] = usePersistedCollapsed(ns, "phone-spectrum-hamlib-collapsed", null, false, callsign);
+
+  const [isCompactSpectrumAudioCollapsed, setIsCompactSpectrumAudioCollapsed] = usePersistedCollapsed(ns, "compact-spectrum-audio-collapsed", "spectrum-audio-collapsed", false, callsign);
+  const [isPhoneSpectrumAudioCollapsed, setIsPhoneSpectrumAudioCollapsed] = usePersistedCollapsed(ns, "phone-spectrum-audio-collapsed", null, false, callsign);
+
+  const [isCompactSMeterCollapsed, setIsCompactSMeterCollapsed] = usePersistedCollapsed(ns, "compact-smeter-collapsed", "is-compact-smeter-collapsed", false, callsign);
+  const [isCompactControlsCollapsed, setIsCompactControlsCollapsed] = usePersistedCollapsed(ns, "compact-controls-collapsed", "is-compact-controls-collapsed", false, callsign);
+  const [isCompactRFPowerCollapsed, setIsCompactRFPowerCollapsed] = usePersistedCollapsed(ns, "compact-rfpower-collapsed", "is-compact-rfpower-collapsed", false, callsign);
+
+  const [isPhoneMeterCollapsed, setIsPhoneMeterCollapsed] = usePersistedCollapsed(ns, "phone-meter-collapsed", null, true, callsign);
+  const [isPhoneQuickControlsCollapsed, setIsPhoneQuickControlsCollapsed] = usePersistedCollapsed(ns, "phone-quickcontrols-collapsed", null, true, callsign);
 
   return {
     showSetupModal, setShowSetupModal,
     phoneMeterTab, setPhoneMeterTab,
     activeMeter, setActiveMeter,
+    isCompactVFOCollapsed, setIsCompactVFOCollapsed,
     isPhoneVFOCollapsed, setIsPhoneVFOCollapsed,
-    isPhoneMeterCollapsed, setIsPhoneMeterCollapsed,
-    isPhoneQuickControlsCollapsed, setIsPhoneQuickControlsCollapsed,
+    isCompactVideoCollapsed, setIsCompactVideoCollapsed,
+    isPhoneVideoCollapsed, setIsPhoneVideoCollapsed,
+    isCompactAudioFeedCollapsed, setIsCompactAudioFeedCollapsed,
+    isPhoneAudioFeedCollapsed, setIsPhoneAudioFeedCollapsed,
+    isCompactConsoleCollapsed, setIsCompactConsoleCollapsed,
+    isPhoneConsoleCollapsed, setIsPhoneConsoleCollapsed,
+    isCompactComboSpotsCollapsed, setIsCompactComboSpotsCollapsed,
+    isPhoneComboSpotsCollapsed, setIsPhoneComboSpotsCollapsed,
+    isCompactSolarCollapsed, setIsCompactSolarCollapsed,
+    isPhoneSolarCollapsed, setIsPhoneSolarCollapsed,
+    isCompactMufMapCollapsed, setIsCompactMufMapCollapsed,
+    isPhoneMufMapCollapsed, setIsPhoneMufMapCollapsed,
+    isCompactCwDecodeCollapsed, setIsCompactCwDecodeCollapsed,
+    isPhoneCwDecodeCollapsed, setIsPhoneCwDecodeCollapsed,
+    isCompactSpectrumHamlibCollapsed, setIsCompactSpectrumHamlibCollapsed,
+    isPhoneSpectrumHamlibCollapsed, setIsPhoneSpectrumHamlibCollapsed,
+    isCompactSpectrumAudioCollapsed, setIsCompactSpectrumAudioCollapsed,
+    isPhoneSpectrumAudioCollapsed, setIsPhoneSpectrumAudioCollapsed,
     isCompactSMeterCollapsed, setIsCompactSMeterCollapsed,
     isCompactControlsCollapsed, setIsCompactControlsCollapsed,
     isCompactRFPowerCollapsed, setIsCompactRFPowerCollapsed,
-    isAudioFeedCollapsed, setIsAudioFeedCollapsed,
-    isConsoleCollapsed, setIsConsoleCollapsed,
-    isSolarCollapsed, setIsSolarCollapsed,
-    isMufMapCollapsed, setIsMufMapCollapsed,
-    isCwDecodeCollapsed, setIsCwDecodeCollapsed,
-    isComboSpotsCollapsed, setIsComboSpotsCollapsed,
-    isSpectrumHamlibCollapsed, setIsSpectrumHamlibCollapsed,
-    isSpectrumAudioCollapsed, setIsSpectrumAudioCollapsed,
+    isPhoneMeterCollapsed, setIsPhoneMeterCollapsed,
+    isPhoneQuickControlsCollapsed, setIsPhoneQuickControlsCollapsed,
   };
 }

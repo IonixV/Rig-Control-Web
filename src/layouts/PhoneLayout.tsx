@@ -215,6 +215,20 @@ export interface PhoneLayoutProps {
   // Audio waterfall
   analyserNodeRef: React.MutableRefObject<AnalyserNode | null>;
 
+  // Collapse state for combo spots / solar / mufmap / cwdecode / spectrum panels
+  isComboSpotsCollapsed: boolean;
+  setIsComboSpotsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  isSolarCollapsed: boolean;
+  setIsSolarCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  isMufMapCollapsed: boolean;
+  setIsMufMapCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  isCwDecodeCollapsed: boolean;
+  setIsCwDecodeCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  isSpectrumHamlibCollapsed: boolean;
+  setIsSpectrumHamlibCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  isSpectrumAudioCollapsed: boolean;
+  setIsSpectrumAudioCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+
   // Grid layout
   phoneLayout: ViewLayout;
   isEditMode: boolean;
@@ -359,6 +373,18 @@ function PhoneLayout({
   spectrumSettings,
   setSpectrumSettings,
   analyserNodeRef,
+  isComboSpotsCollapsed,
+  setIsComboSpotsCollapsed,
+  isSolarCollapsed,
+  setIsSolarCollapsed,
+  isMufMapCollapsed,
+  setIsMufMapCollapsed,
+  isCwDecodeCollapsed,
+  setIsCwDecodeCollapsed,
+  isSpectrumHamlibCollapsed,
+  setIsSpectrumHamlibCollapsed,
+  isSpectrumAudioCollapsed,
+  setIsSpectrumAudioCollapsed,
   phoneLayout,
   isEditMode,
   gridCallbacks,
@@ -369,12 +395,6 @@ function PhoneLayout({
   const [showSotaSettings, setShowSotaSettings] = useState(false);
   const [showWwffSettings, setShowWwffSettings] = useState(false);
   const [showComboSettings, setShowComboSettings] = useState(false);
-  const [spotsComboCollapsed, setSpotsComboCollapsed] = useState(false);
-  const [isSolarCollapsed, setIsSolarCollapsed] = useState(false);
-  const [isMufMapCollapsed, setIsMufMapCollapsed] = useState(false);
-  const [isCwDecodeCollapsed, setIsCwDecodeCollapsed] = useState(false);
-  const [isSpectrumHamlibCollapsed, setIsSpectrumHamlibCollapsed] = useState(false);
-  const [isSpectrumAudioCollapsed, setIsSpectrumAudioCollapsed] = useState(false);
 
   const existingPhonePanelTypes = useMemo(() => {
     const types = new Set<PanelType>();
@@ -682,8 +702,8 @@ function PhoneLayout({
           <PanelChrome
             title="All Spots"
             icon={<MapPin size={12} />}
-            isCollapsed={spotsComboCollapsed}
-            setIsCollapsed={setSpotsComboCollapsed}
+            isCollapsed={isComboSpotsCollapsed}
+            setIsCollapsed={setIsComboSpotsCollapsed}
             bodyClassName="p-0"
             headerSize="md"
           >

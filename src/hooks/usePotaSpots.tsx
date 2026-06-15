@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Socket } from "socket.io-client";
 import { cn } from "../utils";
 import { POTA_BANDS } from "../constants";
+import { usePersistedCollapsed } from "./usePersistedCollapsed";
 import type { PotaSpot, SotaSpot, WwffSpot, RigStatus } from "../types";
 
 interface UsePotaSpotsOptions {
@@ -45,9 +46,8 @@ export function usePotaSpots({
   const [potaSpots, setPotaSpots] = useState<PotaSpot[]>([]);
   const [potaSortCol, setPotaSortCol] = useState<string | null>('spotTime');
   const [potaSortDir, setPotaSortDir] = useState<'asc' | 'desc' | 'api'>('desc');
-  const [potaSpotsCollapsed, setPotaSpotsCollapsed] = useState(
-    () => localStorage.getItem(ns("pota-spots-collapsed")) === "true"
-  );
+  const [isCompactPotaSpotsCollapsed, setIsCompactPotaSpotsCollapsed] = usePersistedCollapsed(ns, "compact-pota-spots-collapsed", "pota-spots-collapsed", false, callsign);
+  const [isPhonePotaSpotsCollapsed, setIsPhonePotaSpotsCollapsed] = usePersistedCollapsed(ns, "phone-pota-spots-collapsed", "pota-spots-collapsed", false, callsign);
 
   // ── SOTA state ────────────────────────────────────────────────────────────
   const [sotaPollRate, setSotaPollRate] = useState(5);
@@ -57,9 +57,8 @@ export function usePotaSpots({
   const [sotaSpots, setSotaSpots] = useState<SotaSpot[]>([]);
   const [sotaSortCol, setSotaSortCol] = useState<string | null>('timeStamp');
   const [sotaSortDir, setSotaSortDir] = useState<'asc' | 'desc' | 'api'>('desc');
-  const [sotaSpotsCollapsed, setSotaSpotsCollapsed] = useState(
-    () => localStorage.getItem(ns("sota-spots-collapsed")) === "true"
-  );
+  const [isCompactSotaSpotsCollapsed, setIsCompactSotaSpotsCollapsed] = usePersistedCollapsed(ns, "compact-sota-spots-collapsed", "sota-spots-collapsed", false, callsign);
+  const [isPhoneSotaSpotsCollapsed, setIsPhoneSotaSpotsCollapsed] = usePersistedCollapsed(ns, "phone-sota-spots-collapsed", "sota-spots-collapsed", false, callsign);
 
   // ── WWFF state ────────────────────────────────────────────────────────────
   const [wwffPollRate, setWwffPollRate] = useState(5);
@@ -69,22 +68,8 @@ export function usePotaSpots({
   const [wwffSpots, setWwffSpots] = useState<WwffSpot[]>([]);
   const [wwffSortCol, setWwffSortCol] = useState<string | null>('spot_time');
   const [wwffSortDir, setWwffSortDir] = useState<'asc' | 'desc' | 'api'>('desc');
-  const [wwffSpotsCollapsed, setWwffSpotsCollapsed] = useState(
-    () => localStorage.getItem(ns("wwff-spots-collapsed")) === "true"
-  );
-
-  // ── LocalStorage sync ─────────────────────────────────────────────────────
-  useEffect(() => {
-    localStorage.setItem(ns("pota-spots-collapsed"), potaSpotsCollapsed.toString());
-  }, [potaSpotsCollapsed]);
-
-  useEffect(() => {
-    localStorage.setItem(ns("sota-spots-collapsed"), sotaSpotsCollapsed.toString());
-  }, [sotaSpotsCollapsed]);
-
-  useEffect(() => {
-    localStorage.setItem(ns("wwff-spots-collapsed"), wwffSpotsCollapsed.toString());
-  }, [wwffSpotsCollapsed]);
+  const [isCompactWwffSpotsCollapsed, setIsCompactWwffSpotsCollapsed] = usePersistedCollapsed(ns, "compact-wwff-spots-collapsed", "wwff-spots-collapsed", false, callsign);
+  const [isPhoneWwffSpotsCollapsed, setIsPhoneWwffSpotsCollapsed] = usePersistedCollapsed(ns, "phone-wwff-spots-collapsed", "wwff-spots-collapsed", false, callsign);
 
   // ── Settings loading from server ─────────────────────────────────────────
   useEffect(() => {
@@ -674,21 +659,24 @@ export function usePotaSpots({
     potaBandFilter, setPotaBandFilter,
     potaSortCol,
     potaSortDir,
-    potaSpotsCollapsed, setPotaSpotsCollapsed,
+    isCompactPotaSpotsCollapsed, setIsCompactPotaSpotsCollapsed,
+    isPhonePotaSpotsCollapsed, setIsPhonePotaSpotsCollapsed,
     sotaPollRate, setSotaPollRate,
     sotaMaxAge, setSotaMaxAge,
     sotaModeFilter, setSotaModeFilter,
     sotaBandFilter, setSotaBandFilter,
     sotaSortCol,
     sotaSortDir,
-    sotaSpotsCollapsed, setSotaSpotsCollapsed,
+    isCompactSotaSpotsCollapsed, setIsCompactSotaSpotsCollapsed,
+    isPhoneSotaSpotsCollapsed, setIsPhoneSotaSpotsCollapsed,
     wwffPollRate, setWwffPollRate,
     wwffMaxAge, setWwffMaxAge,
     wwffModeFilter, setWwffModeFilter,
     wwffBandFilter, setWwffBandFilter,
     wwffSortCol,
     wwffSortDir,
-    wwffSpotsCollapsed, setWwffSpotsCollapsed,
+    isCompactWwffSpotsCollapsed, setIsCompactWwffSpotsCollapsed,
+    isPhoneWwffSpotsCollapsed, setIsPhoneWwffSpotsCollapsed,
     // Computed
     filteredSpots,
     filteredSotaSpots,

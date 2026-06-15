@@ -139,20 +139,31 @@ export default function App() {
     showSetupModal, setShowSetupModal,
     phoneMeterTab, setPhoneMeterTab,
     activeMeter, setActiveMeter,
+    isCompactVFOCollapsed, setIsCompactVFOCollapsed,
     isPhoneVFOCollapsed, setIsPhoneVFOCollapsed,
-    isPhoneMeterCollapsed, setIsPhoneMeterCollapsed,
-    isPhoneQuickControlsCollapsed, setIsPhoneQuickControlsCollapsed,
+    isCompactVideoCollapsed, setIsCompactVideoCollapsed,
+    isPhoneVideoCollapsed, setIsPhoneVideoCollapsed,
+    isCompactAudioFeedCollapsed, setIsCompactAudioFeedCollapsed,
+    isPhoneAudioFeedCollapsed, setIsPhoneAudioFeedCollapsed,
+    isCompactConsoleCollapsed, setIsCompactConsoleCollapsed,
+    isPhoneConsoleCollapsed, setIsPhoneConsoleCollapsed,
+    isCompactComboSpotsCollapsed, setIsCompactComboSpotsCollapsed,
+    isPhoneComboSpotsCollapsed, setIsPhoneComboSpotsCollapsed,
+    isCompactSolarCollapsed, setIsCompactSolarCollapsed,
+    isPhoneSolarCollapsed, setIsPhoneSolarCollapsed,
+    isCompactMufMapCollapsed, setIsCompactMufMapCollapsed,
+    isPhoneMufMapCollapsed, setIsPhoneMufMapCollapsed,
+    isCompactCwDecodeCollapsed, setIsCompactCwDecodeCollapsed,
+    isPhoneCwDecodeCollapsed, setIsPhoneCwDecodeCollapsed,
+    isCompactSpectrumHamlibCollapsed, setIsCompactSpectrumHamlibCollapsed,
+    isPhoneSpectrumHamlibCollapsed, setIsPhoneSpectrumHamlibCollapsed,
+    isCompactSpectrumAudioCollapsed, setIsCompactSpectrumAudioCollapsed,
+    isPhoneSpectrumAudioCollapsed, setIsPhoneSpectrumAudioCollapsed,
     isCompactSMeterCollapsed, setIsCompactSMeterCollapsed,
     isCompactControlsCollapsed, setIsCompactControlsCollapsed,
     isCompactRFPowerCollapsed, setIsCompactRFPowerCollapsed,
-    isAudioFeedCollapsed, setIsAudioFeedCollapsed,
-    isConsoleCollapsed, setIsConsoleCollapsed,
-    isSolarCollapsed, setIsSolarCollapsed,
-    isMufMapCollapsed, setIsMufMapCollapsed,
-    isCwDecodeCollapsed, setIsCwDecodeCollapsed,
-    isComboSpotsCollapsed, setIsComboSpotsCollapsed,
-    isSpectrumHamlibCollapsed, setIsSpectrumHamlibCollapsed,
-    isSpectrumAudioCollapsed, setIsSpectrumAudioCollapsed,
+    isPhoneMeterCollapsed, setIsPhoneMeterCollapsed,
+    isPhoneQuickControlsCollapsed, setIsPhoneQuickControlsCollapsed,
   } = usePanelState(currentUser?.callsign ?? "");
 
   const {
@@ -204,7 +215,6 @@ export default function App() {
     videoDevices,
     isElectronSource,
     isVideoSettingsOpen, setIsVideoSettingsOpen,
-    isVideoCollapsed, setIsVideoCollapsed,
     resolutionDraft, setResolutionDraft,
     resolutionDraftRef,
     isResolutionFocusedRef,
@@ -221,8 +231,9 @@ export default function App() {
 
   const waterfallActiveRef = useRef(false);
   useEffect(() => {
-    waterfallActiveRef.current = hasWaterfallPanel && !isSpectrumAudioCollapsed;
-  }, [hasWaterfallPanel, isSpectrumAudioCollapsed]);
+    const collapsed = isCompact ? isCompactSpectrumAudioCollapsed : isPhoneSpectrumAudioCollapsed;
+    waterfallActiveRef.current = hasWaterfallPanel && !collapsed;
+  }, [hasWaterfallPanel, isCompact, isCompactSpectrumAudioCollapsed, isPhoneSpectrumAudioCollapsed]);
 
   const {
     activeMicClientId,
@@ -341,21 +352,24 @@ export default function App() {
     potaBandFilter, setPotaBandFilter,
     potaSortCol,
     potaSortDir,
-    potaSpotsCollapsed, setPotaSpotsCollapsed,
+    isCompactPotaSpotsCollapsed, setIsCompactPotaSpotsCollapsed,
+    isPhonePotaSpotsCollapsed, setIsPhonePotaSpotsCollapsed,
     sotaPollRate, setSotaPollRate,
     sotaMaxAge, setSotaMaxAge,
     sotaModeFilter, setSotaModeFilter,
     sotaBandFilter, setSotaBandFilter,
     sotaSortCol,
     sotaSortDir,
-    sotaSpotsCollapsed, setSotaSpotsCollapsed,
+    isCompactSotaSpotsCollapsed, setIsCompactSotaSpotsCollapsed,
+    isPhoneSotaSpotsCollapsed, setIsPhoneSotaSpotsCollapsed,
     wwffPollRate, setWwffPollRate,
     wwffMaxAge, setWwffMaxAge,
     wwffModeFilter, setWwffModeFilter,
     wwffBandFilter, setWwffBandFilter,
     wwffSortCol,
     wwffSortDir,
-    wwffSpotsCollapsed, setWwffSpotsCollapsed,
+    isCompactWwffSpotsCollapsed, setIsCompactWwffSpotsCollapsed,
+    isPhoneWwffSpotsCollapsed, setIsPhoneWwffSpotsCollapsed,
     filteredSpots,
     filteredSotaSpots,
     filteredWwffSpots,
@@ -610,18 +624,18 @@ export default function App() {
             handleSetMode={handleSetMode}
             handleSetBw={handleSetBw}
             videoStatus={videoStatus}
-            isVideoCollapsed={isVideoCollapsed}
+            isVideoCollapsed={isPhoneVideoCollapsed}
             isElectronSource={isElectronSource}
             videoError={videoError}
             videoPreviewCallbackRef={videoPreviewCallbackRef}
             videoCanvasRef={videoCanvasRef}
-            setIsVideoCollapsed={setIsVideoCollapsed}
+            setIsVideoCollapsed={setIsPhoneVideoCollapsed}
             setIsVideoSettingsOpen={setIsVideoSettingsOpen}
             setVideoError={setVideoError}
             enumerateVideoDevices={enumerateVideoDevices}
             audioStatus={audioStatus}
-            isAudioFeedCollapsed={isAudioFeedCollapsed}
-            setIsAudioFeedCollapsed={setIsAudioFeedCollapsed}
+            isAudioFeedCollapsed={isPhoneAudioFeedCollapsed}
+            setIsAudioFeedCollapsed={setIsPhoneAudioFeedCollapsed}
             setIsAudioSettingsOpen={setIsAudioSettingsOpen}
             localAudioReady={localAudioReady}
             inboundMuted={inboundMuted}
@@ -667,9 +681,9 @@ export default function App() {
             getAttenuatorLabel={getAttenuatorLabel}
             getPreampLabel={getPreampLabel}
             getAgcLabel={getAgcLabel}
-            potaSpotsCollapsed={potaSpotsCollapsed}
+            potaSpotsCollapsed={isPhonePotaSpotsCollapsed}
             filteredSpots={filteredSpots}
-            setPotaSpotsCollapsed={setPotaSpotsCollapsed}
+            setPotaSpotsCollapsed={setIsPhonePotaSpotsCollapsed}
             potaPollRate={potaPollRate}
             setPotaPollRate={setPotaPollRate}
             potaMaxAge={potaMaxAge}
@@ -679,9 +693,9 @@ export default function App() {
             potaBandFilter={potaBandFilter}
             setPotaBandFilter={setPotaBandFilter}
             renderSpotsTable={renderSpotsTable}
-            sotaSpotsCollapsed={sotaSpotsCollapsed}
+            sotaSpotsCollapsed={isPhoneSotaSpotsCollapsed}
             filteredSotaSpots={filteredSotaSpots}
-            setSotaSpotsCollapsed={setSotaSpotsCollapsed}
+            setSotaSpotsCollapsed={setIsPhoneSotaSpotsCollapsed}
             sotaPollRate={sotaPollRate}
             setSotaPollRate={setSotaPollRate}
             sotaMaxAge={sotaMaxAge}
@@ -691,9 +705,9 @@ export default function App() {
             sotaBandFilter={sotaBandFilter}
             setSotaBandFilter={setSotaBandFilter}
             renderSotaSpotsTable={renderSotaSpotsTable}
-            wwffSpotsCollapsed={wwffSpotsCollapsed}
+            wwffSpotsCollapsed={isPhoneWwffSpotsCollapsed}
             filteredWwffSpots={filteredWwffSpots}
-            setWwffSpotsCollapsed={setWwffSpotsCollapsed}
+            setWwffSpotsCollapsed={setIsPhoneWwffSpotsCollapsed}
             wwffPollRate={wwffPollRate}
             setWwffPollRate={setWwffPollRate}
             wwffMaxAge={wwffMaxAge}
@@ -711,10 +725,10 @@ export default function App() {
             cwStats={cwStats}
             cwScrollContainerRef={cwScrollContainerRef}
             handleSetPTT={handleSetPTT}
-            isConsoleCollapsed={isConsoleCollapsed}
+            isConsoleCollapsed={isPhoneConsoleCollapsed}
             consoleLogs={consoleLogs}
             rawCommand={rawCommand}
-            setIsConsoleCollapsed={setIsConsoleCollapsed}
+            setIsConsoleCollapsed={setIsPhoneConsoleCollapsed}
             setRawCommand={setRawCommand}
             handleSendRaw={handleSendRaw}
             solarData={solarData}
@@ -730,6 +744,18 @@ export default function App() {
             isEditMode={isPhoneEditMode}
             gridCallbacks={phoneGridCallbacks}
             callsign={currentUser?.callsign ?? ""}
+            isComboSpotsCollapsed={isPhoneComboSpotsCollapsed}
+            setIsComboSpotsCollapsed={setIsPhoneComboSpotsCollapsed}
+            isSolarCollapsed={isPhoneSolarCollapsed}
+            setIsSolarCollapsed={setIsPhoneSolarCollapsed}
+            isMufMapCollapsed={isPhoneMufMapCollapsed}
+            setIsMufMapCollapsed={setIsPhoneMufMapCollapsed}
+            isCwDecodeCollapsed={isPhoneCwDecodeCollapsed}
+            setIsCwDecodeCollapsed={setIsPhoneCwDecodeCollapsed}
+            isSpectrumHamlibCollapsed={isPhoneSpectrumHamlibCollapsed}
+            setIsSpectrumHamlibCollapsed={setIsPhoneSpectrumHamlibCollapsed}
+            isSpectrumAudioCollapsed={isPhoneSpectrumAudioCollapsed}
+            setIsSpectrumAudioCollapsed={setIsPhoneSpectrumAudioCollapsed}
           />
         ) : (
           <CompactLayout
@@ -738,8 +764,8 @@ export default function App() {
             availableModes={availableModes}
             socket={socket}
             vfoSupported={vfoSupported}
-            isPhoneVFOCollapsed={isPhoneVFOCollapsed}
-            setIsPhoneVFOCollapsed={setIsPhoneVFOCollapsed}
+            isPhoneVFOCollapsed={isCompactVFOCollapsed}
+            setIsPhoneVFOCollapsed={setIsCompactVFOCollapsed}
             vfoStep={vfoStep}
             inputVfoA={inputVfoA}
             inputVfoB={inputVfoB}
@@ -763,18 +789,18 @@ export default function App() {
             cwScrollContainerRef={cwScrollContainerRef}
             setCwDecodedText={setCwDecodedText}
             videoStatus={videoStatus}
-            isVideoCollapsed={isVideoCollapsed}
+            isVideoCollapsed={isCompactVideoCollapsed}
             isElectronSource={isElectronSource}
             videoError={videoError}
             videoPreviewCallbackRef={videoPreviewCallbackRef}
             videoCanvasRef={videoCanvasRef}
-            setIsVideoCollapsed={setIsVideoCollapsed}
+            setIsVideoCollapsed={setIsCompactVideoCollapsed}
             setIsVideoSettingsOpen={setIsVideoSettingsOpen}
             setVideoError={setVideoError}
             enumerateVideoDevices={enumerateVideoDevices}
             audioStatus={audioStatus}
-            isAudioFeedCollapsed={isAudioFeedCollapsed}
-            setIsAudioFeedCollapsed={setIsAudioFeedCollapsed}
+            isAudioFeedCollapsed={isCompactAudioFeedCollapsed}
+            setIsAudioFeedCollapsed={setIsCompactAudioFeedCollapsed}
             setIsAudioSettingsOpen={setIsAudioSettingsOpen}
             localAudioReady={localAudioReady}
             inboundMuted={inboundMuted}
@@ -848,28 +874,28 @@ export default function App() {
             wwffBandFilter={wwffBandFilter}
             setWwffBandFilter={setWwffBandFilter}
             renderWwffSpotsTable={renderWwffSpotsTable}
-            potaSpotsCollapsed={potaSpotsCollapsed}
-            setPotaSpotsCollapsed={setPotaSpotsCollapsed}
-            sotaSpotsCollapsed={sotaSpotsCollapsed}
-            setSotaSpotsCollapsed={setSotaSpotsCollapsed}
-            wwffSpotsCollapsed={wwffSpotsCollapsed}
-            setWwffSpotsCollapsed={setWwffSpotsCollapsed}
-            isComboSpotsCollapsed={isComboSpotsCollapsed}
-            setIsComboSpotsCollapsed={setIsComboSpotsCollapsed}
-            isCwDecodeCollapsed={isCwDecodeCollapsed}
-            setIsCwDecodeCollapsed={setIsCwDecodeCollapsed}
-            isConsoleCollapsed={isConsoleCollapsed}
+            potaSpotsCollapsed={isCompactPotaSpotsCollapsed}
+            setPotaSpotsCollapsed={setIsCompactPotaSpotsCollapsed}
+            sotaSpotsCollapsed={isCompactSotaSpotsCollapsed}
+            setSotaSpotsCollapsed={setIsCompactSotaSpotsCollapsed}
+            wwffSpotsCollapsed={isCompactWwffSpotsCollapsed}
+            setWwffSpotsCollapsed={setIsCompactWwffSpotsCollapsed}
+            isComboSpotsCollapsed={isCompactComboSpotsCollapsed}
+            setIsComboSpotsCollapsed={setIsCompactComboSpotsCollapsed}
+            isCwDecodeCollapsed={isCompactCwDecodeCollapsed}
+            setIsCwDecodeCollapsed={setIsCompactCwDecodeCollapsed}
+            isConsoleCollapsed={isCompactConsoleCollapsed}
             consoleLogs={consoleLogs}
             rawCommand={rawCommand}
-            setIsConsoleCollapsed={setIsConsoleCollapsed}
+            setIsConsoleCollapsed={setIsCompactConsoleCollapsed}
             setRawCommand={setRawCommand}
             handleSendRaw={handleSendRaw}
             solarData={solarData}
             requestSolarData={requestSolarData}
-            isSolarCollapsed={isSolarCollapsed}
-            setIsSolarCollapsed={setIsSolarCollapsed}
-            isMufMapCollapsed={isMufMapCollapsed}
-            setIsMufMapCollapsed={setIsMufMapCollapsed}
+            isSolarCollapsed={isCompactSolarCollapsed}
+            setIsSolarCollapsed={setIsCompactSolarCollapsed}
+            isMufMapCollapsed={isCompactMufMapCollapsed}
+            setIsMufMapCollapsed={setIsCompactMufMapCollapsed}
             compactLayout={compactLayout}
             setCompactLayout={setCompactLayout}
             isEditMode={isCompactEditMode}
@@ -882,10 +908,10 @@ export default function App() {
             spectrumSettings={spectrumSettings}
             setSpectrumSettings={setSpectrumSettings}
             analyserNodeRef={analyserNodeRef}
-            isSpectrumHamlibCollapsed={isSpectrumHamlibCollapsed}
-            setIsSpectrumHamlibCollapsed={setIsSpectrumHamlibCollapsed}
-            isSpectrumAudioCollapsed={isSpectrumAudioCollapsed}
-            setIsSpectrumAudioCollapsed={setIsSpectrumAudioCollapsed}
+            isSpectrumHamlibCollapsed={isCompactSpectrumHamlibCollapsed}
+            setIsSpectrumHamlibCollapsed={setIsCompactSpectrumHamlibCollapsed}
+            isSpectrumAudioCollapsed={isCompactSpectrumAudioCollapsed}
+            setIsSpectrumAudioCollapsed={setIsCompactSpectrumAudioCollapsed}
           />
         )}
 
