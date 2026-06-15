@@ -500,11 +500,11 @@ export default function App() {
         <header className="bg-[#151619] rounded-xl border border-[#2a2b2e] shadow-2xl py-1.5 px-3 sm:p-4 flex items-center justify-between gap-2">
           <div className="flex sm:hidden items-center gap-2 flex-shrink-0">
             <div className={cn("w-2 h-2 rounded-full flex-shrink-0", connected ? "bg-emerald-500" : "bg-red-500/70")} />
-            <span className="text-sm font-bold tracking-tight uppercase italic text-center">RigControl Web</span>
+            <span className="text-sm font-bold tracking-tight uppercase text-center">RigControl Web</span>
           </div>
           <div className="hidden sm:flex items-center gap-3 min-w-0">
             <img src="/rcw-r-64.png" className="w-7 h-7 flex-shrink-0" alt="" />
-            <h1 className="text-xl font-bold tracking-tighter uppercase italic truncate">RigControl Web</h1>
+            <h1 className="text-xl font-bold tracking-tighter uppercase truncate">RigControl Web</h1>
           </div>
           {isCompact && cwSettings.enabled && connected && !['CW', 'CWR', 'CW-R'].includes(status?.mode || '') && (
             <div className="flex-1 flex justify-center px-2">
