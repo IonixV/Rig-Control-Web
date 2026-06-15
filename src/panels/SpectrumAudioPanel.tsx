@@ -3,7 +3,7 @@ import { Settings, Waves, X } from "lucide-react";
 import PanelChrome from "../components/PanelChrome";
 import { COLORMAPS, COLORMAP_NAMES, amplitudeToPixel } from "../utils/spectrumColors";
 
-const DEFAULT_HEIGHT = 350;
+const DEFAULT_HEIGHT = 200;
 const SPECTRUM_RATIO = 0.3;
 const FLOOR_DEFAULT = -55;
 const CEILING_DEFAULT = 0;

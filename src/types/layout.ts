@@ -17,17 +17,17 @@ export const PANEL_CONFIG_OPTIONS: Partial<Record<string, PanelConfigOptions>> =
   },
   mufmap: {
     hasHeightSlider: true,
-    defaultHeightPx: 400,
+    defaultHeightPx: 200,
   },
   spectrum_hamlib: {
     hasHeightSlider: true,
-    defaultHeightPx: 350,
+    defaultHeightPx: 200,
     hasFullWidth: true,
     defaultFullWidth: false,
   },
   spectrum_audio: {
     hasHeightSlider: true,
-    defaultHeightPx: 350,
+    defaultHeightPx: 200,
   },
 };
 

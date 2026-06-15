@@ -9,7 +9,7 @@ import { COLORMAPS, COLORMAP_NAMES, amplitudeToPixel } from "../utils/spectrumCo
 // with 30 guard bins on each side. 850/790 maps pixel position to true frequency.
 const FT710_SPAN_SCALE = 850 / 790;
 
-const DEFAULT_HEIGHT = 350;
+const DEFAULT_HEIGHT = 200;
 const SPECTRUM_RATIO = 0.3;
 const FLOOR_DEFAULT = -80;
 const CEILING_DEFAULT = -40;

@@ -15,7 +15,7 @@ const METRIC_DESC: Record<Metric, string> = {
 
 const REFRESH_MS = 10 * 60 * 1000;
 const CACHE_MS = 60 * 60 * 1000;
-const DEFAULT_HEIGHT = 400;
+const DEFAULT_HEIGHT = 200;
 const MIN_SCALE = 1;
 const MAX_SCALE = 8;
 const ZOOM_FACTOR = 1.15;
