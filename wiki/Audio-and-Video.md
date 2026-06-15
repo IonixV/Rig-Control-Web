@@ -66,6 +66,15 @@ Think of it this way: **backend audio = the radio's end; local audio = your end*
 
 1. Open Audio Settings (gear icon in the **Audio Feed** panel header).
 2. Scroll down to the **Backend Audio Engine** section. It shows a **READY** or **FAILED** status badge indicating whether the audio hardware initialized correctly.
+
+> **Linux: device list empty or status shows FAILED?** On most Linux distributions, access to sound devices (`/dev/snd/*`) is restricted to users in the `audio` group. If the Backend Audio Engine shows **FAILED**, or the Backend Input/Output dropdowns are empty, add your user to that group:
+>
+> ```bash
+> sudo usermod -aG audio $USER
+> ```
+>
+> Log out and back in (or reboot) for the new group membership to take effect, then reopen Audio Settings.
+
 3. Select the audio device connected to your radio under **Backend Input (Mic/Line)** (receive audio from the radio). Use the toggle switch next to the label to enable or disable this direction.
 4. Select the audio device connected to your radio under **Backend Output (Speakers)** (transmit audio to the radio). Use its toggle switch to enable or disable it.
 5. Click **Start Backend Audio** to start the audio engine. The status will change to **RUNNING**.
