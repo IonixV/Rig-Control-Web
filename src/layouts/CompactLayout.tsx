@@ -858,7 +858,7 @@ function CompactLayout({
             bodyClassName="p-0"
             headerSize="sm"
           >
-            <MufMapPanel heightPx={_item.heightPx} />
+            <MufMapPanel heightPx={_item.heightPx} callsign={callsign} />
           </PanelChrome>
         );
 

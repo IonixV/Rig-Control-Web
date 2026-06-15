@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { RefreshCw } from "lucide-react";
 import { cn } from "../utils";
+import { mufMapStorageKey } from "../types/layout";
 
 type Metric = "mufd" | "fof2";
 type TimeSlot = "now" | "1h" | "12h" | "24h";
@@ -13,6 +14,7 @@ const METRIC_DESC: Record<Metric, string> = {
 };
 
 const REFRESH_MS = 10 * 60 * 1000;
+const CACHE_MS = 60 * 60 * 1000;
 const DEFAULT_HEIGHT = 400;
 const MIN_SCALE = 1;
 const MAX_SCALE = 8;
@@ -21,20 +23,76 @@ const ZOOM_FACTOR = 1.15;
 interface Transform { scale: number; x: number; y: number }
 const IDENTITY: Transform = { scale: 1, x: 0, y: 0 };
 
-interface Props { heightPx?: number }
+interface SavedView {
+  metric: Metric;
+  timeSlot: TimeSlot;
+  transform: Transform;
+  // Cache-busting key + timestamp from the last successful fetch, so a
+  // collapse/expand remount within CACHE_MS reuses the same image URL
+  // instead of forcing a re-fetch from prop.kc2g.com.
+  refreshKey?: number;
+  lastRefreshed?: number;
+}
 
-export default function MufMapPanel({ heightPx = DEFAULT_HEIGHT }: Props) {
-  const [metric, setMetric] = useState<Metric>("mufd");
-  const [timeSlot, setTimeSlot] = useState<TimeSlot>("now");
-  const [refreshKey, setRefreshKey] = useState(() => Date.now());
+// Restores the last metric/timeSlot/pan-zoom/refresh-cache for this user, validating
+// shape since the format may change across app versions or be hand-edited.
+function loadSavedView(callsign: string): SavedView | null {
+  try {
+    const raw = localStorage.getItem(mufMapStorageKey(callsign));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const t = parsed?.transform;
+    if (
+      !(parsed?.metric in METRIC_LABELS) ||
+      !(parsed?.timeSlot in TIME_LABELS) ||
+      typeof t?.scale !== "number" ||
+      typeof t?.x !== "number" ||
+      typeof t?.y !== "number"
+    ) {
+      return null;
+    }
+    return {
+      metric: parsed.metric,
+      timeSlot: parsed.timeSlot,
+      transform: { scale: Math.min(MAX_SCALE, Math.max(MIN_SCALE, t.scale)), x: t.x, y: t.y },
+      refreshKey: typeof parsed.refreshKey === "number" ? parsed.refreshKey : undefined,
+      lastRefreshed: typeof parsed.lastRefreshed === "number" ? parsed.lastRefreshed : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function saveView(callsign: string, view: SavedView): void {
+  try {
+    localStorage.setItem(mufMapStorageKey(callsign), JSON.stringify(view));
+  } catch {
+    // ignore
+  }
+}
+
+interface Props { heightPx?: number; callsign?: string }
+
+export default function MufMapPanel({ heightPx = DEFAULT_HEIGHT, callsign = "" }: Props) {
+  const [savedView] = useState(() => loadSavedView(callsign));
+  // Reuse the last fetch's cache-busting key if it's still within CACHE_MS, so
+  // collapse/expand (which remounts this panel) doesn't force a re-fetch.
+  const [cachedFetch] = useState(() => {
+    const { refreshKey, lastRefreshed } = savedView ?? {};
+    if (refreshKey === undefined || lastRefreshed === undefined) return null;
+    return Date.now() - lastRefreshed < CACHE_MS ? { refreshKey, lastRefreshed } : null;
+  });
+  const [metric, setMetric] = useState<Metric>(() => savedView?.metric ?? "mufd");
+  const [timeSlot, setTimeSlot] = useState<TimeSlot>(() => savedView?.timeSlot ?? "now");
+  const [refreshKey, setRefreshKey] = useState(() => cachedFetch?.refreshKey ?? Date.now());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [lastRefreshed, setLastRefreshed] = useState<Date>(() => new Date());
-  const [transform, setTransform] = useState<Transform>(IDENTITY);
+  const [lastRefreshed, setLastRefreshed] = useState<Date>(() => new Date(cachedFetch?.lastRefreshed ?? Date.now()));
+  const [transform, setTransform] = useState<Transform>(() => savedView?.transform ?? IDENTITY);
   const [isDragging, setIsDragging] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const transformRef = useRef<Transform>(IDENTITY);
+  const transformRef = useRef<Transform>(savedView?.transform ?? IDENTITY);
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ mx: 0, my: 0, tx: 0, ty: 0 });
   const lastTouchDistRef = useRef<number | null>(null);
@@ -81,6 +139,23 @@ export default function MufMapPanel({ heightPx = DEFAULT_HEIGHT }: Props) {
     setLoading(true);
     setError(false);
   }, [metric, timeSlot]);
+
+  // Re-clamp a restored pan position now that the container has real dimensions
+  // (unknown at initial state creation, before first layout).
+  useEffect(() => {
+    if (transformRef.current.scale > 1) {
+      applyTransform(transformRef.current);
+    }
+  }, [applyTransform]);
+
+  // Persist tab selection + pan/zoom + refresh cache, debounced so drag/wheel
+  // interaction doesn't hammer localStorage.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      saveView(callsign, { metric, timeSlot, transform, refreshKey, lastRefreshed: lastRefreshed.getTime() });
+    }, 400);
+    return () => clearTimeout(t);
+  }, [callsign, metric, timeSlot, transform, refreshKey, lastRefreshed]);
 
   // Wheel zoom toward cursor
   useEffect(() => {

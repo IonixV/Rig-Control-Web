@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { LayoutConfig, ViewLayout, GridItem, PanelType, PanelAddConfig } from '../types/layout';
-import { PANEL_MIN_SIZES } from '../types/layout';
+import { PANEL_MIN_SIZES, mufMapStorageKey } from '../types/layout';
 
 
 const BASE_STORAGE_KEY = 'grid-layout-v1';
@@ -64,6 +64,15 @@ function saveToStorage(storageKey: string, config: LayoutConfig): void {
   }
 }
 
+// Reset MufMapPanel's saved pan/zoom + tab selection so re-adding the panel starts fresh.
+function clearMufMapState(callsign: string): void {
+  try {
+    localStorage.removeItem(mufMapStorageKey(callsign));
+  } catch {
+    // ignore
+  }
+}
+
 export function useLayoutConfig(callsign = "") {
   const storageKey = callsign
     ? `${callsign.toUpperCase()}:${BASE_STORAGE_KEY}`
@@ -112,11 +121,13 @@ export function useLayoutConfig(callsign = "") {
   const removePanel = useCallback((view: 'compact' | 'phone', itemId: string) => {
     setConfig(prev => {
       const viewLayout = prev[view];
+      const removedItem = viewLayout.items.find(i => i.i === itemId);
+      if (removedItem?.panelType === 'mufmap') clearMufMapState(callsign);
       const next = { ...prev, [view]: { ...viewLayout, items: viewLayout.items.filter(i => i.i !== itemId) } };
       saveToStorage(storageKey, next);
       return next;
     });
-  }, []);
+  }, [callsign]);
 
   const setGridSize = useCallback((view: 'compact' | 'phone', cols: number, rows: number) => {
     setConfig(prev => {
@@ -149,12 +160,16 @@ export function useLayoutConfig(callsign = "") {
   }, []);
 
   const resetToDefault = useCallback((view?: 'compact' | 'phone') => {
-    setConfig(() => {
+    setConfig(prev => {
+      const views: ('compact' | 'phone')[] = view ? [view] : ['compact', 'phone'];
+      if (views.some(v => prev[v].items.some(item => item.panelType === 'mufmap'))) {
+        clearMufMapState(callsign);
+      }
       const next = view ? { ...DEFAULT_LAYOUT, [view]: DEFAULT_LAYOUT[view] } : DEFAULT_LAYOUT;
       saveToStorage(storageKey, next);
       return next;
     });
-  }, []);
+  }, [callsign]);
 
   return {
     compactLayout: config.compact,

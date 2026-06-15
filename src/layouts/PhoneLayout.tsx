@@ -755,7 +755,7 @@ function PhoneLayout({
             bodyClassName="p-0"
             headerSize="md"
           >
-            <MufMapPanel heightPx={item.heightPx} />
+            <MufMapPanel heightPx={item.heightPx} callsign={callsign} />
           </PanelChrome>
         );
 

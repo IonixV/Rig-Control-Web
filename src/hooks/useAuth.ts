@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import type { Socket } from "socket.io-client";
+import { MUFMAP_STORAGE_KEY } from "../types/layout";
 
 export type AuthState =
   | "unknown"
@@ -184,6 +185,7 @@ const NAMESPACED_KEYS = [
   "sota-spots-collapsed",
   "wwff-spots-collapsed",
   "spots-combo-tab",
+  MUFMAP_STORAGE_KEY,
 ];
 
 const PREFS_CLEARED_KEY = "prefs-cleared-at";

@@ -27,6 +27,15 @@ export const PANEL_CONFIG_OPTIONS: Partial<Record<string, PanelConfigOptions>> =
   },
 };
 
+// localStorage key for MufMapPanel's saved pan/zoom + tab selection.
+// Cleared by useLayoutConfig when the mufmap panel is removed/reset, so
+// re-adding the panel always starts from defaults.
+export const MUFMAP_STORAGE_KEY = 'mufmap-view-v1';
+
+export function mufMapStorageKey(callsign: string): string {
+  return callsign ? `${callsign.toUpperCase()}:${MUFMAP_STORAGE_KEY}` : MUFMAP_STORAGE_KEY;
+}
+
 export type PanelType =
   | 'vfo'
   | 'smeter'
