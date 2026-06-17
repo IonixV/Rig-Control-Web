@@ -203,35 +203,38 @@ No further configuration is needed for USB device access on macOS. If the app st
 
 With the radio connected and powered on, open **Device Manager** (right-click the Start button → Device Manager).
 
-Expand **Universal Serial Bus controllers** (or **Universal Serial Bus devices**) and look for **FT4222H**. If it is listed, the device is recognized.
+Look for two **FT4222H** entries. They will typically appear under **Universal Serial Bus controllers** with the stock FTDI driver. You should see both **Interface 0** and **Interface 1** listed.
 
-If it does not appear, check the USB connection and confirm SCU-LAN10 is enabled in the radio (see above).
+If they do not appear, check the USB connection and confirm SCU-LAN10 is enabled in the radio (see above).
 
 > The CP2105 CAT serial port will appear separately under **Ports (COM & LPT)** — this is expected.
 
-### Step 2 — Replace the default FTDI driver
+### Step 2 — Verify the FTDI D2XX driver is loaded
 
-Windows loads the wrong driver for the FT4222H by default. Use [Zadig](https://zadig.akeo.ie/), a free utility, to replace it:
+RigControl Web communicates with the FT4222H through FTDI's D2XX API, which requires the stock **FTDI driver** that Windows installs automatically. **Do not replace this driver** with WinUSB, libusb, or any other third-party driver — doing so will prevent the spectrum scope from working.
 
-1. Download and open **Zadig**.
-2. From the menu, choose **Options → List All Devices**.
-3. Select **FT4222H** from the dropdown.
-4. Set the target driver to **WinUSB**.
-5. Click **Replace Driver**.
+To verify the correct driver is loaded:
 
-> This only affects the FT4222H spectrum device — the CP2105 CAT serial port is untouched.
+1. In Device Manager, right-click one of the **FT4222H** entries and choose **Properties**.
+2. Go to the **Driver** tab.
+3. The **Driver Provider** should be **FTDI**. If it shows **libusb-win32**, **WinUSB**, or anything else, the driver has been replaced and needs to be restored (see below).
+
+**If the driver was replaced (e.g. by a third-party tool):**
+
+1. In Device Manager, right-click the FT4222H device → **Uninstall device**.
+2. Check **Attempt to remove the driver** and click **Uninstall**.
+3. Repeat for the second FT4222H interface.
+4. Unplug the FT-710's USB cable, wait a few seconds, and plug it back in.
+5. Windows will automatically reinstall the stock FTDI driver.
 
 ### Step 3 — Install the FT4222 library files
 
-Go to the [FT4222H Software Examples page](https://ftdichip.com/software-examples/ft4222h-software-examples/) and download the Windows package. It contains two files:
+Go to the [FT4222H Software Examples page](https://ftdichip.com/software-examples/ft4222h-software-examples/) and download the Windows package. It contains two DLL files that RigControl Web needs at runtime:
 
 - `ftd2xx.dll`
 - `LibFT4222-64.dll`
 
-Copy both files to **one** of these locations:
-
-- `C:\Windows\System32\` — available to all applications system-wide
-- The folder where `RigControl Web.exe` is installed — keeps them alongside the app
+Copy both files to the folder where **RIGCONTROL WEB.exe** is installed (e.g. `C:\Program Files\RIGCONTROL WEB\`).
 
 RigControl Web will show a clear error on startup if either file is missing.
 
@@ -260,9 +263,11 @@ Check the error message shown in the Spectrum Scope settings panel.
 |-------|-------------------|-----|
 | `libft4222 not found` | Library not installed or not on search path | Redo the install steps for your platform |
 | `No FT4222 device found` | Radio not connected, or SCU-LAN10 not enabled | Check USB cable and radio menu |
-| `LIBUSB_ERROR_ACCESS` / permission denied | udev rule missing or not applied (Linux) | Redo Step 6 and replug the USB cable |
-| `device not found (status 2)` despite `lsusb` showing the device | Permission denied on the device node — common over remote desktop/RDP sessions, where `uaccess` ACLs are not granted | Redo Step 6 with `GROUP="dialout"`, confirm your user is in `dialout` (`groups`), then replug the USB cable |
-| `libft4222 not found` on macOS | Quarantine flag still set | Run the `xattr -d` command from Step 3 |
+| `device not found` + `using the FTDI D2XX driver` (Windows) | The FT4222H driver was replaced with WinUSB or libusb | Restore the stock FTDI driver — see Windows Step 2 |
+| `LIBUSB_ERROR_ACCESS` / permission denied (Linux) | udev rule missing or not applied | Redo Linux Step 6 and replug the USB cable |
+| `device not found (status 2)` despite `lsusb` showing the device (Linux) | Permission denied on the device node — common over remote desktop/RDP sessions, where `uaccess` ACLs are not granted | Redo Linux Step 6 with `GROUP="dialout"`, confirm your user is in `dialout` (`groups`), then replug the USB cable |
+| `device not found` on macOS | USB access blocked by macOS security | Check **System Settings → Privacy & Security** for blocked USB access; also verify the quarantine flag was removed (macOS Step 3) |
+| `libft4222 not found` on macOS | Quarantine flag still set | Run the `xattr -d` command from macOS Step 3 |
 
 ### Check the debug log
 

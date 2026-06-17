@@ -212,8 +212,17 @@ static int setup_device(void) {
     FT_STATUS st = pFT_OpenEx((void *)"FT4222 A", FT_OPEN_BY_DESCRIPTION, &g_device);
     if (st != FT_OK) {
         fprintf(stdout,
+#ifdef _WIN32
+            "OPEN_ERROR: FT4222 device not found (status %u) — "
+            "check that the FT-710 is connected via USB and using the FTDI D2XX driver\n",
+#elif defined(__APPLE__)
+            "OPEN_ERROR: FT4222 device not found (status %u) — "
+            "check that the FT-710 is connected via USB and check System Settings > "
+            "Privacy & Security for blocked USB access\n",
+#else
             "OPEN_ERROR: FT4222 device not found (status %u) — "
             "check udev rules and that the FT-710 is connected via USB\n",
+#endif
             (unsigned)st);
         g_device = NULL;
         return 0;
