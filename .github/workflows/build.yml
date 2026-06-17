@@ -73,9 +73,17 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: gcc -O2 -o bin/linux/cw-key-helper cw-key-helper.c
 
+      - name: Compile FT4222 scope reader (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: gcc -O2 -o bin/linux/ft4222-scope-reader ft4222-scope-reader.c -ldl
+
       - name: Compile CW key helper (macOS)
         if: matrix.os == 'macos-latest'
         run: clang -O2 -o bin/mac/cw-key-helper cw-key-helper.c
+
+      - name: Compile FT4222 scope reader (macOS)
+        if: matrix.os == 'macos-latest'
+        run: clang -O2 -o bin/mac/ft4222-scope-reader ft4222-scope-reader.c
 
       - name: Set up MSVC (Windows)
         if: matrix.os == 'windows-2022'
@@ -85,6 +93,11 @@ jobs:
         if: matrix.os == 'windows-2022'
         shell: cmd
         run: cl cw-key-helper.c /Fe:bin\windows\cw-key-helper.exe /O2 /nologo
+
+      - name: Compile FT4222 scope reader (Windows)
+        if: matrix.os == 'windows-2022'
+        shell: cmd
+        run: cl ft4222-scope-reader.c /Fe:bin\windows\ft4222-scope-reader.exe /O2 /nologo
 
       - name: Build rigctld (Linux/macOS)
         if: matrix.os != 'windows-2022'
