@@ -71,6 +71,15 @@ export function usePotaSpots({
   const [isCompactWwffSpotsCollapsed, setIsCompactWwffSpotsCollapsed] = usePersistedCollapsed(ns, "compact-wwff-spots-collapsed", "wwff-spots-collapsed", false, callsign);
   const [isPhoneWwffSpotsCollapsed, setIsPhoneWwffSpotsCollapsed] = usePersistedCollapsed(ns, "phone-wwff-spots-collapsed", "wwff-spots-collapsed", false, callsign);
 
+  // ── Debug flag ────────────────────────────────────────────────────────────
+  const spotsVerboseRef = React.useRef(false);
+  useEffect(() => {
+    if (!socket) return;
+    const onDebugFlags = ({ spots }: { spots: boolean }) => { spotsVerboseRef.current = spots; };
+    socket.on("debug-flags", onDebugFlags);
+    return () => { socket.off("debug-flags", onDebugFlags); };
+  }, [socket]);
+
   // ── Settings loading from server ─────────────────────────────────────────
   useEffect(() => {
     if (!socket) return;
@@ -122,14 +131,24 @@ export function usePotaSpots({
       return;
     }
     const fetchSpots = async () => {
+      const vlog = spotsVerboseRef.current;
+      if (vlog) console.log("[spots:pota] Fetching https://api.pota.app/spot/");
       try {
         const res = await fetch("https://api.pota.app/spot/");
+        if (vlog) console.log(`[spots:pota] Response: ${res.status} ${res.statusText}`);
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data)) setPotaSpots(data);
+          if (Array.isArray(data)) {
+            if (vlog) console.log(`[spots:pota] Received ${data.length} spots`);
+            setPotaSpots(data);
+          } else {
+            if (vlog) console.warn("[spots:pota] Response was not an array:", typeof data);
+          }
+        } else {
+          if (vlog) console.warn(`[spots:pota] HTTP error: ${res.status} ${res.statusText}`);
         }
-      } catch {
-        // network error — silently ignore
+      } catch (err) {
+        if (vlog) console.error("[spots:pota] Fetch failed:", err);
       }
     };
     fetchSpots();
@@ -145,14 +164,24 @@ export function usePotaSpots({
       return;
     }
     const fetchSotaSpots = async () => {
+      const vlog = spotsVerboseRef.current;
+      if (vlog) console.log("[spots:sota] Fetching https://api2.sota.org.uk/api/spots/-1/all");
       try {
         const res = await fetch("https://api2.sota.org.uk/api/spots/-1/all");
+        if (vlog) console.log(`[spots:sota] Response: ${res.status} ${res.statusText}`);
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data)) setSotaSpots(data);
+          if (Array.isArray(data)) {
+            if (vlog) console.log(`[spots:sota] Received ${data.length} spots`);
+            setSotaSpots(data);
+          } else {
+            if (vlog) console.warn("[spots:sota] Response was not an array:", typeof data);
+          }
+        } else {
+          if (vlog) console.warn(`[spots:sota] HTTP error: ${res.status} ${res.statusText}`);
         }
-      } catch {
-        // network error — silently ignore
+      } catch (err) {
+        if (vlog) console.error("[spots:sota] Fetch failed:", err);
       }
     };
     fetchSotaSpots();
@@ -167,14 +196,24 @@ export function usePotaSpots({
       return;
     }
     const fetchWwffSpots = async () => {
+      const vlog = spotsVerboseRef.current;
+      if (vlog) console.log("[spots:wwff] Fetching https://spots.wwff.co/static/spots.json");
       try {
         const res = await fetch("https://spots.wwff.co/static/spots.json");
+        if (vlog) console.log(`[spots:wwff] Response: ${res.status} ${res.statusText}`);
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data)) setWwffSpots(data);
+          if (Array.isArray(data)) {
+            if (vlog) console.log(`[spots:wwff] Received ${data.length} spots`);
+            setWwffSpots(data);
+          } else {
+            if (vlog) console.warn("[spots:wwff] Response was not an array:", typeof data);
+          }
+        } else {
+          if (vlog) console.warn(`[spots:wwff] HTTP error: ${res.status} ${res.statusText}`);
         }
-      } catch {
-        // network error — silently ignore
+      } catch (err) {
+        if (vlog) console.error("[spots:wwff] Fetch failed:", err);
       }
     };
     fetchWwffSpots();

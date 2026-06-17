@@ -7,6 +7,7 @@ export const DEBUG_VIDEO    = debugAll || argv.includes('--debug-video');
 export const DEBUG_CW       = debugAll || argv.includes('--debug-cw');
 export const DEBUG_INFRA    = debugAll || argv.includes('--debug-infra');
 export const DEBUG_SPECTRUM = debugAll || argv.includes('--debug-spectrum');
+export const DEBUG_SPOTS    = debugAll || argv.includes('--debug-spots');
 
 export const vlogRig      = (...args: any[]) => { if (DEBUG_RIG)      console.log(...args); };
 export const vlogAudio    = (...args: any[]) => { if (DEBUG_AUDIO)    console.log(...args); };
@@ -14,6 +15,7 @@ export const vlogVideo    = (...args: any[]) => { if (DEBUG_VIDEO)    console.lo
 export const vlogCw       = (...args: any[]) => { if (DEBUG_CW)       console.log(...args); };
 export const vlogInfra    = (...args: any[]) => { if (DEBUG_INFRA)    console.log(...args); };
 export const vlogSpectrum = (...args: any[]) => { if (DEBUG_SPECTRUM) console.log(...args); };
+export const vlogSpots    = (...args: any[]) => { if (DEBUG_SPOTS)    console.log(...args); };
 
 export type DebugFlags = {
   rig: boolean;
@@ -22,6 +24,7 @@ export type DebugFlags = {
   cw: boolean;
   infra: boolean;
   spectrum: boolean;
+  spots: boolean;
 };
 
 export const debugFlags: DebugFlags = {
@@ -31,4 +34,5 @@ export const debugFlags: DebugFlags = {
   cw: DEBUG_CW,
   infra: DEBUG_INFRA,
   spectrum: DEBUG_SPECTRUM,
+  spots: DEBUG_SPOTS,
 };
