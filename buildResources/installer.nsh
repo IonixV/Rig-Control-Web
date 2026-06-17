@@ -34,7 +34,9 @@
 ;   TCP 3000 — HTTPS web server, scoped to the app executable only
 ;   UDP 4531 — CI-V spectrum scope multicast from rigctld (not app-scoped;
 ;              the multicast receiver runs inside the app process but netsh
-;              program= filtering is unreliable for multicast UDP)
+;              program= filtering is unreliable for multicast UDP).  4531 is
+;              the default multicast_data_port; advanced users who change the
+;              port in Spectrum settings must adjust the rule manually.
 ; Each rule is skipped silently if it already exists.  If the installer is
 ; running without admin rights (per-user install), a single targeted UAC
 ; prompt is shown to cover both rules.
@@ -75,14 +77,41 @@
   ${EndIf}
 !macroend
 
-; ── Firewall cleanup on uninstall ────────────────────────────────────────────
-; Removes both rules when the uninstaller has admin rights.  For per-user
-; uninstalls without elevation the rules are left in place; users can remove
-; them manually via Windows Defender Firewall.
+; ── Optional firewall cleanup on uninstall ───────────────────────────────────
+; Offers to remove the inbound firewall rules added at install time (TCP 3000
+; and UDP 4531).  Defaults to "Yes" since the rules are only useful while the
+; app is installed.  Skipped during a silent uninstall (left in place).  If the
+; uninstaller is not elevated, a UAC prompt is shown to perform the deletion.
 
 !macro customUnInstall
-  ${If} ${UAC_IsAdmin}
-    nsExec::Exec `"$SYSDIR\netsh.exe" advfirewall firewall delete rule name="RigControl Web - TCP 3000"`
-    nsExec::Exec `"$SYSDIR\netsh.exe" advfirewall firewall delete rule name="RigControl Web - UDP 4531"`
+  ${IfNot} ${Silent}
+    MessageBox MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON1 \
+      "Remove the Windows firewall rules that were added for RigControl Web (inbound TCP 3000 and UDP 4531)?" \
+      IDYES uninstallFirewall IDNO skipFirewall
+    uninstallFirewall:
+      ${If} ${UAC_IsAdmin}
+        nsExec::Exec `"$SYSDIR\netsh.exe" advfirewall firewall delete rule name="RigControl Web - TCP 3000"`
+        nsExec::Exec `"$SYSDIR\netsh.exe" advfirewall firewall delete rule name="RigControl Web - UDP 4531"`
+      ${Else}
+        ExecShell "runas" "$SYSDIR\netsh.exe" `advfirewall firewall delete rule name="RigControl Web - TCP 3000"`
+        ExecShell "runas" "$SYSDIR\netsh.exe" `advfirewall firewall delete rule name="RigControl Web - UDP 4531"`
+      ${EndIf}
+    skipFirewall:
+  ${EndIf}
+
+  ; ── Optional user-data removal ─────────────────────────────────────────────
+  ; The app stores its settings and login accounts (settings.json, users.json,
+  ; auth.json, audit.json) under $APPDATA\RigControl Web — Electron's userData
+  ; directory (app.setName('RigControl Web')).  These survive a normal
+  ; uninstall/reinstall, which is why old logins persist.  Offer to delete them.
+  ; Defaults to "No" (MB_DEFBUTTON2) so a silent uninstall or an accidental
+  ; keypress preserves the data; only an explicit "Yes" removes it.
+  ${IfNot} ${Silent}
+    MessageBox MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON2 \
+      "Also delete RigControl Web user data (saved settings and login accounts)?$\n$\nChoose No to keep them for a future reinstall." \
+      IDYES uninstallUserData IDNO skipUserData
+    uninstallUserData:
+      RMDir /r "$APPDATA\RigControl Web"
+    skipUserData:
   ${EndIf}
 !macroend

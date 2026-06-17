@@ -202,6 +202,16 @@ Native `.node` addons (`naudiodon`) and `.wasm` files (`libopus-node`, `ggmorse`
 - Linux AppImage auto-installs GNOME desktop integration (icon + `.desktop` file) on first launch if not already present. The `.desktop` file uses `StartupWMClass=rigcontrol-web` and `Exec="<path>" --class=rigcontrol-web %U`; the `--class` flag forces Electron's `WM_CLASS` to `rigcontrol-web` so it matches `StartupWMClass` exactly (without it, Electron derives `WM_CLASS` from `app.getName()` as `"rigcontrol web"` — lowercase with a space — which does not match). The `--install` / `--uninstall` CLI flags provide explicit control; both exit before `app.whenReady()`.
 - **GNOME dock icon on first direct launch**: When the AppImage is launched directly (not via the GNOME Activities menu), the dock icon will show as generic on that first run. This is a GNOME Shell limitation: it matches running windows to `.desktop` files at window-creation time using startup notification tokens, which are only issued when an app is launched through GNOME's own launcher infrastructure. The auto-install writes the correct `.desktop` file and icon before the window appears, so all subsequent launches from the Activities menu show the correct icon immediately.
 
+### Windows Installer (NSIS)
+
+The Windows target uses a custom NSIS include script (`buildResources/installer.nsh`, referenced via `nsis.include` in `package.json`) that defines three electron-builder hook macros:
+
+- **`customFinishPage`** — Custom finish page with both a "Launch" checkbox and an "Open documentation (GitHub Wiki)" checkbox.
+- **`customInstall`** — Adds two inbound Windows Defender Firewall rules post-install: TCP 3000 for the HTTPS web server (scoped to the app executable) and UDP 4531 for the CI-V spectrum scope multicast from `rigctld` (not app-scoped, since `netsh program=` filtering is unreliable for multicast UDP). 4531 is the default `multicast_data_port`; users who change the port in Spectrum settings must adjust the rule manually. Existing rules are skipped; per-user installs trigger a single UAC prompt covering both.
+- **`customUnInstall`** — Presents two optional Yes/No prompts (both skipped during a silent uninstall via `${IfNot} ${Silent}`):
+  1. **"Remove the Windows firewall rules that were added for RigControl Web (inbound TCP 3000 and UDP 4531)?"** — defaults to **Yes** (`MB_DEFBUTTON1`); deletes both rules (directly when elevated, otherwise via a `runas` UAC prompt).
+  2. **"Also delete RigControl Web user data (saved settings and login accounts)?"** — defaults to **No** (`MB_DEFBUTTON2`); choosing Yes runs `RMDir /r "$APPDATA\RigControl Web"`, deleting Electron's userData directory (`settings.json`, `users.json`, `auth.json`, `audit.json`). This is the supported way to reset login accounts/settings on reinstall — the unconditional `deleteAppDataOnUninstall` electron-builder flag is deliberately **not** used, since the data folder otherwise survives a normal uninstall/reinstall.
+
 ## Known Issues / Tech Debt
 
 - `rigctld` binary is assumed to be in system PATH (or `bin/[platform]/rigctld` in Electron builds).

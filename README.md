@@ -224,6 +224,8 @@ RigControl Web requires a login before any controls are accessible.
 
 **Rate limiting:** 5 failed login attempts per IP (15-minute window) and 10 per callsign (proxy-safe, admin-clearable). Password-change attempts are also rate-limited at 5 per callsign.
 
+**Resetting accounts on reinstall (Windows):** User accounts and settings are stored outside the program folder (in `%APPDATA%\RigControl Web`), so they survive a normal uninstall/reinstall — an old login will still be in effect after reinstalling. To wipe them, the Windows uninstaller now asks **"Also delete RigControl Web user data (saved settings and login accounts)?"** — choose **Yes** to remove all accounts and settings. (The prompt defaults to No, so data is kept unless you opt in.) After deletion, the next launch reseeds the default `ADMIN` / `admin` account. You can also delete `%APPDATA%\RigControl Web` manually while the app is closed.
+
 ### General Settings (gear icon)
 
 Open the **General Settings** panel (gear icon) to configure. Settings are organized into two tabs:
