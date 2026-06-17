@@ -124,6 +124,13 @@ export function usePotaSpots({
     return () => { socket.off("settings-data", handler); };
   }, [socket]);
 
+  // ── Log enabled state ─────────────────────────────────────────────────────
+  useEffect(() => {
+    if (spotsVerboseRef.current) {
+      console.log(`[spots] Enabled state — pota: ${potaEnabled}, sota: ${sotaEnabled}, wwff: ${wwffEnabled}`);
+    }
+  }, [potaEnabled, sotaEnabled, wwffEnabled]);
+
   // ── POTA fetch interval ───────────────────────────────────────────────────
   useEffect(() => {
     if (!potaEnabled) {
@@ -223,6 +230,7 @@ export function usePotaSpots({
 
   // ── Computed: POTA ────────────────────────────────────────────────────────
   const filteredSpots = useMemo(() => {
+    const vlog = spotsVerboseRef.current;
     const latestByActivator = new Map<string, PotaSpot>();
     for (const spot of potaSpots) {
       const existing = latestByActivator.get(spot.activator);
@@ -230,20 +238,30 @@ export function usePotaSpots({
         latestByActivator.set(spot.activator, spot);
       }
     }
+    const deduped = [...latestByActivator.values()];
     const cutoff = Date.now() - potaMaxAge * 60 * 1000;
     const potaAllModes = ALL_SPOT_MODES.every(m => potaModeFilter.includes(m));
-    return [...latestByActivator.values()].filter(s => {
-      if (new Date(s.spotTime + 'Z').getTime() < cutoff) return false;
-      if (!potaAllModes && potaModeFilter.length > 0 && !potaModeFilter.includes(s.mode)) return false;
+    if (vlog && deduped.length > 0) {
+      const sample = deduped[0];
+      const parsed = new Date(sample.spotTime + 'Z').getTime();
+      console.log(`[spots:pota] Filter pipeline — raw: ${potaSpots.length}, deduped: ${deduped.length}, maxAge: ${potaMaxAge}m, cutoff: ${new Date(cutoff).toISOString()}, sample spotTime: "${sample.spotTime}", parsed: ${new Date(parsed).toISOString()} (${isNaN(parsed) ? 'NaN!' : 'ok'}), freq: ${sample.frequency}, mode: "${sample.mode}"`);
+      console.log(`[spots:pota] Filters — modeFilter: [${potaModeFilter}], allModes: ${potaAllModes}, bandFilter: [${potaBandFilter}]`);
+    }
+    let droppedAge = 0, droppedMode = 0, droppedBand = 0;
+    const result = deduped.filter(s => {
+      if (new Date(s.spotTime + 'Z').getTime() < cutoff) { droppedAge++; return false; }
+      if (!potaAllModes && potaModeFilter.length > 0 && !potaModeFilter.includes(s.mode)) { droppedMode++; return false; }
       if (potaBandFilter.length > 0) {
         const inBand = potaBandFilter.some(label => {
           const band = POTA_BANDS.find(b => b.label === label);
           return band && s.frequency >= band.min && s.frequency < band.max;
         });
-        if (!inBand) return false;
+        if (!inBand) { droppedBand++; return false; }
       }
       return true;
     });
+    if (vlog) console.log(`[spots:pota] Result: ${result.length} spots (dropped — age: ${droppedAge}, mode: ${droppedMode}, band: ${droppedBand})`);
+    return result;
   }, [potaSpots, potaMaxAge, potaModeFilter, potaBandFilter]);
 
   const sortedSpots = useMemo(() => {
@@ -279,6 +297,7 @@ export function usePotaSpots({
 
   // ── Computed: SOTA ────────────────────────────────────────────────────────
   const filteredSotaSpots = useMemo(() => {
+    const vlog = spotsVerboseRef.current;
     const latestByActivator = new Map<string, SotaSpot>();
     for (const spot of sotaSpots) {
       const existing = latestByActivator.get(spot.activatorCallsign);
@@ -286,21 +305,30 @@ export function usePotaSpots({
         latestByActivator.set(spot.activatorCallsign, spot);
       }
     }
+    const deduped = [...latestByActivator.values()];
     const cutoff = Date.now() - sotaMaxAge * 60 * 1000;
     const sotaAllModes = ALL_SPOT_MODES.every(m => sotaModeFilter.includes(m));
-    return [...latestByActivator.values()].filter(s => {
-      if (new Date(s.timeStamp + 'Z').getTime() < cutoff) return false;
-      if (!sotaAllModes && sotaModeFilter.length > 0 && !sotaModeFilter.includes(s.mode)) return false;
+    if (vlog && deduped.length > 0) {
+      const sample = deduped[0];
+      const parsed = new Date(sample.timeStamp + 'Z').getTime();
+      console.log(`[spots:sota] Filter pipeline — raw: ${sotaSpots.length}, deduped: ${deduped.length}, maxAge: ${sotaMaxAge}m, sample timeStamp: "${sample.timeStamp}", parsed: ${new Date(parsed).toISOString()} (${isNaN(parsed) ? 'NaN!' : 'ok'}), freq: "${sample.frequency}", mode: "${sample.mode}"`);
+    }
+    let droppedAge = 0, droppedMode = 0, droppedBand = 0;
+    const result = deduped.filter(s => {
+      if (new Date(s.timeStamp + 'Z').getTime() < cutoff) { droppedAge++; return false; }
+      if (!sotaAllModes && sotaModeFilter.length > 0 && !sotaModeFilter.includes(s.mode)) { droppedMode++; return false; }
       if (sotaBandFilter.length > 0) {
         const freqKhz = parseFloat(s.frequency) * 1000;
         const inBand = sotaBandFilter.some(label => {
           const band = POTA_BANDS.find(b => b.label === label);
           return band && freqKhz >= band.min && freqKhz < band.max;
         });
-        if (!inBand) return false;
+        if (!inBand) { droppedBand++; return false; }
       }
       return true;
     });
+    if (vlog) console.log(`[spots:sota] Result: ${result.length} spots (dropped — age: ${droppedAge}, mode: ${droppedMode}, band: ${droppedBand})`);
+    return result;
   }, [sotaSpots, sotaMaxAge, sotaModeFilter, sotaBandFilter]);
 
   const sortedSotaSpots = useMemo(() => {
@@ -336,6 +364,7 @@ export function usePotaSpots({
 
   // ── Computed: WWFF ────────────────────────────────────────────────────────
   const filteredWwffSpots = useMemo(() => {
+    const vlog = spotsVerboseRef.current;
     const latestByActivator = new Map<string, WwffSpot>();
     for (const spot of wwffSpots) {
       const existing = latestByActivator.get(spot.activator);
@@ -343,20 +372,28 @@ export function usePotaSpots({
         latestByActivator.set(spot.activator, spot);
       }
     }
+    const deduped = [...latestByActivator.values()];
     const cutoff = Date.now() - wwffMaxAge * 60 * 1000;
     const wwffAllModes = ALL_SPOT_MODES.every(m => wwffModeFilter.includes(m));
-    return [...latestByActivator.values()].filter(s => {
-      if (s.spot_time * 1000 < cutoff) return false;
-      if (!wwffAllModes && wwffModeFilter.length > 0 && !wwffModeFilter.includes(s.mode)) return false;
+    if (vlog && deduped.length > 0) {
+      const sample = deduped[0];
+      console.log(`[spots:wwff] Filter pipeline — raw: ${wwffSpots.length}, deduped: ${deduped.length}, maxAge: ${wwffMaxAge}m, sample spot_time: ${sample.spot_time} (${new Date(sample.spot_time * 1000).toISOString()}), freq_khz: ${sample.frequency_khz}, mode: "${sample.mode}"`);
+    }
+    let droppedAge = 0, droppedMode = 0, droppedBand = 0;
+    const result = deduped.filter(s => {
+      if (s.spot_time * 1000 < cutoff) { droppedAge++; return false; }
+      if (!wwffAllModes && wwffModeFilter.length > 0 && !wwffModeFilter.includes(s.mode)) { droppedMode++; return false; }
       if (wwffBandFilter.length > 0) {
         const inBand = wwffBandFilter.some(label => {
           const band = POTA_BANDS.find(b => b.label === label);
           return band && s.frequency_khz >= band.min && s.frequency_khz < band.max;
         });
-        if (!inBand) return false;
+        if (!inBand) { droppedBand++; return false; }
       }
       return true;
     });
+    if (vlog) console.log(`[spots:wwff] Result: ${result.length} spots (dropped — age: ${droppedAge}, mode: ${droppedMode}, band: ${droppedBand})`);
+    return result;
   }, [wwffSpots, wwffMaxAge, wwffModeFilter, wwffBandFilter]);
 
   const sortedWwffSpots = useMemo(() => {
