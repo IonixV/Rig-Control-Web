@@ -38,9 +38,16 @@ export function startYaesuScope(ctx: ServerContext): void {
   const binaryPath = getYaesuScopeHelperPath(ctx.baseDir);
   vlogSpectrum(`[YAESU-SCOPE] Starting ${binaryPath}`);
 
+  const spawnOpts: Parameters<typeof spawn>[2] = { stdio: ["ignore", "pipe", "pipe"] };
+  if (process.platform === "win32" && ctx.baseDir.includes(".asar")) {
+    const appInstallDir = path.resolve(ctx.baseDir, "..", "..");
+    spawnOpts.env = { ...process.env, PATH: `${appInstallDir};${process.env.PATH ?? ""}` };
+    vlogSpectrum(`[YAESU-SCOPE] Added ${appInstallDir} to DLL search path`);
+  }
+
   let proc: ReturnType<typeof spawn>;
   try {
-    proc = spawn(binaryPath, [], { stdio: ["ignore", "pipe", "pipe"] });
+    proc = spawn(binaryPath, [], spawnOpts);
   } catch (err: any) {
     console.error(`[YAESU-SCOPE] Failed to spawn: ${err.message}`);
     ctx.yaesuScopeProcess = null;
