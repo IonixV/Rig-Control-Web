@@ -147,9 +147,10 @@ async function createWindow() {
 
   const savedState = loadWindowState();
   
-  // Smallest compact view window size: 768x600
-  const defaultWidth = 768;
-  const defaultHeight = 600;
+  // Content must be ≥768px for compact layout; 800 covers Windows frame chrome
+  const defaultWidth = 800;
+  // Default compact layout content is ~826px; 875 covers Windows title bar + frame
+  const defaultHeight = 875;
 
   const iconPath = isDev
     ? path.join(process.cwd(), 'assets/icons/rcw_512x512.png')
