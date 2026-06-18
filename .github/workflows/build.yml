@@ -27,7 +27,7 @@ jobs:
           if [ -z "$P" ]; then P="all"; fi
           ITEMS=()
           if [ "$P" = "all" ] || [[ "$P" == *"linux"* ]]; then
-            ITEMS+=('{"os":"ubuntu-latest","platform":"linux","artifact":"*.AppImage"}')
+            ITEMS+=('{"os":"ubuntu-latest","platform":"linux","artifact":"linux"}')
           fi
           if [ "$P" = "all" ] || [[ "$P" == *"win"* ]]; then
             ITEMS+=('{"os":"windows-2022","platform":"win","artifact":"*.exe"}')
@@ -58,9 +58,10 @@ jobs:
 
       # naudiodon requires ALSA headers on Linux.
       # libopus-dev provides Opus headers if libopus-node compiles from source.
+      # rpm provides rpmbuild, required by electron-builder's fpm for RPM generation.
       - name: Install Linux system dependencies
         if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libopus-dev
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libopus-dev rpm
 
       # npm ci uses package-lock.json for a clean, reproducible install.
       # The postinstall script (electron-builder install-app-deps) automatically
@@ -159,18 +160,31 @@ jobs:
       - name: Build
         run: npm run electron:build -- --${{ matrix.platform }} ${{ matrix.platform == 'mac' && '--arm64' || '' }} --publish never
 
+      # Collect build artifacts into a staging directory for upload.
+      # Linux produces AppImage + deb + rpm; other platforms produce a single installer.
+      - name: Collect artifacts
+        shell: bash
+        run: |
+          mkdir -p build/artifacts
+          if [ "${{ matrix.platform }}" = "linux" ]; then
+            cp build/*.AppImage build/*.deb build/*.rpm build/artifacts/ 2>/dev/null || true
+          else
+            cp build/${{ matrix.artifact }} build/artifacts/ 2>/dev/null || true
+          fi
+          ls -lh build/artifacts/
+
       # Upload as a workflow artifact (useful for inspecting builds without a release)
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: rigcontrol-web-${{ matrix.platform }}
-          path: build/${{ matrix.artifact }}
+          path: build/artifacts/*
 
       # Attach the installer to the GitHub Release — only runs on tag pushes, not manual dispatches
       - name: Attach to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v3
         with:
-          files: build/${{ matrix.artifact }}
+          files: build/artifacts/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
