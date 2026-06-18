@@ -29,6 +29,27 @@
   !insertmacro MUI_PAGE_FINISH
 !macroend
 
+; ── Migrate FT4222 DLLs to %LOCALAPPDATA% ───────────────────────────────────
+; On upgrade, electron-builder wipes $INSTDIR before extracting new files.
+; If the user previously placed ftd2xx.dll / LibFT4222-64.dll in the install
+; directory (the old documented location), copy them to %LOCALAPPDATA%\RIGCONTROL WEB
+; so they survive the upgrade.  customInit runs before the old directory is removed.
+
+!macro customInit
+  ${If} ${FileExists} "$INSTDIR\ftd2xx.dll"
+  ${OrIf} ${FileExists} "$INSTDIR\LibFT4222-64.dll"
+    CreateDirectory "$LOCALAPPDATA\RIGCONTROL WEB"
+    ${If} ${FileExists} "$INSTDIR\ftd2xx.dll"
+    ${AndIfNot} ${FileExists} "$LOCALAPPDATA\RIGCONTROL WEB\ftd2xx.dll"
+      CopyFiles /SILENT "$INSTDIR\ftd2xx.dll" "$LOCALAPPDATA\RIGCONTROL WEB\"
+    ${EndIf}
+    ${If} ${FileExists} "$INSTDIR\LibFT4222-64.dll"
+    ${AndIfNot} ${FileExists} "$LOCALAPPDATA\RIGCONTROL WEB\LibFT4222-64.dll"
+      CopyFiles /SILENT "$INSTDIR\LibFT4222-64.dll" "$LOCALAPPDATA\RIGCONTROL WEB\"
+    ${EndIf}
+  ${EndIf}
+!macroend
+
 ; ── Windows Defender Firewall rules ──────────────────────────────────────────
 ; Two inbound allow rules are added post-install:
 ;   TCP 3000 — HTTPS web server, scoped to the app executable only
