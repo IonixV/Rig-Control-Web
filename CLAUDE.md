@@ -32,6 +32,17 @@ npm run electron:build   # Full Electron production build (frontend + electron +
 
 There is no hot-reload for `server.ts` or any module under `server/` — restart manually after backend changes.
 
+### Pre-release: Linux Package Smoke Test
+
+Before tagging a release, run the Linux DEB/RPM smoke test to verify packages install cleanly and all shared libraries resolve on the minimum supported distros (Ubuntu 24.04, Fedora 39):
+
+```bash
+bash scripts/test-linux-packages.sh                          # build + test (slow, ~3 min)
+bash scripts/test-linux-packages.sh path/*.deb path/*.rpm    # test pre-built packages (fast)
+```
+
+Requires `podman`. The script installs the DEB in an Ubuntu 24.04 container and the RPM in a Fedora 39 container, then checks: package install succeeds, `.desktop` file and icon are placed correctly, and `ldd` finds all shared libraries for every bundled binary (rigctld, cw-key-helper, ft4222-scope-reader, naudiodon/libportaudio, libopus-node, Electron).
+
 ## Architecture
 
 ### Process Model
