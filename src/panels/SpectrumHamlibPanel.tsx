@@ -11,8 +11,10 @@ const FT710_SPAN_SCALE = 850 / 790;
 
 const DEFAULT_HEIGHT = 200;
 const SPECTRUM_RATIO = 0.3;
-const FLOOR_DEFAULT = -80;
-const CEILING_DEFAULT = -40;
+const FLOOR_DEFAULT_HAMLIB = -80;
+const CEILING_DEFAULT_HAMLIB = -40;
+const FLOOR_DEFAULT_FT4222 = -100;
+const CEILING_DEFAULT_FT4222 = -50;
 const LS_PREFIX = "spectrum-hamlib-";
 const TOOLTIP_MAX_WIDTH = 90;
 
@@ -60,13 +62,24 @@ export default function SpectrumHamlibPanel({
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [colorMapId, setColorMapId] = useState(() => lsGet("colormap", "classic"));
-  const [floor, setFloor] = useState(() => Number(lsGet("floor", String(FLOOR_DEFAULT))));
-  const [ceiling, setCeiling] = useState(() => Number(lsGet("ceiling", String(CEILING_DEFAULT))));
+  const isFt4222 = spectrumSettings.source === "ft4222";
+  const floorDefault = isFt4222 ? FLOOR_DEFAULT_FT4222 : FLOOR_DEFAULT_HAMLIB;
+  const ceilingDefault = isFt4222 ? CEILING_DEFAULT_FT4222 : CEILING_DEFAULT_HAMLIB;
+  const lsFloorKey = isFt4222 ? "floor-ft4222" : "floor";
+  const lsCeilingKey = isFt4222 ? "ceiling-ft4222" : "ceiling";
+
+  const [floor, setFloor] = useState(() => Number(lsGet(lsFloorKey, String(floorDefault))));
+  const [ceiling, setCeiling] = useState(() => Number(lsGet(lsCeilingKey, String(ceilingDefault))));
   const [tooltip, setTooltip] = useState<{ x: number; y: number; label: string } | null>(null);
   const [cursorLineX, setCursorLineX] = useState<number | null>(null);
   const [yaesuStatus, setYaesuStatus] = useState<{ running: boolean; error: string | null }>({ running: false, error: null });
   const [optimisticSpanIndex, setOptimisticSpanIndex] = useState<number | null>(null);
   const optimisticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setFloor(Number(lsGet(lsFloorKey, String(floorDefault))));
+    setCeiling(Number(lsGet(lsCeilingKey, String(ceilingDefault))));
+  }, [spectrumSettings.source]);
 
   useEffect(() => {
     if (!socket) return;
@@ -480,7 +493,7 @@ export default function SpectrumHamlibPanel({
             <input
               type="range" min={-160} max={-60} step={5}
               value={floor}
-              onChange={e => { setFloor(Number(e.target.value)); lsSet("floor", e.target.value); }}
+              onChange={e => { setFloor(Number(e.target.value)); lsSet(lsFloorKey, e.target.value); }}
               className="w-full accent-emerald-500"
             />
           </div>
@@ -494,7 +507,7 @@ export default function SpectrumHamlibPanel({
             <input
               type="range" min={-100} max={0} step={5}
               value={ceiling}
-              onChange={e => { setCeiling(Number(e.target.value)); lsSet("ceiling", e.target.value); }}
+              onChange={e => { setCeiling(Number(e.target.value)); lsSet(lsCeilingKey, e.target.value); }}
               className="w-full accent-emerald-500"
             />
           </div>
