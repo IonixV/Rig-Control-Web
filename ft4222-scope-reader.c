@@ -67,6 +67,9 @@ typedef uint32_t FT_STATUS;
 #define CLK_LEADING    0
 #define SYS_CLK_24     0   /* 24 MHz system clock */
 
+#define FT_PURGE_RX    1
+#define FT_PURGE_TX    2
+
 typedef FT_STATUS (*FT_OpenEx_fn)            (void*, uint32_t, FT_HANDLE*);
 typedef FT_STATUS (*FT_Close_fn)             (FT_HANDLE);
 typedef FT_STATUS (*FT_SetTimeouts_fn)       (FT_HANDLE, uint32_t, uint32_t);
@@ -74,6 +77,7 @@ typedef FT_STATUS (*FT_SetLatencyTimer_fn)   (FT_HANDLE, uint8_t);
 typedef FT_STATUS (*FT4222_UnInitialize_fn)  (FT_HANDLE);
 typedef FT_STATUS (*FT4222_SPIMaster_Init_fn)(FT_HANDLE, int, int, int, int, uint8_t);
 typedef FT_STATUS (*FT4222_SPIMaster_SingleRead_fn)(FT_HANDLE, uint8_t*, uint16_t, uint16_t*, int);
+typedef FT_STATUS (*FT_Purge_fn)             (FT_HANDLE, uint32_t);
 typedef FT_STATUS (*FT4222_SetClock_fn)      (FT_HANDLE, int);
 
 static FT_OpenEx_fn             pFT_OpenEx             = NULL;
@@ -83,6 +87,7 @@ static FT_SetLatencyTimer_fn    pFT_SetLatencyTimer    = NULL;
 static FT4222_UnInitialize_fn   pFT4222_UnInitialize   = NULL;
 static FT4222_SPIMaster_Init_fn pFT4222_SPIMaster_Init = NULL;
 static FT4222_SPIMaster_SingleRead_fn pFT4222_SingleRead = NULL;
+static FT_Purge_fn              pFT_Purge              = NULL;
 static FT4222_SetClock_fn       pFT4222_SetClock       = NULL;
 
 /* ---------- Frame layout ---------- */
@@ -173,6 +178,7 @@ static int load_libraries(void) {
     pFT_Close           = (FT_Close_fn)            get_sym(g_ftd2xx_lib, "FT_Close");
     pFT_SetTimeouts     = (FT_SetTimeouts_fn)      get_sym(g_ftd2xx_lib, "FT_SetTimeouts");
     pFT_SetLatencyTimer = (FT_SetLatencyTimer_fn)  get_sym(g_ftd2xx_lib, "FT_SetLatencyTimer");
+    pFT_Purge           = (FT_Purge_fn)            get_sym(g_ftd2xx_lib, "FT_Purge");
     pFT4222_UnInitialize   = (FT4222_UnInitialize_fn)   get_sym(g_ft4222_lib, "FT4222_UnInitialize");
     pFT4222_SPIMaster_Init = (FT4222_SPIMaster_Init_fn) get_sym(g_ft4222_lib, "FT4222_SPIMaster_Init");
     pFT4222_SingleRead     = (FT4222_SPIMaster_SingleRead_fn) get_sym(g_ft4222_lib, "FT4222_SPIMaster_SingleRead");
@@ -192,6 +198,7 @@ static int load_libraries(void) {
     pFT_Close           = (FT_Close_fn)            get_sym(g_ft4222_lib, "FT_Close");
     pFT_SetTimeouts     = (FT_SetTimeouts_fn)      get_sym(g_ft4222_lib, "FT_SetTimeouts");
     pFT_SetLatencyTimer = (FT_SetLatencyTimer_fn)  get_sym(g_ft4222_lib, "FT_SetLatencyTimer");
+    pFT_Purge           = (FT_Purge_fn)            get_sym(g_ft4222_lib, "FT_Purge");
     pFT4222_UnInitialize   = (FT4222_UnInitialize_fn)   get_sym(g_ft4222_lib, "FT4222_UnInitialize");
     pFT4222_SPIMaster_Init = (FT4222_SPIMaster_Init_fn) get_sym(g_ft4222_lib, "FT4222_SPIMaster_Init");
     pFT4222_SingleRead     = (FT4222_SPIMaster_SingleRead_fn) get_sym(g_ft4222_lib, "FT4222_SPIMaster_SingleRead");
@@ -199,7 +206,7 @@ static int load_libraries(void) {
 #endif
 
     if (!pFT_OpenEx || !pFT_Close || !pFT_SetTimeouts || !pFT_SetLatencyTimer ||
-        !pFT4222_UnInitialize || !pFT4222_SPIMaster_Init ||
+        !pFT_Purge || !pFT4222_UnInitialize || !pFT4222_SPIMaster_Init ||
         !pFT4222_SingleRead || !pFT4222_SetClock) {
         fprintf(stdout, "OPEN_ERROR: failed to resolve required symbols from libft4222\n");
         return 0;
@@ -217,9 +224,9 @@ static int setup_device(void) {
         /* Hold CS deasserted long enough (> one frame period ≈ 87 ms at 375 kHz)
          * for the DSP's SPI state machine to reset its frame byte counter. */
 #ifdef _WIN32
-        Sleep(150);
+        Sleep(250);
 #else
-        usleep(150000);
+        usleep(250000);
 #endif
     }
 
@@ -267,6 +274,12 @@ static int setup_device(void) {
         goto fail;
     }
 
+    /* Flush stale data from USB receive/transmit buffers.  On Windows the
+     * D2XX driver retains old SPI data across close/reopen cycles; without
+     * this the first reads after re-init return zeros and resync scans
+     * through tens of thousands of empty bytes before giving up. */
+    pFT_Purge(g_device, FT_PURGE_RX | FT_PURGE_TX);
+
     return 1;
 
 fail:
@@ -279,92 +292,114 @@ fail:
 /* ---------- Frame resync ---------- */
 
 /*
- * Reads the SPI byte stream one byte at a time through a 4-byte sliding window
- * until the sync pattern FF 01 EE 01 appears (candidate), then reads one full
- * FRAME_SIZE frame into g_frame and verifies that (a) sync appears at SYNC_OFFSET
- * and (b) metadata is sane: raw_span_idx 0-9, center_hz 1 MHz-60 MHz. Both checks
- * are required because the FT-710 DSP emits a doubled sync pattern (FF 01 EE 01
- * appears at both 4088 and 4092), making sync-only verification tautological.
- * Returns 1 with g_frame populated on confirmed alignment, 0 on read error or
- * scan limit exceeded.
- */
-/*
+ * Scans the SPI byte stream in FRAME_SIZE chunks (not byte-at-a-time) for the
+ * sync pattern FF 01 EE 01, then reads a full frame and verifies sync at
+ * SYNC_OFFSET plus metadata sanity (span_idx 0-9, center 1-60 MHz).  Chunk
+ * reads are critical on Windows where each USB round-trip has ~0.1-1 ms
+ * overhead; byte-at-a-time scanning took 10-15 s per attempt.
+ *
  * Returns:
  *   1  — g_frame holds a verified, metadata-valid frame
  *   0  — scan limit exhausted without confirming alignment
  *  -1  — SPI read error mid-scan
  */
 static int resync_frame(int *resync_count) {
-    uint8_t window[4] = {0, 0, 0, 0};
-    uint8_t b;
-    uint16_t got;
+    uint8_t buf[FRAME_SIZE + 3];  /* +3 for cross-chunk overlap */
+    int carry = 0;                /* bytes carried over from previous chunk */
     int scanned = 0;
-    int candidates_found  = 0;  /* times FF 01 EE 01 matched in sliding window */
-    int sync_confirmed    = 0;  /* times verification frame also had sync at SYNC_OFFSET */
-    int metadata_rejected = 0;  /* times sync confirmed but metadata out of range */
-    const int max_scan = FRAME_SIZE * 20;
+    int candidates_found  = 0;
+    int sync_confirmed    = 0;
+    int metadata_rejected = 0;
+    const int max_scan = FRAME_SIZE * 40;
 
     while (scanned < max_scan) {
-        FT_STATUS st = pFT4222_SingleRead(g_device, &b, 1, &got, 0);
-        if (st != FT_OK || got != 1) {
+        uint16_t got = 0;
+        FT_STATUS st = pFT4222_SingleRead(g_device, buf + carry,
+                                          FRAME_SIZE, &got, 0);
+        if (st != FT_OK || got == 0) {
             fprintf(stderr,
-                    "[FT4222] Resync read error after %d bytes scanned "
+                    "[FT4222] Resync read error (status=%u got=%u) after %d bytes "
                     "(candidates=%d sync_confirmed=%d metadata_rejected=%d)\n",
-                    scanned, candidates_found, sync_confirmed, metadata_rejected);
+                    (unsigned)st, (unsigned)got, scanned,
+                    candidates_found, sync_confirmed, metadata_rejected);
             return -1;
         }
+        scanned += (int)got;
 
-        window[0] = window[1]; window[1] = window[2];
-        window[2] = window[3]; window[3] = b;
-        scanned++;
+        int total = carry + (int)got;
+        int hit = 0;
 
-        if (memcmp(window, SYNC_BYTES, 4) == 0) {
+        for (int i = 0; i <= total - 4; i++) {
+            if (memcmp(buf + i, SYNC_BYTES, 4) != 0)
+                continue;
+
             candidates_found++;
-            /* Candidate found — verify by reading the next full frame */
-            uint16_t bytes_read = 0;
-            st = pFT4222_SingleRead(g_device, g_frame, FRAME_SIZE, &bytes_read, 0);
-            if (st != FT_OK || bytes_read != FRAME_SIZE) {
-                fprintf(stderr,
-                        "[FT4222] Resync read error after %d bytes scanned "
-                        "(candidates=%d sync_confirmed=%d metadata_rejected=%d)\n",
-                        scanned, candidates_found, sync_confirmed, metadata_rejected);
-                return -1;
-            }
-            scanned += FRAME_SIZE;
 
-            if (memcmp(g_frame + SYNC_OFFSET, SYNC_BYTES, 4) == 0) {
-                sync_confirmed++;
-                /* Sync bytes confirmed — validate metadata to reject false alignments.
-                 * A false sync match (e.g. the doubled FF 01 EE 01 at bytes 4088-4091)
-                 * is self-consistent across frames, so sync-only verification is
-                 * tautological. Metadata range-checks distinguish true from false. */
-                uint8_t raw_span_idx = g_frame[DATA_OFFSET + 32];
-                uint32_t chz = ((uint32_t)g_frame[DATA_OFFSET + 132] << 24) |
-                               ((uint32_t)g_frame[DATA_OFFSET + 133] << 16) |
-                               ((uint32_t)g_frame[DATA_OFFSET + 134] << 8)  |
-                                (uint32_t)g_frame[DATA_OFFSET + 135];
-                if (raw_span_idx > 9 || chz < 1000000 || chz > 60000000) {
-                    metadata_rejected++;
+            /* Bytes after sync still in buf */
+            int have = total - (i + 4);
+            if (have > FRAME_SIZE) have = FRAME_SIZE;
+            if (have > 0)
+                memcpy(g_frame, buf + i + 4, have);
+
+            int need = FRAME_SIZE - have;
+            if (need > 0) {
+                uint16_t rr = 0;
+                st = pFT4222_SingleRead(g_device, g_frame + have,
+                                        (uint16_t)need, &rr, 0);
+                if (st != FT_OK || rr != (uint16_t)need) {
                     fprintf(stderr,
-                            "[FT4222] False alignment: span_idx=%u center=%lu Hz; continuing scan\n",
-                            (unsigned)raw_span_idx, (unsigned long)chz);
-                    /* fall through to continue scanning */
-                } else {
-                    (*resync_count)++;
-                    fprintf(stderr,
-                            "[FT4222] Resync #%d: alignment confirmed after %d bytes "
-                            "(candidates=%d sync_confirmed=%d metadata_rejected=%d)\n",
-                            *resync_count, scanned,
+                            "[FT4222] Resync verify-read error (status=%u got=%u) "
+                            "after %d bytes (candidates=%d sync_confirmed=%d "
+                            "metadata_rejected=%d)\n",
+                            (unsigned)st, (unsigned)rr, scanned,
                             candidates_found, sync_confirmed, metadata_rejected);
-                    return 1;  /* g_frame holds a verified frame */
+                    return -1;
                 }
-            } else {
-                /* Sync not at expected offset — log the actual bytes around it */
+                scanned += need;
+            }
+
+            if (memcmp(g_frame + SYNC_OFFSET, SYNC_BYTES, 4) != 0) {
                 fprintf(stderr,
                         "[FT4222] False sync candidate: bytes[4088..4095]="
                         "%02X %02X %02X %02X  %02X %02X %02X %02X; continuing scan\n",
                         g_frame[4088], g_frame[4089], g_frame[4090], g_frame[4091],
                         g_frame[4092], g_frame[4093], g_frame[4094], g_frame[4095]);
+                hit = 1; carry = 0;
+                break;
+            }
+
+            sync_confirmed++;
+            uint8_t raw_span_idx = g_frame[DATA_OFFSET + 32];
+            uint32_t chz = ((uint32_t)g_frame[DATA_OFFSET + 132] << 24) |
+                           ((uint32_t)g_frame[DATA_OFFSET + 133] << 16) |
+                           ((uint32_t)g_frame[DATA_OFFSET + 134] << 8)  |
+                            (uint32_t)g_frame[DATA_OFFSET + 135];
+            if (raw_span_idx > 9 || chz < 1000000 || chz > 60000000) {
+                metadata_rejected++;
+                fprintf(stderr,
+                        "[FT4222] False alignment: span_idx=%u center=%lu Hz; "
+                        "continuing scan\n",
+                        (unsigned)raw_span_idx, (unsigned long)chz);
+                hit = 1; carry = 0;
+                break;
+            }
+
+            (*resync_count)++;
+            fprintf(stderr,
+                    "[FT4222] Resync #%d: alignment confirmed after %d bytes "
+                    "(candidates=%d sync_confirmed=%d metadata_rejected=%d)\n",
+                    *resync_count, scanned,
+                    candidates_found, sync_confirmed, metadata_rejected);
+            return 1;
+        }
+
+        if (!hit) {
+            /* Keep last 3 bytes for cross-chunk boundary matching */
+            if (total >= 3) {
+                memmove(buf, buf + total - 3, 3);
+                carry = 3;
+            } else {
+                carry = 0;
             }
         }
     }
@@ -421,9 +456,16 @@ int main(void) {
                         fprintf(stderr, "[FT4222] Re-init #%d failed, exiting\n", reinit_count);
                         break;
                     }
-                    fprintf(stderr, "[FT4222] Re-init #%d succeeded, resuming reads\n", reinit_count);
-                    log_next_frame_bytes = 1;
+                    fprintf(stderr, "[FT4222] Re-init #%d succeeded; scanning for alignment\n", reinit_count);
                     sync_fails = 0;
+                    int rsync_ret = resync_frame(&resync_count);
+                    if (rsync_ret == 1) {
+                        frame_ready = 1;
+                        log_next_frame_bytes = 1;
+                    } else if (rsync_ret == -1) {
+                        fprintf(stderr, "[FT4222] Read error during post-init resync, exiting\n");
+                        g_running = 0;
+                    }
                 }
                 continue;
             }
@@ -456,8 +498,15 @@ int main(void) {
                         fprintf(stderr, "[FT4222] Re-init #%d failed, exiting\n", reinit_count);
                         break;
                     }
-                    fprintf(stderr, "[FT4222] Re-init #%d succeeded\n", reinit_count);
-                    log_next_frame_bytes = 1;
+                    fprintf(stderr, "[FT4222] Re-init #%d succeeded; scanning for alignment\n", reinit_count);
+                    int rsync2 = resync_frame(&resync_count);
+                    if (rsync2 == 1) {
+                        frame_ready = 1;
+                        log_next_frame_bytes = 1;
+                    } else if (rsync2 == -1) {
+                        fprintf(stderr, "[FT4222] Read error during post-init resync, exiting\n");
+                        g_running = 0;
+                    }
                 }
                 sync_fails = 0;
             }
