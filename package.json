@@ -48,6 +48,8 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "allowElevation": true,
+      "installerIcon": "assets/icons/rcw.ico",
+      "uninstallerIcon": "assets/icons/rcw.ico",
       "include": "buildResources/installer.nsh"
     },
     "win": {
