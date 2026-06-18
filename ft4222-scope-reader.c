@@ -15,7 +15,7 @@
  * Requires libft4222 installed on the host:
  *   Linux:   libft4222.so  (from ftdi.com/products/ft4222h)
  *   macOS:   libft4222.dylib
- *   Windows: LibFT4222-64.dll + ftd2xx.dll in %LOCALAPPDATA%\RIGCONTROL WEB\ (or exe dir)
+ *   Windows: LibFT4222-64.dll + ftd2xx.dll in %APPDATA%\RigControl Web\ (or exe dir)
  *
  * Build:
  *   Linux:   gcc -O2 -o bin/linux/ft4222-scope-reader ft4222-scope-reader.c -ldl
@@ -148,29 +148,30 @@ static int load_libraries(void) {
 #ifdef _WIN32
     /*
      * Windows: ftd2xx.dll holds FT_ functions; LibFT4222-64.dll holds FT4222_.
-     * Add %LOCALAPPDATA%\RIGCONTROL WEB to the DLL search path so users can
-     * place the DLLs there (survives app upgrades, unlike the install directory).
+     * Add %APPDATA%\RigControl Web (Electron's userData directory) to the DLL
+     * search path so the DLLs survive app upgrades (the install directory is
+     * wiped by the NSIS installer on each update).
      * The exe directory is searched by default, so existing installs still work.
      */
     {
-        char localappdata_dir[MAX_PATH];
-        DWORD len = GetEnvironmentVariableA("LOCALAPPDATA", localappdata_dir, MAX_PATH);
+        char appdata_dir[MAX_PATH];
+        DWORD len = GetEnvironmentVariableA("APPDATA", appdata_dir, MAX_PATH);
         if (len > 0 && len < MAX_PATH) {
             char dll_dir[MAX_PATH];
-            snprintf(dll_dir, MAX_PATH, "%s\\RIGCONTROL WEB", localappdata_dir);
+            snprintf(dll_dir, MAX_PATH, "%s\\RigControl Web", appdata_dir);
             SetDllDirectoryA(dll_dir);
         }
     }
     g_ftd2xx_lib = open_lib("ftd2xx");
     if (!g_ftd2xx_lib) {
-        fprintf(stdout, "OPEN_ERROR: ftd2xx.dll not found — copy it to %%LOCALAPPDATA%%\\RIGCONTROL WEB\\\n");
+        fprintf(stdout, "OPEN_ERROR: ftd2xx.dll not found — copy it to %%APPDATA%%\\RigControl Web\\\n");
         return 0;
     }
     g_ft4222_lib = open_lib("LibFT4222-64");
     if (!g_ft4222_lib) {
         g_ft4222_lib = open_lib("LibFT4222");
         if (!g_ft4222_lib) {
-            fprintf(stdout, "OPEN_ERROR: LibFT4222.dll not found — copy it to %%LOCALAPPDATA%%\\RIGCONTROL WEB\\\n");
+            fprintf(stdout, "OPEN_ERROR: LibFT4222.dll not found — copy it to %%APPDATA%%\\RigControl Web\\\n");
             return 0;
         }
     }

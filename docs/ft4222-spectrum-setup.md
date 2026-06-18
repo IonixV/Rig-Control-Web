@@ -234,15 +234,15 @@ Go to the [FT4222H Software Examples page](https://ftdichip.com/software-example
 - `ftd2xx.dll`
 - `LibFT4222-64.dll`
 
-Copy both files to `%LOCALAPPDATA%\RIGCONTROL WEB\`. To open this folder quickly, press **Win+R**, paste the following, and press Enter:
+Copy both files to `%APPDATA%\RigControl Web\` (this is the same folder where RigControl Web stores its settings). To open this folder quickly, press **Win+R**, paste the following, and press Enter:
 
 ```
-%LOCALAPPDATA%\RIGCONTROL WEB
+"%APPDATA%\RigControl Web"
 ```
 
-If the `RIGCONTROL WEB` folder does not exist yet, create it first.
+If the `RigControl Web` folder does not exist yet, create it first.
 
-> **Upgrading from a previous version?** If you previously placed the DLLs in the program directory (e.g. `C:\Program Files\RIGCONTROL WEB\`), the installer will automatically copy them to `%LOCALAPPDATA%\RIGCONTROL WEB` during the upgrade — no manual action required.
+> **Upgrading from a previous version?** If you previously placed the DLLs in the program directory (e.g. `C:\Program Files\RIGCONTROL WEB\`), the installer will automatically copy them to `%APPDATA%\RigControl Web` during the upgrade — no manual action required.
 
 RigControl Web will show a clear error on startup if either file is missing.
 
@@ -269,7 +269,7 @@ Check the error message shown in the Spectrum Scope settings panel.
 
 | Error | Most likely cause | Fix |
 |-------|-------------------|-----|
-| `libft4222 not found` | Library not installed or not on search path | Redo the install steps for your platform; on Windows, ensure the DLLs are in `%LOCALAPPDATA%\RIGCONTROL WEB` |
+| `libft4222 not found` | Library not installed or not on search path | Redo the install steps for your platform; on Windows, ensure the DLLs are in `%APPDATA%\RigControl Web` |
 | `No FT4222 device found` | Radio not connected, or SCU-LAN10 not enabled | Check USB cable and radio menu |
 | `device not found` + `using the FTDI D2XX driver` (Windows) | The FT4222H driver was replaced with WinUSB or libusb | Restore the stock FTDI driver — see Windows Step 2 |
 | `LIBUSB_ERROR_ACCESS` / permission denied (Linux) | udev rule missing or not applied | Redo Linux Step 6 and replug the USB cable |

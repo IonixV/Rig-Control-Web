@@ -29,23 +29,24 @@
   !insertmacro MUI_PAGE_FINISH
 !macroend
 
-; ── Migrate FT4222 DLLs to %LOCALAPPDATA% ───────────────────────────────────
+; ── Migrate FT4222 DLLs to %APPDATA%\RigControl Web ─────────────────────────
 ; On upgrade, electron-builder wipes $INSTDIR before extracting new files.
 ; If the user previously placed ftd2xx.dll / LibFT4222-64.dll in the install
-; directory (the old documented location), copy them to %LOCALAPPDATA%\RIGCONTROL WEB
-; so they survive the upgrade.  customInit runs before the old directory is removed.
+; directory (the old documented location), copy them to %APPDATA%\RigControl Web
+; (Electron's userData directory) so they survive the upgrade.
+; customInit runs before the old directory is removed.
 
 !macro customInit
   ${If} ${FileExists} "$INSTDIR\ftd2xx.dll"
   ${OrIf} ${FileExists} "$INSTDIR\LibFT4222-64.dll"
-    CreateDirectory "$LOCALAPPDATA\RIGCONTROL WEB"
+    CreateDirectory "$APPDATA\RigControl Web"
     ${If} ${FileExists} "$INSTDIR\ftd2xx.dll"
-    ${AndIfNot} ${FileExists} "$LOCALAPPDATA\RIGCONTROL WEB\ftd2xx.dll"
-      CopyFiles /SILENT "$INSTDIR\ftd2xx.dll" "$LOCALAPPDATA\RIGCONTROL WEB\"
+    ${AndIfNot} ${FileExists} "$APPDATA\RigControl Web\ftd2xx.dll"
+      CopyFiles /SILENT "$INSTDIR\ftd2xx.dll" "$APPDATA\RigControl Web\"
     ${EndIf}
     ${If} ${FileExists} "$INSTDIR\LibFT4222-64.dll"
-    ${AndIfNot} ${FileExists} "$LOCALAPPDATA\RIGCONTROL WEB\LibFT4222-64.dll"
-      CopyFiles /SILENT "$INSTDIR\LibFT4222-64.dll" "$LOCALAPPDATA\RIGCONTROL WEB\"
+    ${AndIfNot} ${FileExists} "$APPDATA\RigControl Web\LibFT4222-64.dll"
+      CopyFiles /SILENT "$INSTDIR\LibFT4222-64.dll" "$APPDATA\RigControl Web\"
     ${EndIf}
   ${EndIf}
 !macroend
