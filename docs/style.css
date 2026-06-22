@@ -301,6 +301,14 @@ section {
   flex-shrink: 0;
 }
 
+.tech-item a {
+  color: inherit;
+}
+
+.tech-item a:hover {
+  color: var(--accent);
+}
+
 /* ---- PLATFORMS ---- */
 
 .platform-grid {
@@ -330,6 +338,56 @@ section {
 }
 
 .platform-card p {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* ---- DOWNLOAD ---- */
+
+.download-section {
+  text-align: center;
+}
+
+.download-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.download-card {
+  display: block;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 32px 24px;
+  text-align: center;
+  color: var(--text);
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+}
+
+.download-card:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  text-decoration: none;
+}
+
+.download-icon {
+  font-size: 40px;
+  margin-bottom: 16px;
+  color: var(--accent);
+}
+
+.download-card h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 6px;
+}
+
+.download-card p {
   font-size: 13px;
   color: var(--text-muted);
 }

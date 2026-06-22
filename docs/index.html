@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RigControl Web &mdash; Remote Amateur Radio Control</title>
   <meta name="description" content="Open-source web and desktop application for controlling amateur radio equipment via Hamlib. Real-time audio, video, spectrum scope, CW keyer, POTA/SOTA spots, and more.">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer">
   <link rel="icon" type="image/png" sizes="32x32" href="images/icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,6 +24,7 @@
       <ul class="nav-links">
         <li><a href="#features">Features</a></li>
         <li><a href="#platforms">Platforms</a></li>
+        <li><a href="#download">Download</a></li>
         <li><a href="https://github.com/jbdubbs/Rig-Control-Web">GitHub</a></li>
         <li><a href="https://github.com/jbdubbs/Rig-Control-Web/wiki">Docs</a></li>
       </ul>
@@ -33,7 +35,7 @@
   <header class="hero">
     <img src="images/lockup-horizontal.png" alt="RigControl Web" class="hero-banner">
     <h1>Control your rig from <span class="accent">anywhere</span></h1>
-    <p>Open-source web and desktop application for remote amateur radio operation via Hamlib. Real-time audio, video, spectrum, CW keyer, and propagation data in your browser.</p>
+    <p>Open-source web and desktop application for remote amateur radio operation via <a href="https://github.com/Hamlib/Hamlib">Hamlib</a>. Real-time audio, video, spectrum, CW keyer, and propagation data in your browser.</p>
     <div class="hero-buttons">
       <a href="https://github.com/jbdubbs/Rig-Control-Web/releases" class="btn btn-primary">Download</a>
       <a href="https://github.com/jbdubbs/Rig-Control-Web" class="btn btn-secondary">View on GitHub</a>
@@ -89,7 +91,7 @@
       <img src="images/spectrum-scope.png" alt="Spectrum Scope" class="panel-img">
       <div class="panel-text">
         <h3>Spectrum Scope</h3>
-        <p>Live panadapter and waterfall display. Supports Hamlib UDP multicast (Icom) and direct USB-SPI from the Yaesu FT-710. Click anywhere on the scope to tune.</p>
+        <p>Live panadapter and waterfall display. Supports <a href="https://github.com/Hamlib/Hamlib">Hamlib</a> UDP multicast (Icom) and direct USB-SPI from the Yaesu FT-710. Click anywhere on the scope to tune.</p>
       </div>
     </div>
 
@@ -137,7 +139,7 @@
       <img src="images/solar-conditions.png" alt="Solar Conditions" class="panel-img">
       <div class="panel-text">
         <h3>Solar Conditions</h3>
-        <p>HF band conditions (day/night), VHF propagation alerts, SFI, sunspot number, A-index, and K-index from hamqsl.com and prop.kc2g.com. Know what's open before you tune.</p>
+        <p>HF band conditions (day/night), VHF propagation alerts, SFI, sunspot number, A-index, and K-index from <a href="https://www.hamqsl.com/">hamqsl.com</a> and <a href="https://prop.kc2g.com/">prop.kc2g.com</a>. Know what's open before you tune.</p>
       </div>
     </div>
 
@@ -145,7 +147,7 @@
       <img src="images/muf-map.png" alt="MUF Map" class="panel-img">
       <div class="panel-text">
         <h3>MUF Map</h3>
-        <p>Zoomable world propagation map from prop.kc2g.com. MUFD and foF2 views with historical time slots. Scroll-zoom, drag-pan, and pinch-to-zoom.</p>
+        <p>Zoomable world propagation map from <a href="https://prop.kc2g.com/">prop.kc2g.com</a>. MUFD and foF2 views with historical time slots. Scroll-zoom, drag-pan, and pinch-to-zoom.</p>
       </div>
     </div>
 
@@ -153,7 +155,7 @@
       <img src="images/command-console.png" alt="Command Console" class="panel-img">
       <div class="panel-text">
         <h3>Command Console</h3>
-        <p>Send raw Hamlib commands directly to rigctld and see the responses. Useful for debugging and advanced rig control.</p>
+        <p>Send raw <a href="https://github.com/Hamlib/Hamlib">Hamlib</a> commands directly to rigctld and see the responses. Useful for debugging and advanced rig control.</p>
       </div>
     </div>
 
@@ -171,7 +173,7 @@
     <div class="section-label">Under the Hood</div>
     <h2 class="section-title">Built on modern, proven technology</h2>
     <div class="tech-list">
-      <div class="tech-item"><span class="tech-dot"></span>Hamlib / rigctld</div>
+      <div class="tech-item"><span class="tech-dot"></span><a href="https://github.com/Hamlib/Hamlib">Hamlib</a> / rigctld</div>
       <div class="tech-item"><span class="tech-dot"></span>Node.js + Express</div>
       <div class="tech-item"><span class="tech-dot"></span>Socket.io (real-time)</div>
       <div class="tech-item"><span class="tech-dot"></span>React + Vite</div>
@@ -207,6 +209,29 @@
         <h3>Any Browser</h3>
         <p>Remote client via HTTPS</p>
       </div>
+    </div>
+  </section>
+
+  <!-- Download -->
+  <section id="download" class="download-section">
+    <div class="section-label">Download</div>
+    <h2 class="section-title">Get the latest release</h2>
+    <div class="download-grid">
+      <a href="https://github.com/jbdubbs/Rig-Control-Web/releases/latest" class="download-card">
+        <i class="fa-brands fa-windows download-icon"></i>
+        <h3>Windows</h3>
+        <p>NSIS installer (.exe)</p>
+      </a>
+      <a href="https://github.com/jbdubbs/Rig-Control-Web/releases/latest" class="download-card">
+        <i class="fa-brands fa-apple download-icon"></i>
+        <h3>macOS</h3>
+        <p>DMG (Universal)</p>
+      </a>
+      <a href="https://github.com/jbdubbs/Rig-Control-Web/releases/latest" class="download-card">
+        <i class="fa-brands fa-linux download-icon"></i>
+        <h3>Linux</h3>
+        <p>AppImage, DEB, RPM</p>
+      </a>
     </div>
   </section>
 
