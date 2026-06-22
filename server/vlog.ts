@@ -1,4 +1,25 @@
 const argv = process.argv;
+
+if (argv.includes('--help')) {
+  console.log(`
+RigControl Web
+
+Usage: npm run dev [-- <options>]
+
+Debug options:
+  --debug-rig        Rig communication (rigctld TCP commands, poll results)
+  --debug-audio      Audio pipeline (naudiodon, Opus encode/decode, mic routing)
+  --debug-video      Video relay (H.264 chunk forwarding, keyframe buffering)
+  --debug-cw         CW keyer (iambic state machine, DTR/RTS key events)
+  --debug-infra      Infrastructure (TLS, settings, Socket.io lifecycle)
+  --debug-spectrum   Spectrum scope (Hamlib UDP multicast, FT4222 SPI frames)
+  --debug-spots      Spot integration (POTA/SOTA/WWFF fetch lifecycle)
+  --debug-all        Enable all debug flags
+  --help             Show this help message
+`);
+  process.exit(0);
+}
+
 const debugAll = argv.includes('--debug-all');
 
 export const DEBUG_RIG      = debugAll || argv.includes('--debug-rig');
