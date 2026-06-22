@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RigControl Web &mdash; Remote Amateur Radio Control</title>
+  <meta name="description" content="Open-source web and desktop application for controlling amateur radio equipment via Hamlib. Real-time audio, video, spectrum scope, CW keyer, POTA/SOTA spots, and more.">
+  <link rel="icon" type="image/png" sizes="32x32" href="images/icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <div class="nav-brand">
+        <img src="images/icon.png" alt="RigControl Web icon">
+        RigControl Web
+      </div>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#platforms">Platforms</a></li>
+        <li><a href="https://github.com/jbdubbs/Rig-Control-Web">GitHub</a></li>
+        <li><a href="https://github.com/jbdubbs/Rig-Control-Web/wiki">Docs</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <header class="hero">
+    <img src="images/icon.png" alt="RigControl Web" class="hero-icon">
+    <h1>Control your rig from <span class="accent">anywhere</span></h1>
+    <p>Open-source web and desktop application for remote amateur radio operation via Hamlib. Real-time audio, video, spectrum, CW keyer, and propagation data in your browser.</p>
+    <div class="hero-buttons">
+      <a href="https://github.com/jbdubbs/Rig-Control-Web/releases" class="btn btn-primary">Download</a>
+      <a href="https://github.com/jbdubbs/Rig-Control-Web" class="btn btn-secondary">View on GitHub</a>
+    </div>
+  </header>
+
+  <!-- Screenshots -->
+  <div class="screenshots">
+    <div class="screenshot-grid">
+      <img src="images/compact-view.png" alt="RigControl Web compact desktop view" class="screenshot-desktop">
+      <img src="images/phone-view.png" alt="RigControl Web phone view" class="screenshot-phone">
+    </div>
+  </div>
+
+  <!-- Features -->
+  <section id="features">
+    <div class="section-label">Features</div>
+    <h2 class="section-title">Everything you need for remote operation</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <span class="feature-icon" aria-hidden="true">&#x1F4FB;</span>
+        <h3>Full Rig Control</h3>
+        <p>Frequency, mode, bandwidth, VFO, split, PTT, and raw command access through Hamlib's rigctld. Support for 200+ radio models.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon" aria-hidden="true">&#x1F3A7;</span>
+        <h3>Bidirectional Audio</h3>
+        <p>Low-latency Opus-compressed audio streaming. Hear the radio and transmit with your mic from any browser on your network.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon" aria-hidden="true">&#x1F4F9;</span>
+        <h3>Live Video</h3>
+        <p>Browser-native H.264 video streaming from the Electron host to remote clients. See your radio's front panel in real time.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon" aria-hidden="true">&#x1F4C8;</span>
+        <h3>Spectrum Scope</h3>
+        <p>Live waterfall and spectrum display via Hamlib UDP multicast (Icom) or direct USB-SPI from the Yaesu FT-710's built-in FT4222H chip.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon" aria-hidden="true">&#x1F511;</span>
+        <h3>CW Keyer &amp; Decoder</h3>
+        <p>Server-side iambic keyer (A/B/straight) with client-side sidetone. GGMorse WASM decoder displays received CW text in real time.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon" aria-hidden="true">&#x1F4CD;</span>
+        <h3>POTA / SOTA / WWFF Spots</h3>
+        <p>Live activator spots with band, mode, and age filtering. Click-to-tune jumps your VFO directly to spotted frequencies.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon" aria-hidden="true">&#x2600;&#xFE0F;</span>
+        <h3>Solar &amp; Propagation</h3>
+        <p>HF band conditions, VHF phenomena, SFI, SSN, and MUF map from hamqsl.com and prop.kc2g.com. Know what's open before you tune.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon" aria-hidden="true">&#x1F4BB;</span>
+        <h3>Configurable Layout</h3>
+        <p>Drag-and-drop panel grid that adapts from desktop to phone. Add, remove, and rearrange panels to build your operating view.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon" aria-hidden="true">&#x1F512;</span>
+        <h3>Secure by Default</h3>
+        <p>Auto-generated HTTPS with EC P-256 certificates covering localhost and all LAN IPs. No manual TLS setup required.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tech -->
+  <section id="tech">
+    <div class="section-label">Under the Hood</div>
+    <h2 class="section-title">Built on modern, proven technology</h2>
+    <div class="tech-list">
+      <div class="tech-item"><span class="tech-dot"></span>Hamlib / rigctld</div>
+      <div class="tech-item"><span class="tech-dot"></span>Node.js + Express</div>
+      <div class="tech-item"><span class="tech-dot"></span>Socket.io (real-time)</div>
+      <div class="tech-item"><span class="tech-dot"></span>React + Vite</div>
+      <div class="tech-item"><span class="tech-dot"></span>Electron (desktop)</div>
+      <div class="tech-item"><span class="tech-dot"></span>WebCodecs (H.264 / Opus)</div>
+      <div class="tech-item"><span class="tech-dot"></span>naudiodon (PortAudio)</div>
+      <div class="tech-item"><span class="tech-dot"></span>GGMorse WASM (CW decode)</div>
+    </div>
+  </section>
+
+  <!-- Platforms -->
+  <section id="platforms">
+    <div class="section-label">Platforms</div>
+    <h2 class="section-title">Runs where you do</h2>
+    <div class="platform-grid">
+      <div class="platform-card">
+        <div class="platform-icon" aria-hidden="true">&#x1F5A5;&#xFE0F;</div>
+        <h3>Windows</h3>
+        <p>NSIS installer</p>
+      </div>
+      <div class="platform-card">
+        <div class="platform-icon" aria-hidden="true">&#x1F34E;</div>
+        <h3>macOS</h3>
+        <p>DMG (Universal)</p>
+      </div>
+      <div class="platform-card">
+        <div class="platform-icon" aria-hidden="true">&#x1F427;</div>
+        <h3>Linux</h3>
+        <p>AppImage, DEB, RPM</p>
+      </div>
+      <div class="platform-card">
+        <div class="platform-icon" aria-hidden="true">&#x1F310;</div>
+        <h3>Any Browser</h3>
+        <p>Remote client via HTTPS</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <p>RigControl Web is open-source software. <a href="https://github.com/jbdubbs/Rig-Control-Web">View on GitHub</a></p>
+    </div>
+  </footer>
+
+</body>
+</html>
