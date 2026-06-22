@@ -5,6 +5,7 @@ import { vlogAudio as vlog } from "./vlog.ts";
 const OUTBOUND_SILENCE = Buffer.alloc(960 * 2);
 const OUTBOUND_PRE_FILL = 3;
 const OUTBOUND_JITTER_MAX = 8;
+const CW_MODES = new Set(["CW", "CWR", "CW-R"]);
 
 export async function initAudioEngine(ctx: ServerContext): Promise<void> {
   try {
@@ -114,7 +115,7 @@ export async function startAudio(ctx: ServerContext): Promise<void> {
 
       ctx.audioInputProcess.on('data', (data: Buffer) => {
         try {
-          if (ctx.activeMicClientId && ctx.lastStatus.ptt) return;
+          if (ctx.activeMicClientId && ctx.lastStatus.ptt && !CW_MODES.has(ctx.lastStatus.mode)) return;
           pcmBuffer = Buffer.concat([pcmBuffer, data]);
           while (pcmBuffer.length >= FRAME_SIZE_BYTES) {
             const frame = pcmBuffer.subarray(0, FRAME_SIZE_BYTES);
