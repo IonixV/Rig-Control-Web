@@ -207,7 +207,7 @@ a:hover {
 }
 
 .screenshot-phone {
-  width: 200px;
+  width: 300px;
 }
 
 /* ---- SECTION COMMON ---- */
@@ -241,11 +241,7 @@ section {
   display: flex;
   align-items: center;
   gap: 40px;
-  margin-bottom: 48px;
-}
-
-.panel-row.reverse {
-  flex-direction: row-reverse;
+  margin-bottom: 64px;
 }
 
 .panel-img {
@@ -369,7 +365,7 @@ section {
   }
 
   .screenshot-phone {
-    width: 160px;
+    width: 240px;
   }
 
   .nav-links {
@@ -380,8 +376,7 @@ section {
     font-size: 13px;
   }
 
-  .panel-row,
-  .panel-row.reverse {
+  .panel-row {
     flex-direction: column;
   }
 
