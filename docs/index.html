@@ -48,55 +48,120 @@
     </div>
   </div>
 
-  <!-- Features -->
+  <!-- Panels -->
   <section id="features">
-    <div class="section-label">Features</div>
+    <div class="section-label">Panels</div>
     <h2 class="section-title">Everything you need for remote operation</h2>
-    <div class="features-grid">
-      <div class="feature-card">
-        <span class="feature-icon" aria-hidden="true">&#x1F4FB;</span>
-        <h3>Full Rig Control</h3>
-        <p>Frequency, mode, bandwidth, VFO, split, PTT, and raw command access through Hamlib's rigctld. Support for 200+ radio models.</p>
+
+    <div class="panel-row">
+      <img src="images/vfo.png" alt="VFO Panel" class="panel-img">
+      <div class="panel-text">
+        <h3>VFO</h3>
+        <p>Tune your radio with configurable step sizes from 10 Hz to 100 kHz. VFO A/B switching, split operation, and mode/bandwidth selection.</p>
       </div>
-      <div class="feature-card">
-        <span class="feature-icon" aria-hidden="true">&#x1F3A7;</span>
-        <h3>Bidirectional Audio</h3>
-        <p>Low-latency Opus-compressed audio streaming. Hear the radio and transmit with your mic from any browser on your network.</p>
+    </div>
+
+    <div class="panel-row reverse">
+      <img src="images/controls.png" alt="Controls Panel" class="panel-img">
+      <div class="panel-text">
+        <h3>Controls</h3>
+        <p>One-tap PTT, TUNE, ATT, pre-amp, noise blanker, ANF, AGC, and DNR. Power output and CW mode shown at a glance.</p>
       </div>
-      <div class="feature-card">
-        <span class="feature-icon" aria-hidden="true">&#x1F4F9;</span>
-        <h3>Live Video</h3>
-        <p>Browser-native H.264 video streaming from the Electron host to remote clients. See your radio's front panel in real time.</p>
+    </div>
+
+    <div class="panel-row">
+      <img src="images/signal-meter.png" alt="Signal Meter" class="panel-img">
+      <div class="panel-text">
+        <h3>Signal Meter</h3>
+        <p>Live S-meter, SWR, ALC, and VDD traces on a scrolling chart. Tabbed views let you watch the metric that matters.</p>
       </div>
-      <div class="feature-card">
-        <span class="feature-icon" aria-hidden="true">&#x1F4C8;</span>
+    </div>
+
+    <div class="panel-row reverse">
+      <img src="images/rf-levels.png" alt="RF Levels Panel" class="panel-img">
+      <div class="panel-text">
+        <h3>RF Levels</h3>
+        <p>Adjust RF power, RF gain level, DNR level, and noise blanker level with drag sliders.</p>
+      </div>
+    </div>
+
+    <div class="panel-row">
+      <img src="images/spectrum-scope.png" alt="Spectrum Scope" class="panel-img">
+      <div class="panel-text">
         <h3>Spectrum Scope</h3>
-        <p>Live waterfall and spectrum display via Hamlib UDP multicast (Icom) or direct USB-SPI from the Yaesu FT-710's built-in FT4222H chip.</p>
+        <p>Live panadapter and waterfall display. Supports Hamlib UDP multicast (Icom) and direct USB-SPI from the Yaesu FT-710. Click anywhere on the scope to tune.</p>
       </div>
-      <div class="feature-card">
-        <span class="feature-icon" aria-hidden="true">&#x1F511;</span>
-        <h3>CW Keyer &amp; Decoder</h3>
-        <p>Server-side iambic keyer (A/B/straight) with client-side sidetone. GGMorse WASM decoder displays received CW text in real time.</p>
+    </div>
+
+    <div class="panel-row reverse">
+      <img src="images/audio-waterfall.png" alt="Audio Waterfall" class="panel-img">
+      <div class="panel-text">
+        <h3>Audio Waterfall</h3>
+        <p>Visualize received audio as a spectrum plot and scrolling waterfall. Useful for spotting CW signals and tuning to the correct audio frequency.</p>
       </div>
-      <div class="feature-card">
-        <span class="feature-icon" aria-hidden="true">&#x1F4CD;</span>
+    </div>
+
+    <div class="panel-row">
+      <img src="images/audio-feed.png" alt="Audio Feed" class="panel-img">
+      <div class="panel-text">
+        <h3>Audio Feed</h3>
+        <p>Bidirectional Opus audio streaming. Mute/unmute speaker and mic independently. Join from any browser on your network.</p>
+      </div>
+    </div>
+
+    <div class="panel-row reverse">
+      <img src="images/video-feed.png" alt="Video Feed" class="panel-img">
+      <div class="panel-text">
+        <h3>Video Feed</h3>
+        <p>See your radio's front panel remotely via H.264 video. Feed an HDMI capture card into the host and stream to any browser client.</p>
+      </div>
+    </div>
+
+    <div class="panel-row">
+      <img src="images/all-spots.png" alt="Spots Panel" class="panel-img">
+      <div class="panel-text">
         <h3>POTA / SOTA / WWFF Spots</h3>
-        <p>Live activator spots with band, mode, and age filtering. Click-to-tune jumps your VFO directly to spotted frequencies.</p>
+        <p>Live activator spots with band, mode, and age filtering. Click any spot to instantly tune the VFO and set the mode.</p>
       </div>
-      <div class="feature-card">
-        <span class="feature-icon" aria-hidden="true">&#x2600;&#xFE0F;</span>
-        <h3>Solar &amp; Propagation</h3>
-        <p>HF band conditions, VHF phenomena, SFI, SSN, and MUF map from hamqsl.com and prop.kc2g.com. Know what's open before you tune.</p>
+    </div>
+
+    <div class="panel-row reverse">
+      <img src="images/cw-decode.png" alt="CW Decode Panel" class="panel-img">
+      <div class="panel-text">
+        <h3>CW Decoder</h3>
+        <p>Real-time Morse code decoding via GGMorse WASM. Shows decoded text, estimated pitch, and speed in WPM.</p>
       </div>
-      <div class="feature-card">
-        <span class="feature-icon" aria-hidden="true">&#x1F4BB;</span>
-        <h3>Configurable Layout</h3>
-        <p>Drag-and-drop panel grid that adapts from desktop to phone. Add, remove, and rearrange panels to build your operating view.</p>
+    </div>
+
+    <div class="panel-row">
+      <img src="images/solar-conditions.png" alt="Solar Conditions" class="panel-img">
+      <div class="panel-text">
+        <h3>Solar Conditions</h3>
+        <p>HF band conditions (day/night), VHF propagation alerts, SFI, sunspot number, A-index, and K-index from hamqsl.com. Know what's open before you tune.</p>
       </div>
-      <div class="feature-card">
-        <span class="feature-icon" aria-hidden="true">&#x1F512;</span>
-        <h3>Secure by Default</h3>
-        <p>Auto-generated HTTPS with EC P-256 certificates covering localhost and all LAN IPs. No manual TLS setup required.</p>
+    </div>
+
+    <div class="panel-row reverse">
+      <img src="images/muf-map.png" alt="MUF Map" class="panel-img">
+      <div class="panel-text">
+        <h3>MUF Map</h3>
+        <p>Zoomable world propagation map from prop.kc2g.com. MUFD and foF2 views with historical time slots. Scroll-zoom, drag-pan, and pinch-to-zoom.</p>
+      </div>
+    </div>
+
+    <div class="panel-row">
+      <img src="images/command-console.png" alt="Command Console" class="panel-img">
+      <div class="panel-text">
+        <h3>Command Console</h3>
+        <p>Send raw Hamlib commands directly to rigctld and see the responses. Useful for debugging and advanced rig control.</p>
+      </div>
+    </div>
+
+    <div class="panel-row reverse">
+      <img src="images/settings-rigctld.png" alt="Settings — rigctld" class="panel-img panel-img-tall">
+      <div class="panel-text">
+        <h3>Settings</h3>
+        <p>Configure rigctld connection, rig model, serial port, CW keyer mode and speed, sidetone, and key bindings. Manage user accounts, sessions, and audit logs from the Admin tab.</p>
       </div>
     </div>
   </section>

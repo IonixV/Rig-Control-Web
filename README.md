@@ -21,10 +21,10 @@ Developers who want to run from source will find build instructions in the [Deve
 ## Screenshots
 
 ### Compact View (Desktop)
-![RigControl Web — Compact View](assets/compact%20view%2006.11.2026.png)
+![RigControl Web — Compact View](assets/1.0.0.screenshots/compact-view-1.0.0.png)
 
 ### Phone View (Mobile)
-<img src="assets/phone%20view%2006.11.2026.png" alt="RigControl Web — Phone View" width="50%">
+<img src="assets/1.0.0.screenshots/phone%20view%2006.11.2026.png" alt="RigControl Web — Phone View" width="50%">
 
 ## Features
 

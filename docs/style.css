@@ -235,44 +235,47 @@ section {
   letter-spacing: -0.015em;
 }
 
-/* ---- FEATURES ---- */
+/* ---- PANELS SHOWCASE ---- */
 
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
+.panel-row {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  margin-bottom: 48px;
 }
 
-.feature-card {
-  background: var(--bg-card);
+.panel-row.reverse {
+  flex-direction: row-reverse;
+}
+
+.panel-img {
+  width: 50%;
+  max-width: 520px;
+  border-radius: 10px;
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 28px;
-  transition: background 0.2s, border-color 0.2s;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+  flex-shrink: 0;
 }
 
-.feature-card:hover {
-  background: var(--bg-card-hover);
-  border-color: #2a3a4e;
+.panel-img-tall {
+  width: 280px;
 }
 
-.feature-icon {
-  font-size: 28px;
-  margin-bottom: 14px;
-  display: block;
+.panel-text {
+  flex: 1;
 }
 
-.feature-card h3 {
-  font-size: 17px;
-  font-weight: 600;
+.panel-text h3 {
+  font-size: 20px;
+  font-weight: 700;
   color: #fff;
   margin-bottom: 8px;
 }
 
-.feature-card p {
-  font-size: 14px;
+.panel-text p {
+  font-size: 15px;
   color: var(--text-muted);
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 /* ---- TECH SECTION ---- */
@@ -377,7 +380,14 @@ section {
     font-size: 13px;
   }
 
-  .features-grid {
-    grid-template-columns: 1fr;
+  .panel-row,
+  .panel-row.reverse {
+    flex-direction: column;
+  }
+
+  .panel-img,
+  .panel-img-tall {
+    width: 100%;
+    max-width: 100%;
   }
 }
