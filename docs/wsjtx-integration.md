@@ -35,16 +35,13 @@ network.
 
 ### Linux (fully automated)
 
-```bash
-./scripts/setup-virtual-audio.sh
-```
+No manual setup needed.  The `wsjtx-bridge` helper automatically creates
+virtual audio devices via PipeWire (`pw-loopback`) on startup and removes
+them on exit.  Requires PipeWire (standard on Fedora, Ubuntu 22.04+, and
+most modern distros).
 
-This creates two PulseAudio/PipeWire null sinks.  No third-party software
-needed.  To remove them later:
-
-```bash
-./scripts/setup-virtual-audio.sh teardown
-```
+Use `--no-audio` to skip automatic virtual audio creation if you prefer to
+manage devices manually.
 
 ### macOS
 
@@ -71,15 +68,19 @@ cable (TX path), download VB-Cable A+B from the same site.
 Run the `wsjtx-bridge` binary on your local machine:
 
 ```bash
-# From the RigControl Web directory
-./bin/linux/wsjtx-bridge          # Linux
-./bin/mac/wsjtx-bridge            # macOS
-bin\windows\wsjtx-bridge.exe      # Windows
+./wsjtx-bridge          # Linux
+./wsjtx-bridge          # macOS
+wsjtx-bridge.exe        # Windows
 ```
 
-You should see:
+On Linux you should see:
 ```
 READY 4540 4541
+wsjtx-bridge: Virtual audio devices created (PipeWire)
+  WSJTX Soundcard Input:   RCW-WSJTX-RX
+  WSJTX Soundcard Output:  RCW-WSJTX-TX
+  RCW WSJTX Audio Output:  RCW-WSJTX-RX
+  RCW Local Input (Mic):   RCW-WSJTX-TX
 ```
 
 The helper listens on:

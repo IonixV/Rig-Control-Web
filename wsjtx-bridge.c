@@ -33,9 +33,12 @@
   #define SOCK_INVALID INVALID_SOCKET
   #define CLOSESOCK closesocket
   #define SOCKERR WSAGetLastError()
+  static volatile int g_running = 1;
+  static BOOL WINAPI console_handler(DWORD type) { (void)type; g_running = 0; return TRUE; }
   static void sock_init(void) {
       WSADATA wd;
       WSAStartup(MAKEWORD(2,2), &wd);
+      SetConsoleCtrlHandler(console_handler, TRUE);
   }
 #else
   #include <sys/socket.h>
@@ -50,8 +53,12 @@
   #define SOCK_INVALID (-1)
   #define CLOSESOCK close
   #define SOCKERR errno
+  static volatile int g_running = 1;
+  static void handle_signal(int sig) { (void)sig; g_running = 0; }
   static void sock_init(void) {
       signal(SIGPIPE, SIG_IGN);
+      signal(SIGINT, handle_signal);
+      signal(SIGTERM, handle_signal);
   }
 #endif
 
@@ -736,11 +743,113 @@ static void ws_client_reset(void) {
     ws_handshake_done = 0;
 }
 
+/* ─── PipeWire virtual audio (Linux only) ────────────────────────────────── */
+
+#if !defined(_WIN32) && !defined(__APPLE__)
+#include <sys/wait.h>
+
+static pid_t pw_rx_pid = 0;   /* pw-loopback for RX (browser → WSJTX) */
+static pid_t pw_tx_pid = 0;   /* pw-loopback for TX (WSJTX → browser) */
+
+static void kill_pw_children(void) {
+    if (pw_rx_pid > 0) { kill(pw_rx_pid, SIGTERM); waitpid(pw_rx_pid, NULL, 0); pw_rx_pid = 0; }
+    if (pw_tx_pid > 0) { kill(pw_tx_pid, SIGTERM); waitpid(pw_tx_pid, NULL, 0); pw_tx_pid = 0; }
+}
+
+static pid_t spawn_pw_loopback(const char *node_name, const char *description,
+                                const char *media_class, const char *capture_class) {
+    pid_t pid = fork();
+    if (pid < 0) return -1;
+    if (pid == 0) {
+        /* child */
+        char capture_props[256];
+        char playback_props[256];
+        snprintf(capture_props, sizeof(capture_props),
+                 "node.name=%s node.description=%s media.class=%s",
+                 node_name, description, capture_class);
+        snprintf(playback_props, sizeof(playback_props),
+                 "node.name=%s.output node.description=%s media.class=%s",
+                 node_name, description, media_class);
+        execlp("pw-loopback", "pw-loopback",
+               "--capture-props", capture_props,
+               "--playback-props", playback_props,
+               (char *)NULL);
+        /* exec failed */
+        _exit(127);
+    }
+    return pid;
+}
+
+static int check_pw_loopback(void) {
+    pid_t pid = fork();
+    if (pid < 0) return 0;
+    if (pid == 0) {
+        /* Redirect stdout/stderr to /dev/null */
+        freopen("/dev/null", "w", stdout);
+        freopen("/dev/null", "w", stderr);
+        execlp("pw-loopback", "pw-loopback", "--help", (char *)NULL);
+        _exit(127);
+    }
+    int status;
+    waitpid(pid, &status, 0);
+    return WIFEXITED(status) && WEXITSTATUS(status) != 127;
+}
+
+static int start_virtual_audio(void) {
+    if (!check_pw_loopback()) {
+        fprintf(stderr, "wsjtx-bridge: pw-loopback not found. Install pipewire for virtual audio.\n");
+        fprintf(stderr, "wsjtx-bridge: Use --no-audio to skip virtual audio setup.\n");
+        return -1;
+    }
+
+    VLOG("Spawning pw-loopback for RX virtual sink (browser -> WSJTX)");
+    pw_rx_pid = spawn_pw_loopback(
+        "rcw_wsjtx_rx", "RCW-WSJTX-RX",
+        "Audio/Source", "Audio/Sink");
+    if (pw_rx_pid < 0) {
+        fprintf(stderr, "wsjtx-bridge: Failed to spawn pw-loopback for RX\n");
+        return -1;
+    }
+    VLOG("RX pw-loopback PID: %d", (int)pw_rx_pid);
+
+    VLOG("Spawning pw-loopback for TX virtual sink (WSJTX -> browser)");
+    pw_tx_pid = spawn_pw_loopback(
+        "rcw_wsjtx_tx", "RCW-WSJTX-TX",
+        "Audio/Source", "Audio/Sink");
+    if (pw_tx_pid < 0) {
+        fprintf(stderr, "wsjtx-bridge: Failed to spawn pw-loopback for TX\n");
+        kill(pw_rx_pid, SIGTERM); waitpid(pw_rx_pid, NULL, 0); pw_rx_pid = 0;
+        return -1;
+    }
+    VLOG("TX pw-loopback PID: %d", (int)pw_tx_pid);
+
+    /* Brief pause to let PipeWire register the devices */
+    usleep(200000);
+
+    fprintf(stderr, "wsjtx-bridge: Virtual audio devices created (PipeWire)\n");
+    fprintf(stderr, "  WSJTX Soundcard Input:   RCW-WSJTX-RX\n");
+    fprintf(stderr, "  WSJTX Soundcard Output:  RCW-WSJTX-TX\n");
+    fprintf(stderr, "  RCW WSJTX Audio Output:  RCW-WSJTX-RX\n");
+    fprintf(stderr, "  RCW Local Input (Mic):   RCW-WSJTX-TX\n");
+    return 0;
+}
+
+static void stop_virtual_audio(void) {
+    if (pw_rx_pid > 0 || pw_tx_pid > 0) {
+        VLOG("Stopping virtual audio devices");
+        kill_pw_children();
+        fprintf(stderr, "wsjtx-bridge: Virtual audio devices removed\n");
+    }
+}
+
+#endif /* !_WIN32 && !__APPLE__ */
+
 /* ─── Main event loop ────────────────────────────────────────────────────── */
 
 int main(int argc, char *argv[]) {
     int tcp_port = 4540;
     int ws_port  = 4541;
+    int setup_audio = 1;   /* auto-create virtual audio on Linux */
 
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--tcp-port") == 0 && i+1 < argc)
@@ -749,11 +858,20 @@ int main(int argc, char *argv[]) {
             ws_port = atoi(argv[++i]);
         else if (strcmp(argv[i], "--verbose") == 0 || strcmp(argv[i], "-v") == 0)
             verbose = 1;
+        else if (strcmp(argv[i], "--no-audio") == 0)
+            setup_audio = 0;
         else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
-            printf("Usage: wsjtx-bridge [--tcp-port %d] [--ws-port %d] [--verbose]\n", 4540, 4541);
+            printf("Usage: wsjtx-bridge [OPTIONS]\n\n");
+            printf("Options:\n");
             printf("  --tcp-port N  rigctld protocol port for WSJTX (default 4540)\n");
             printf("  --ws-port N   WebSocket port for RigControl Web browser (default 4541)\n");
+            printf("  --no-audio    Skip automatic virtual audio device creation (Linux)\n");
             printf("  --verbose,-v  Log all rigctld commands, WebSocket messages, and state changes\n");
+            printf("  --help,-h     Show this help message\n");
+#if !defined(_WIN32) && !defined(__APPLE__)
+            printf("\nOn Linux, virtual audio devices are created automatically via pw-loopback\n");
+            printf("(PipeWire) on startup and removed on exit. Use --no-audio to disable.\n");
+#endif
             return 0;
         }
     }
@@ -780,7 +898,17 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "wsjtx-bridge: TCP (rigctld) on localhost:%d, WebSocket on localhost:%d\n",
             tcp_port, ws_port);
 
-    for (;;) {
+#if !defined(_WIN32) && !defined(__APPLE__)
+    if (setup_audio) {
+        if (start_virtual_audio() < 0) {
+            fprintf(stderr, "wsjtx-bridge: Continuing without virtual audio devices.\n");
+        }
+    }
+#else
+    (void)setup_audio;
+#endif
+
+    while (g_running) {
         fd_set rfds;
         FD_ZERO(&rfds);
         FD_SET(tcp_listen, &rfds);
@@ -970,5 +1098,8 @@ int main(int argc, char *argv[]) {
     CLOSESOCK(tcp_listen);
     CLOSESOCK(ws_listen);
     ws_client_reset();
+#if !defined(_WIN32) && !defined(__APPLE__)
+    stop_virtual_audio();
+#endif
     return 0;
 }
