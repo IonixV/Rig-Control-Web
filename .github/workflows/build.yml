@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      all_platforms: ${{ steps.set-matrix.outputs.all_platforms }}
     steps:
       - id: set-matrix
         run: |
@@ -37,6 +38,12 @@ jobs:
           fi
           JOINED=$(IFS=,; echo "${ITEMS[*]}")
           echo "matrix={\"include\":[$JOINED]}" >> $GITHUB_OUTPUT
+          # Flag whether all three platforms are being built
+          if [ "$P" = "all" ]; then
+            echo "all_platforms=true" >> $GITHUB_OUTPUT
+          else
+            echo "all_platforms=false" >> $GITHUB_OUTPUT
+          fi
 
   build:
     needs: prepare
@@ -221,3 +228,47 @@ jobs:
           files: build/artifacts/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # After all platforms build, copy the WSJTX bridge helper binaries into
+  # docs/downloads/ so they're served by GitHub Pages.  Only runs when all
+  # three platforms were built (tag push or workflow_dispatch with "all").
+  publish-helper:
+    needs: [prepare, build]
+    if: needs.prepare.outputs.all_platforms == 'true' || startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Download WSJTX bridge artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: wsjtx-bridge-*
+          path: docs/downloads/
+          merge-multiple: true
+
+      - name: Verify all platform binaries present
+        run: |
+          echo "Contents of docs/downloads/:"
+          ls -lh docs/downloads/
+          for f in wsjtx-bridge-linux wsjtx-bridge-mac wsjtx-bridge.exe; do
+            if [ ! -f "docs/downloads/$f" ]; then
+              echo "ERROR: Missing docs/downloads/$f"
+              exit 1
+            fi
+          done
+          echo "All three platform binaries present."
+
+      - name: Commit and push helper binaries
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/downloads/wsjtx-bridge-linux docs/downloads/wsjtx-bridge-mac docs/downloads/wsjtx-bridge.exe
+          if git diff --cached --quiet; then
+            echo "No changes to helper binaries — skipping commit."
+          else
+            git commit -m "ci: update WSJTX bridge helper binaries for GitHub Pages"
+            git push
+          fi
