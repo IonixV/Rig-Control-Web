@@ -815,6 +815,8 @@ static pid_t spawn_pw_loopback(const char *node_name, const char *description,
                  "node.name=%s.output node.description=%s media.class=%s",
                  node_name, description, media_class);
         execlp("pw-loopback", "pw-loopback",
+               "--channels", "1",
+               "--channel-map", "MONO",
                "--capture-props", capture_props,
                "--playback-props", playback_props,
                (char *)NULL);
