@@ -78,6 +78,10 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: gcc -O2 -o bin/linux/ft4222-scope-reader ft4222-scope-reader.c -ldl
 
+      - name: Compile WSJTX bridge helper (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: gcc -O2 -o bin/linux/wsjtx-bridge wsjtx-bridge.c
+
       - name: Compile CW key helper (macOS)
         if: matrix.os == 'macos-latest'
         run: clang -O2 -o bin/mac/cw-key-helper cw-key-helper.c
@@ -85,6 +89,10 @@ jobs:
       - name: Compile FT4222 scope reader (macOS)
         if: matrix.os == 'macos-latest'
         run: clang -O2 -o bin/mac/ft4222-scope-reader ft4222-scope-reader.c
+
+      - name: Compile WSJTX bridge helper (macOS)
+        if: matrix.os == 'macos-latest'
+        run: clang -O2 -o bin/mac/wsjtx-bridge wsjtx-bridge.c
 
       - name: Set up MSVC (Windows)
         if: matrix.os == 'windows-2022'
@@ -99,6 +107,11 @@ jobs:
         if: matrix.os == 'windows-2022'
         shell: cmd
         run: cl ft4222-scope-reader.c /Fe:bin\windows\ft4222-scope-reader.exe /O2 /nologo
+
+      - name: Compile WSJTX bridge helper (Windows)
+        if: matrix.os == 'windows-2022'
+        shell: cmd
+        run: cl wsjtx-bridge.c /Fe:bin\windows\wsjtx-bridge.exe /O2 /nologo ws2_32.lib advapi32.lib
 
       - name: Build rigctld (Linux/macOS)
         if: matrix.os != 'windows-2022'
@@ -179,6 +192,26 @@ jobs:
         with:
           name: rigcontrol-web-${{ matrix.platform }}
           path: build/artifacts/*
+
+      # Stage the standalone WSJTX bridge helper with a platform-specific name
+      # so all three can be downloaded from the GitHub Pages /downloads/ page.
+      - name: Stage WSJTX bridge helper
+        shell: bash
+        run: |
+          mkdir -p build/wsjtx-bridge
+          if [ "${{ matrix.platform }}" = "linux" ]; then
+            cp bin/linux/wsjtx-bridge build/wsjtx-bridge/wsjtx-bridge-linux
+          elif [ "${{ matrix.platform }}" = "mac" ]; then
+            cp bin/mac/wsjtx-bridge build/wsjtx-bridge/wsjtx-bridge-mac
+          elif [ "${{ matrix.platform }}" = "win" ]; then
+            cp bin/windows/wsjtx-bridge.exe build/wsjtx-bridge/wsjtx-bridge.exe
+          fi
+
+      - name: Upload WSJTX bridge helper
+        uses: actions/upload-artifact@v7
+        with:
+          name: wsjtx-bridge-${{ matrix.platform }}
+          path: build/wsjtx-bridge/*
 
       # Attach the installer to the GitHub Release — only runs on tag pushes, not manual dispatches
       - name: Attach to GitHub Release
