@@ -666,26 +666,16 @@ static const char *handle_rigctld_cmd(sock_t tcp_sock, const char *line) {
      * dumpcaps_protocol() in rigctl_parse.c.  The fields are parsed by
      * netrigctl_open() in rigs/dummy/netrigctl.c.
      *
-     * Format (protocol version 0):
-     *   protocol_version
-     *   rig_model
-     *   itu_region
-     *   RX freq ranges (terminated by "0 0 0 0 0 0 0")
-     *   TX freq ranges (terminated by "0 0 0 0 0 0 0")
-     *   tuning steps   (terminated by "0 0")
-     *   filters        (terminated by "0 0")
-     *   max_rit, max_xit, max_ifshift, announces
-     *   preamp list (newline)
-     *   attenuator list (newline)
-     *   has_get_func, has_set_func
-     *   has_get_level, has_set_level
-     *   has_get_parm, has_set_parm
+     * Protocol version 1 extends version 0 with a key=value section
+     * (terminated by "done") that declares per-capability flags.  The
+     * critical field is ptt_type: without it the netrigctl backend defaults
+     * to RIG_PTT_NONE and WSJTX will never send T commands.
      */
 
     if (strncmp(cmd, "dump_state", 10) == 0) {
-        VLOG("  -> dump_state (rigctld NET init)");
+        VLOG("  -> dump_state (rigctld NET init, protocol v1)");
         snprintf(resp, sizeof(resp),
-            "0\n"                             /* protocol version */
+            "1\n"                             /* protocol version 1 */
             "2\n"                             /* rig model 2 = NET rigctl */
             "2\n"                             /* ITU region */
             /* RX range: 30 kHz – 470 MHz, all common modes, VFO A+B */
@@ -712,6 +702,15 @@ static const char *handle_rigctld_cmd(sock_t tcp_sock, const char *line) {
             "0x0\n"                           /* has_set_level */
             "0x0\n"                           /* has_get_parm */
             "0x0\n"                           /* has_set_parm */
+            /* ── Protocol v1 key=value section ── */
+            "ptt_type=0x1\n"                  /* RIG_PTT_RIG (CAT PTT) */
+            "has_set_freq=1\n"
+            "has_get_freq=1\n"
+            "has_set_mode=1\n"
+            "has_get_mode=1\n"
+            "has_set_vfo=1\n"
+            "has_get_vfo=1\n"
+            "done\n"
         );
         return resp;
     }
