@@ -747,6 +747,9 @@ static void ws_client_reset(void) {
 
 #if !defined(_WIN32) && !defined(__APPLE__)
 #include <sys/wait.h>
+#ifdef __linux__
+#include <sys/prctl.h>
+#endif
 
 static pid_t pw_rx_pid = 0;   /* pw-loopback for RX (browser → WSJTX) */
 static pid_t pw_tx_pid = 0;   /* pw-loopback for TX (WSJTX → browser) */
@@ -761,7 +764,10 @@ static pid_t spawn_pw_loopback(const char *node_name, const char *description,
     pid_t pid = fork();
     if (pid < 0) return -1;
     if (pid == 0) {
-        /* child */
+        /* child — auto-terminate if parent dies */
+#ifdef __linux__
+        prctl(PR_SET_PDEATHSIG, SIGTERM);
+#endif
         char capture_props[256];
         char playback_props[256];
         snprintf(capture_props, sizeof(capture_props),
@@ -844,6 +850,14 @@ static void stop_virtual_audio(void) {
 
 #endif /* !_WIN32 && !__APPLE__ */
 
+/* ─── Cleanup at exit ────────────────────────────────────────────────────── */
+
+static void cleanup_at_exit(void) {
+#if !defined(_WIN32) && !defined(__APPLE__)
+    stop_virtual_audio();
+#endif
+}
+
 /* ─── Main event loop ────────────────────────────────────────────────────── */
 
 int main(int argc, char *argv[]) {
@@ -877,6 +891,7 @@ int main(int argc, char *argv[]) {
     }
 
     sock_init();
+    atexit(cleanup_at_exit);
     memset(tcp_clients, 0, sizeof(tcp_clients));
     memset(pending_cmds, 0, sizeof(pending_cmds));
 
