@@ -727,14 +727,23 @@ static const char *handle_rigctld_cmd(sock_t tcp_sock, const char *line) {
         return resp;
     }
 
+    /* ── chk_vfo — WSJTX sends this before dump_state ── */
+
+    if (strncmp(cmd, "chk_vfo", 7) == 0) {
+        VLOG("  -> chk_vfo: returning CHKVFO 0 (no VFO targeting)");
+        return "CHKVFO 0\n";
+    }
+
     /* ── get_powerstat — always return ON ── */
 
     if (strncmp(cmd, "get_powerstat", 13) == 0) {
+        VLOG("  -> get_powerstat: 1 (ON)");
         return "1\n";
     }
 
     /* ── Unknown command ── */
 
+    VLOG("  -> UNKNOWN, returning RPRT -1");
     return "RPRT -1\n";
 }
 
@@ -940,7 +949,7 @@ int main(int argc, char *argv[]) {
 
     printf("READY %d %d\n", tcp_port, ws_port);
     fflush(stdout);
-    fprintf(stderr, "wsjtx-bridge: TCP (rigctld) on localhost:%d, WebSocket on localhost:%d\n",
+    fprintf(stderr, "wsjtx-bridge v0.1.0: TCP (rigctld) on localhost:%d, WebSocket on localhost:%d\n",
             tcp_port, ws_port);
 
 #if !defined(_WIN32) && !defined(__APPLE__)
