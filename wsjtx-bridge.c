@@ -658,41 +658,71 @@ static const char *handle_rigctld_cmd(sock_t tcp_sock, const char *line) {
         return "RPRT -1\n";
     }
 
-    /* ── dump_caps — static response ── */
+    /*
+     * ── dump_state — rigctld NET protocol initialization ──
+     *
+     * WSJTX (via Hamlib's netrigctl backend) sends \dump_state on connect.
+     * The response is a structured multi-line format defined by rigctld's
+     * dumpcaps_protocol() in rigctl_parse.c.  The fields are parsed by
+     * netrigctl_open() in rigs/dummy/netrigctl.c.
+     *
+     * Format (protocol version 0):
+     *   protocol_version
+     *   rig_model
+     *   itu_region
+     *   RX freq ranges (terminated by "0 0 0 0 0 0 0")
+     *   TX freq ranges (terminated by "0 0 0 0 0 0 0")
+     *   tuning steps   (terminated by "0 0")
+     *   filters        (terminated by "0 0")
+     *   max_rit, max_xit, max_ifshift, announces
+     *   preamp list (newline)
+     *   attenuator list (newline)
+     *   has_get_func, has_set_func
+     *   has_get_level, has_set_level
+     *   has_get_parm, has_set_parm
+     */
 
+    if (strncmp(cmd, "dump_state", 10) == 0) {
+        VLOG("  -> dump_state (rigctld NET init)");
+        snprintf(resp, sizeof(resp),
+            "0\n"                             /* protocol version */
+            "2\n"                             /* rig model 2 = NET rigctl */
+            "2\n"                             /* ITU region */
+            /* RX range: 30 kHz – 470 MHz, all common modes, VFO A+B */
+            "30000 470000000 0x1fff -1 -1 0x3 0x0\n"
+            "0 0 0 0 0 0 0\n"                 /* RX terminator */
+            /* TX range: same */
+            "30000 470000000 0x1fff 1 100 0x3 0x0\n"
+            "0 0 0 0 0 0 0\n"                 /* TX terminator */
+            /* Tuning steps: all modes, 1 Hz */
+            "0x1fff 1\n"
+            "0 0\n"                           /* steps terminator */
+            /* Filters: all modes, any width */
+            "0x1fff 0\n"
+            "0 0\n"                           /* filters terminator */
+            "0\n"                             /* max RIT */
+            "0\n"                             /* max XIT */
+            "0\n"                             /* max IF shift */
+            "0\n"                             /* announces */
+            "\n"                              /* preamp list (empty) */
+            "\n"                              /* attenuator list (empty) */
+            "0x0\n"                           /* has_get_func */
+            "0x0\n"                           /* has_set_func */
+            "0x0\n"                           /* has_get_level */
+            "0x0\n"                           /* has_set_level */
+            "0x0\n"                           /* has_get_parm */
+            "0x0\n"                           /* has_set_parm */
+        );
+        return resp;
+    }
+
+    /* dump_caps — human-readable form (not used by WSJTX, but useful for diag) */
     if (strncmp(cmd, "dump_caps", 9) == 0 || strncmp(cmd, "1", 1) == 0) {
         snprintf(resp, sizeof(resp),
             "Caps dump for model: 2\n"
-            "Model name: NET rigctl\n"
-            "Mfg name: Hamlib\n"
+            "Model name: RCW WSJTX Bridge\n"
+            "Mfg name: RigControl Web\n"
             "Backend version: 1.0\n"
-            "Backend status: Stable\n"
-            "Rig type: Other\n"
-            "PTT type: Rig capable\n"
-            "DCD type: Rig capable\n"
-            "Port type: Network link\n"
-            "Write delay: 0ms, timeout 2000ms, 0 retry\n"
-            "Post write delay: 0ms\n"
-            "Has get_freq: Y\n"
-            "Has set_freq: Y\n"
-            "Has get_mode: Y\n"
-            "Has set_mode: Y\n"
-            "Has get_vfo: Y\n"
-            "Has set_vfo: Y\n"
-            "Has get_ptt: Y\n"
-            "Has set_ptt: Y\n"
-            "Has get_split_vfo: Y\n"
-            "Has set_split_vfo: Y\n"
-            "Can get frequency: Y\n"
-            "Can set frequency: Y\n"
-            "Can get mode: Y\n"
-            "Can set mode: Y\n"
-            "Can get ptt: Y\n"
-            "Can set ptt: Y\n"
-            "Can get vfo: Y\n"
-            "Can set vfo: Y\n"
-            "Can get split: Y\n"
-            "Can set split: Y\n"
             "RPRT 0\n");
         return resp;
     }
