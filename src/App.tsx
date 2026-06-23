@@ -33,6 +33,7 @@ import { useCwDecoder } from "./hooks/useCwDecoder";
 import { usePanelState } from "./hooks/usePanelState";
 import { useLayoutConfig } from "./hooks/useLayoutConfig";
 import { useSpectrum } from "./hooks/useSpectrum";
+import { useWsjtxBridge } from "./hooks/useWsjtxBridge";
 import type { PanelType, PanelAddConfig } from "./types/layout";
 
 export default function App() {
@@ -256,6 +257,7 @@ export default function App() {
     handleStartAudio,
     startMicCapture,
     stopMicCapture,
+    updateWsjtxOutput,
   } = useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, waterfallActiveRef });
 
   const {
@@ -329,6 +331,12 @@ export default function App() {
     ditPressedRef,
     dahPressedRef,
   } = useCWKeyer({ socket, connected, localAudioOutputDevice: localAudioSettings.outputDevice });
+
+  const {
+    bridgeEnabled, setBridgeEnabled,
+    wsPort: wsjtxWsPort, setWsPort: setWsjtxWsPort,
+    bridgeConnected,
+  } = useWsjtxBridge({ socket, rigStatus: status });
 
   const potaEnabled = useMemo(() => {
     const items = isPhone ? phoneLayout.items : compactLayout.items;
@@ -1055,6 +1063,12 @@ export default function App() {
           outboundMuted={outboundMuted}
           localAudioReady={localAudioReady}
           audioDevices={audioDevices}
+          updateWsjtxOutput={updateWsjtxOutput}
+          wsjtxBridgeEnabled={bridgeEnabled}
+          setWsjtxBridgeEnabled={setBridgeEnabled}
+          wsjtxBridgeConnected={bridgeConnected}
+          wsjtxWsPort={wsjtxWsPort}
+          setWsjtxWsPort={setWsjtxWsPort}
         />
 
         {/* Rigctld Settings Modal */}

@@ -23,6 +23,7 @@
     "build:electron": "esbuild electron/main.ts --bundle --platform=node --outfile=dist-electron/main.cjs --external:electron --external:vite && esbuild electron/preload.ts --bundle --platform=node --outfile=dist-electron/preload.cjs --external:electron",
     "build:cw-helper": "node scripts/build-cw-helper.mjs",
     "build:ft4222-reader": "node scripts/build-ft4222-reader.mjs",
+    "build:wsjtx-bridge": "node scripts/build-wsjtx-bridge.mjs",
     "build:rigctld": "node scripts/build-rigctld.mjs",
     "postinstall": "electron-builder install-app-deps"
   },

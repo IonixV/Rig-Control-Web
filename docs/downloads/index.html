@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WSJTX Bridge Helper &mdash; RigControl Web</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="../images/icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer">
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <div class="nav-brand">
+        <img src="../images/icon.png" alt="RigControl Web icon">
+        RigControl Web
+      </div>
+      <ul class="nav-links">
+        <li><a href="../">Home</a></li>
+        <li><a href="https://github.com/jbdubbs/Rig-Control-Web">GitHub</a></li>
+        <li><a href="https://github.com/jbdubbs/Rig-Control-Web/blob/main/docs/wsjtx-integration.md">Setup Guide</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <header class="hero" style="padding-top:6rem;">
+    <h1>WSJTX Bridge <span class="accent">Helper</span></h1>
+    <p>A lightweight companion binary that bridges WSJTX to RigControl Web. Runs on your local machine alongside WSJTX — no Node.js or other runtime required.</p>
+  </header>
+
+  <section id="platforms">
+    <div class="section-label">Download</div>
+    <h2 class="section-title">Choose your platform</h2>
+    <div class="platform-grid">
+      <a href="wsjtx-bridge-linux" class="platform-card" download>
+        <i class="fa-brands fa-linux platform-fa-icon" aria-hidden="true"></i>
+        <h3>Linux</h3>
+        <p>x86_64 binary</p>
+      </a>
+      <a href="wsjtx-bridge-mac" class="platform-card" download>
+        <i class="fa-brands fa-apple platform-fa-icon" aria-hidden="true"></i>
+        <h3>macOS</h3>
+        <p>Universal binary</p>
+      </a>
+      <a href="wsjtx-bridge.exe" class="platform-card" download>
+        <i class="fa-brands fa-windows platform-fa-icon" aria-hidden="true"></i>
+        <h3>Windows</h3>
+        <p>x86_64 .exe</p>
+      </a>
+    </div>
+
+    <div style="max-width:600px;margin:2rem auto 0;text-align:center;">
+      <p style="color:var(--muted);font-size:0.875rem;line-height:1.6;">
+        After downloading, run the helper from a terminal:
+      </p>
+      <pre style="background:var(--card);border:1px solid var(--border);border-radius:0.5rem;padding:1rem;text-align:left;font-size:0.8rem;margin-top:1rem;color:var(--text);">
+# Linux / macOS
+chmod +x wsjtx-bridge-linux    # (or wsjtx-bridge-mac)
+./wsjtx-bridge-linux
+
+# Windows
+wsjtx-bridge.exe</pre>
+      <p style="color:var(--muted);font-size:0.75rem;margin-top:1rem;">
+        See the <a href="https://github.com/jbdubbs/Rig-Control-Web/blob/main/docs/wsjtx-integration.md" style="color:var(--accent);">WSJTX Integration Guide</a> for full setup instructions.
+      </p>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <p>RigControl Web is open-source software. <a href="https://github.com/jbdubbs/Rig-Control-Web">View on GitHub</a></p>
+    </div>
+  </footer>
+
+</body>
+</html>

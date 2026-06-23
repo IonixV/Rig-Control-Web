@@ -5,7 +5,10 @@ import {
   ChevronDown,
   ChevronUp,
   Headphones,
+  Link,
+  Link2Off,
   Power,
+  Radio,
   X,
 } from "lucide-react";
 import { cn } from "../utils";
@@ -34,9 +37,9 @@ export interface AudioSettingsModalProps {
   setLocalAudioDevices: React.Dispatch<
     React.SetStateAction<{ inputs: MediaDeviceInfo[]; outputs: MediaDeviceInfo[] }>
   >;
-  localAudioSettings: { inputDevice: string; outputDevice: string };
+  localAudioSettings: { inputDevice: string; outputDevice: string; wsjtxOutputDevice: string };
   setLocalAudioSettings: React.Dispatch<
-    React.SetStateAction<{ inputDevice: string; outputDevice: string }>
+    React.SetStateAction<{ inputDevice: string; outputDevice: string; wsjtxOutputDevice: string }>
   >;
   inboundVolume: number;
   setInboundVolume: React.Dispatch<React.SetStateAction<number>>;
@@ -58,6 +61,12 @@ export interface AudioSettingsModalProps {
     inputs: { name: string; altName: string; hostAPIName: string; defaultSampleRate: number }[];
     outputs: { name: string; altName: string; hostAPIName: string; defaultSampleRate: number }[];
   };
+  updateWsjtxOutput: (deviceId: string) => Promise<void>;
+  wsjtxBridgeEnabled: boolean;
+  setWsjtxBridgeEnabled: (enabled: boolean) => void;
+  wsjtxBridgeConnected: boolean;
+  wsjtxWsPort: number;
+  setWsjtxWsPort: (port: number) => void;
 }
 
 function AudioSettingsModal({
@@ -88,6 +97,12 @@ function AudioSettingsModal({
   outboundMuted,
   localAudioReady,
   audioDevices,
+  updateWsjtxOutput,
+  wsjtxBridgeEnabled,
+  setWsjtxBridgeEnabled,
+  wsjtxBridgeConnected,
+  wsjtxWsPort,
+  setWsjtxWsPort,
 }: AudioSettingsModalProps) {
   if (!isOpen) return null;
   return (
@@ -218,6 +233,87 @@ function AudioSettingsModal({
               <p className="text-[0.5rem] uppercase text-[#4a4b4e] font-bold">
                 Device changes apply immediately — no restart needed
               </p>
+            </div>
+
+            {/* WSJTX Bridge Section */}
+            <div className="pt-4 border-t border-[#2a2b2e]/50 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Radio size={14} className="text-[#8e9299]" />
+                  <h4 className="text-[0.625rem] uppercase text-[#8e9299] font-bold">WSJTX / Digital Mode Bridge</h4>
+                </div>
+                <div className="flex items-center gap-2">
+                  {wsjtxBridgeEnabled && (
+                    <span className={cn(
+                      "text-[0.5rem] uppercase font-bold flex items-center gap-1",
+                      wsjtxBridgeConnected ? "text-green-500" : "text-yellow-500"
+                    )}>
+                      {wsjtxBridgeConnected ? <Link size={10} /> : <Link2Off size={10} />}
+                      {wsjtxBridgeConnected ? "Connected" : "Waiting"}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => setWsjtxBridgeEnabled(!wsjtxBridgeEnabled)}
+                    className={cn(
+                      "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
+                      wsjtxBridgeEnabled ? "bg-blue-500" : "bg-[#2a2b2e]"
+                    )}
+                  >
+                    <span className={cn(
+                      "inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform",
+                      wsjtxBridgeEnabled ? "translate-x-[18px]" : "translate-x-[3px]"
+                    )} />
+                  </button>
+                </div>
+              </div>
+
+              {wsjtxBridgeEnabled && (
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <label className="text-[0.625rem] uppercase text-[#4a4b4e] font-bold">WSJTX Audio Output (Virtual Cable)</label>
+                    <select
+                      value={localAudioSettings.wsjtxOutputDevice}
+                      onFocus={() => navigator.mediaDevices.enumerateDevices().then(devices => {
+                        setLocalAudioDevices({ inputs: devices.filter(d => d.kind === 'audioinput'), outputs: devices.filter(d => d.kind === 'audiooutput') });
+                      }).catch(console.error)}
+                      onChange={(e) => {
+                        const newSettings = { ...localAudioSettings, wsjtxOutputDevice: e.target.value };
+                        setLocalAudioSettings(newSettings);
+                        updateWsjtxOutput(e.target.value);
+                      }}
+                      className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all"
+                    >
+                      <option value="">None (Disabled)</option>
+                      {localAudioDevices.outputs.map(d => {
+                        const label = d.label || `Output ${d.deviceId.slice(0, 5)}`;
+                        const isVirtual = /VB-Audio|CABLE|BlackHole|wsjtx|null|virtual/i.test(label);
+                        return (
+                          <option key={d.deviceId} value={d.deviceId}>
+                            {label}{isVirtual ? " ★" : ""}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[0.625rem] uppercase text-[#4a4b4e] font-bold">Bridge WebSocket Port</label>
+                    <input
+                      type="number"
+                      value={wsjtxWsPort}
+                      onChange={(e) => setWsjtxWsPort(parseInt(e.target.value) || 4541)}
+                      className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all"
+                    />
+                  </div>
+
+                  <p className="text-[0.5rem] uppercase text-[#4a4b4e] font-bold">
+                    Run wsjtx-bridge helper on this machine. In WSJTX, set Rig to "Hamlib NET rigctl" → localhost:4540.{" "}
+                    <a href="https://jbdubbs.github.io/Rig-Control-Web/downloads/" target="_blank" rel="noreferrer" className="text-emerald-400 underline hover:text-emerald-300 normal-case">Download Helper</a>
+                    {" · "}
+                    <a href="https://github.com/jbdubbs/Rig-Control-Web/blob/main/docs/wsjtx-integration.md" target="_blank" rel="noreferrer" className="text-emerald-400 underline hover:text-emerald-300 normal-case">Setup Guide</a>
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="pt-4 border-t border-[#2a2b2e]/50">

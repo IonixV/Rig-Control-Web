@@ -3,7 +3,9 @@ import { Socket } from "socket.io-client";
 import type { GGMorseDecoder } from "../ggmorseDecoder";
 
 let audioVerbose = false;
+let wsjtxAudioVerbose = false;
 const vlog = (...args: any[]) => { if (audioVerbose) console.log(...args); };
+const vlogWsjtx = (...args: any[]) => { if (wsjtxAudioVerbose) console.log("[wsjtx:audio]", ...args); };
 
 interface UseAudioOptions {
   socket: Socket | null;
@@ -26,7 +28,8 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, waterfallAc
   const [localAudioDevices, setLocalAudioDevices] = useState<{ inputs: MediaDeviceInfo[]; outputs: MediaDeviceInfo[] }>({ inputs: [], outputs: [] });
   const [localAudioSettings, setLocalAudioSettings] = useState({
     inputDevice: localStorage.getItem("local-audio-input") || "default",
-    outputDevice: localStorage.getItem("local-audio-output") || "default"
+    outputDevice: localStorage.getItem("local-audio-output") || "default",
+    wsjtxOutputDevice: localStorage.getItem("local-audio-wsjtx-output") || "",
   });
   const [inboundMuted, setInboundMuted] = useState(false);
   const [inboundVolume, setInboundVolume] = useState<number>(() => {
@@ -46,6 +49,8 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, waterfallAc
   const opusDecoderRef = useRef<any>(null);
   const opusEncoderRef = useRef<any>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
+  const wsjtxStreamDestRef = useRef<MediaStreamAudioDestinationNode | null>(null);
+  const wsjtxAudioRef = useRef<HTMLAudioElement | null>(null);
   const socketRef = useRef(socket);
 
   // Internal refs kept in sync for use in stale closures
@@ -179,7 +184,10 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, waterfallAc
       setAudioDevices(devices);
     };
 
-    const onDebugFlags = ({ audio }: { audio: boolean }) => { audioVerbose = audio; };
+    const onDebugFlags = ({ audio, wsjtx }: { audio: boolean; wsjtx: boolean }) => {
+      audioVerbose = audio;
+      wsjtxAudioVerbose = wsjtx;
+    };
 
     socket.on("settings-data", onSettingsData);
     socket.on("audio-status", onAudioStatus);
@@ -288,6 +296,35 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, waterfallAc
         playbackNodeRef.current.connect(analyserNode);
         analyserNode.connect(gainNode);
         gainNode.connect(ctx.destination);
+
+        // WSJTX dual output: tap from analyserNode (before gain) so mute/volume
+        // doesn't affect the WSJTX feed
+        const wsjtxDevice = localAudioSettingsRef.current.wsjtxOutputDevice;
+        if (wsjtxDevice) {
+          vlogWsjtx(`Setting up dual output to device: ${wsjtxDevice}`);
+          try {
+            const streamDest = ctx.createMediaStreamDestination();
+            analyserNode.connect(streamDest);
+            wsjtxStreamDestRef.current = streamDest;
+            vlogWsjtx("MediaStreamDestination created and connected to analyserNode");
+
+            const audioEl = new Audio();
+            audioEl.srcObject = streamDest.stream;
+            if (typeof (audioEl as any).setSinkId === "function") {
+              vlogWsjtx(`Calling setSinkId(${wsjtxDevice})`);
+              await (audioEl as any).setSinkId(wsjtxDevice);
+              vlogWsjtx("setSinkId succeeded");
+            } else {
+              vlogWsjtx("setSinkId not available on this browser");
+            }
+            await audioEl.play();
+            wsjtxAudioRef.current = audioEl;
+            vlogWsjtx("WSJTX audio output active");
+          } catch (e) {
+            console.error("[AUDIO] Failed to setup WSJTX output:", e);
+            vlogWsjtx("WSJTX audio output setup failed:", e);
+          }
+        }
       }
 
       if (!opusDecoderRef.current && typeof (window as any).AudioDecoder !== 'undefined') {
@@ -297,8 +334,9 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, waterfallAc
             const needPcm = isPlaying && (!inboundMutedRef.current);
             const needCw = isPlaying && cwDecodeEnabledRef.current && !!cwDecoderRef.current;
             const needWaterfall = isPlaying && waterfallActiveRef.current;
+            const needWsjtx = isPlaying && !!wsjtxStreamDestRef.current;
 
-            if (!needPcm && !needCw && !needWaterfall) {
+            if (!needPcm && !needCw && !needWaterfall && !needWsjtx) {
               audioData.close();
               return;
             }
@@ -309,7 +347,7 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, waterfallAc
             audioData.copyTo(buffer, options);
             const float32Data = new Float32Array(buffer);
 
-            if ((needPcm || needWaterfall) && playbackNodeRef.current) {
+            if ((needPcm || needWaterfall || needWsjtx) && playbackNodeRef.current) {
               playbackNodeRef.current.port.postMessage({ type: 'pcm', pcm: float32Data });
             }
             if (needCw) {
@@ -334,6 +372,52 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, waterfallAc
     setLocalAudioReady(true);
     setAudioWasRestarted(false);
   }, [stopMicCapture]);
+
+  const updateWsjtxOutput = useCallback(async (deviceId: string) => {
+    vlogWsjtx(`updateWsjtxOutput called, deviceId=${deviceId || "(none)"}`);
+    localStorage.setItem("local-audio-wsjtx-output", deviceId);
+    setLocalAudioSettings(prev => ({ ...prev, wsjtxOutputDevice: deviceId }));
+
+    const ctx = audioContextRef.current;
+    const analyser = analyserNodeRef.current;
+
+    // Tear down existing WSJTX output
+    if (wsjtxStreamDestRef.current && analyser) {
+      vlogWsjtx("Tearing down existing WSJTX output");
+      try { analyser.disconnect(wsjtxStreamDestRef.current); } catch {}
+    }
+    if (wsjtxAudioRef.current) {
+      wsjtxAudioRef.current.pause();
+      wsjtxAudioRef.current.srcObject = null;
+      wsjtxAudioRef.current = null;
+    }
+    wsjtxStreamDestRef.current = null;
+
+    if (!deviceId || !ctx || !analyser) {
+      vlogWsjtx("WSJTX output disabled (no device selected or no audio context)");
+      return;
+    }
+
+    try {
+      const streamDest = ctx.createMediaStreamDestination();
+      analyser.connect(streamDest);
+      wsjtxStreamDestRef.current = streamDest;
+      vlogWsjtx("MediaStreamDestination created and connected");
+
+      const audioEl = new Audio();
+      audioEl.srcObject = streamDest.stream;
+      if (typeof (audioEl as any).setSinkId === "function") {
+        vlogWsjtx(`Calling setSinkId(${deviceId})`);
+        await (audioEl as any).setSinkId(deviceId);
+      }
+      await audioEl.play();
+      wsjtxAudioRef.current = audioEl;
+      vlogWsjtx("WSJTX audio output active");
+    } catch (e) {
+      console.error("[AUDIO] Failed to setup WSJTX output:", e);
+      vlogWsjtx("WSJTX audio output setup failed:", e);
+    }
+  }, []);
 
   const handleStartAudio = useCallback(async () => {
     await initLocalAudioPipeline();
@@ -497,5 +581,6 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, waterfallAc
     handleStartAudio,
     startMicCapture,
     stopMicCapture,
+    updateWsjtxOutput,
   };
 }

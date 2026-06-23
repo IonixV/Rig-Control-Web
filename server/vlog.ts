@@ -14,6 +14,7 @@ Debug options:
   --debug-infra      Infrastructure (TLS, settings, Socket.io lifecycle)
   --debug-spectrum   Spectrum scope (Hamlib UDP multicast, FT4222 SPI frames)
   --debug-spots      Spot integration (POTA/SOTA/WWFF fetch lifecycle)
+  --debug-wsjtx      WSJTX bridge (WebSocket lifecycle, rig command relay)
   --debug-all        Enable all debug flags
   --help             Show this help message
 `);
@@ -29,6 +30,7 @@ export const DEBUG_CW       = debugAll || argv.includes('--debug-cw');
 export const DEBUG_INFRA    = debugAll || argv.includes('--debug-infra');
 export const DEBUG_SPECTRUM = debugAll || argv.includes('--debug-spectrum');
 export const DEBUG_SPOTS    = debugAll || argv.includes('--debug-spots');
+export const DEBUG_WSJTX    = debugAll || argv.includes('--debug-wsjtx');
 
 export const vlogRig      = (...args: any[]) => { if (DEBUG_RIG)      console.log(...args); };
 export const vlogAudio    = (...args: any[]) => { if (DEBUG_AUDIO)    console.log(...args); };
@@ -37,6 +39,7 @@ export const vlogCw       = (...args: any[]) => { if (DEBUG_CW)       console.lo
 export const vlogInfra    = (...args: any[]) => { if (DEBUG_INFRA)    console.log(...args); };
 export const vlogSpectrum = (...args: any[]) => { if (DEBUG_SPECTRUM) console.log(...args); };
 export const vlogSpots    = (...args: any[]) => { if (DEBUG_SPOTS)    console.log(...args); };
+export const vlogWsjtx   = (...args: any[]) => { if (DEBUG_WSJTX)    console.log(...args); };
 
 export type DebugFlags = {
   rig: boolean;
@@ -46,6 +49,7 @@ export type DebugFlags = {
   infra: boolean;
   spectrum: boolean;
   spots: boolean;
+  wsjtx: boolean;
 };
 
 export const debugFlags: DebugFlags = {
@@ -56,4 +60,5 @@ export const debugFlags: DebugFlags = {
   infra: DEBUG_INFRA,
   spectrum: DEBUG_SPECTRUM,
   spots: DEBUG_SPOTS,
+  wsjtx: DEBUG_WSJTX,
 };
