@@ -1,0 +1,101 @@
+name: Build WSJTX Bridge Helper
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: macos-latest
+            platform: mac
+          - os: windows-2022
+            platform: win
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Compile WSJTX bridge helper (Linux)
+        if: matrix.platform == 'linux'
+        run: gcc -O2 -o bin/linux/wsjtx-bridge wsjtx-bridge.c
+
+      - name: Compile WSJTX bridge helper (macOS)
+        if: matrix.platform == 'mac'
+        run: clang -O2 -o bin/mac/wsjtx-bridge wsjtx-bridge.c
+
+      - name: Set up MSVC (Windows)
+        if: matrix.platform == 'win'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Compile WSJTX bridge helper (Windows)
+        if: matrix.platform == 'win'
+        shell: cmd
+        run: cl wsjtx-bridge.c /Fe:bin\windows\wsjtx-bridge.exe /O2 /nologo ws2_32.lib advapi32.lib
+
+      - name: Stage binary
+        shell: bash
+        run: |
+          mkdir -p build/wsjtx-bridge
+          if [ "${{ matrix.platform }}" = "linux" ]; then
+            cp bin/linux/wsjtx-bridge build/wsjtx-bridge/wsjtx-bridge-linux
+          elif [ "${{ matrix.platform }}" = "mac" ]; then
+            cp bin/mac/wsjtx-bridge build/wsjtx-bridge/wsjtx-bridge-mac
+          elif [ "${{ matrix.platform }}" = "win" ]; then
+            cp bin/windows/wsjtx-bridge.exe build/wsjtx-bridge/wsjtx-bridge.exe
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: wsjtx-bridge-${{ matrix.platform }}
+          path: build/wsjtx-bridge/*
+
+  publish-helper:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Download WSJTX bridge artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: wsjtx-bridge-*
+          path: docs/downloads/
+          merge-multiple: true
+
+      - name: Verify all platform binaries present
+        run: |
+          echo "Contents of docs/downloads/:"
+          ls -lh docs/downloads/
+          for f in wsjtx-bridge-linux wsjtx-bridge-mac wsjtx-bridge.exe; do
+            if [ ! -f "docs/downloads/$f" ]; then
+              echo "ERROR: Missing docs/downloads/$f"
+              exit 1
+            fi
+          done
+          echo "All three platform binaries present."
+
+      - name: Commit and push helper binaries
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/downloads/wsjtx-bridge-linux docs/downloads/wsjtx-bridge-mac docs/downloads/wsjtx-bridge.exe
+          if git diff --cached --quiet; then
+            echo "No changes to helper binaries — skipping commit."
+          else
+            git commit -m "ci: update WSJTX bridge helper binaries for GitHub Pages"
+            git push
+          fi
