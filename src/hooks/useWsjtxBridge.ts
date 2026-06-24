@@ -176,9 +176,11 @@ export function useWsjtxBridge({ socket, rigStatus }: UseWsjtxBridgeOptions) {
 
 function handleCommand(ws: WebSocket, socket: Socket, msg: { cmd: string; args: any; id: number }) {
   const { cmd, args, id } = msg;
+  const t0 = performance.now();
 
   const sendResult = (ok: boolean, error?: string) => {
-    vlog(`Sending cmd-result id=${id} ok=${ok}`, error ? `error=${error}` : "");
+    const elapsed = (performance.now() - t0).toFixed(1);
+    vlog(`Sending cmd-result id=${id} ok=${ok} (${elapsed}ms since receipt)`, error ? `error=${error}` : "");
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ event: "cmd-result", id, ok, ...(error ? { error } : {}) }));
     }
@@ -203,11 +205,27 @@ function handleCommand(ws: WebSocket, socket: Socket, msg: { cmd: string; args: 
       }
       break;
 
-    case "set-ptt":
-      vlog(`Emitting set-ptt ${args} via Socket.io`);
-      socket.emit("set-ptt", args === 1 || args === true);
+    case "set-ptt": {
+      const pttVal = Number(args) > 0;
+      vlog(`PTT: emitting set-ptt ${pttVal} via Socket.io`);
+      const pttErrorHandler = (errMsg: string) => {
+        vlog(`PTT: rig-error received from server: "${errMsg}"`);
+      };
+      socket.once("rig-error", pttErrorHandler);
+      const pttStatusHandler = (status: any) => {
+        const elapsed = (performance.now() - t0).toFixed(1);
+        vlog(`PTT: rig-status confirmation received (${elapsed}ms): ptt=${status.ptt}, requested=${pttVal}, match=${status.ptt === pttVal}`);
+        socket.off("rig-error", pttErrorHandler);
+      };
+      socket.once("rig-status", pttStatusHandler);
+      setTimeout(() => {
+        socket.off("rig-status", pttStatusHandler);
+        socket.off("rig-error", pttErrorHandler);
+      }, 10000);
+      socket.emit("set-ptt", pttVal);
       sendResult(true);
       break;
+    }
 
     case "set-vfo":
       vlog(`Emitting set-vfo ${args} via Socket.io`);
@@ -226,6 +244,12 @@ function handleCommand(ws: WebSocket, socket: Socket, msg: { cmd: string; args: 
       } else {
         sendResult(false, "invalid args");
       }
+      break;
+
+    case "send-raw":
+      vlog(`Emitting send-raw "${args}" via Socket.io`);
+      socket.emit("send-raw", String(args));
+      sendResult(true);
       break;
 
     default:

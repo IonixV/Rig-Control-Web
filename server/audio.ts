@@ -176,6 +176,10 @@ export async function startAudio(ctx: ServerContext): Promise<void> {
         let frame: Buffer;
         if (ctx.lastStatus.ptt && ctx.outboundJitterBuffer.length > 0) {
           frame = ctx.outboundJitterBuffer.shift()!;
+        } else if (ctx.lastStatus.ptt) {
+          // PTT active but buffer momentarily empty — write silence without
+          // clearing the buffer so arriving packets aren't discarded.
+          frame = OUTBOUND_SILENCE;
         } else {
           ctx.outboundJitterBuffer = [];
           frame = OUTBOUND_SILENCE;

@@ -77,7 +77,18 @@
 #define MAX_PENDING_CMDS 32
 
 static int verbose = 0;
-#define VLOG(...) do { if (verbose) { fprintf(stderr, "[wsjtx-bridge] "); fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); } } while(0)
+
+#ifdef _WIN32
+#define VLOG(...) do { if (verbose) { \
+    DWORD _ms = GetTickCount(); \
+    fprintf(stderr, "[wsjtx-bridge +%lu.%03lus] ", (unsigned long)(_ms/1000), (unsigned long)(_ms%1000)); \
+    fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); } } while(0)
+#else
+#define VLOG(...) do { if (verbose) { \
+    struct timespec _ts; clock_gettime(CLOCK_MONOTONIC, &_ts); \
+    fprintf(stderr, "[wsjtx-bridge +%ld.%03lds] ", (long)_ts.tv_sec, _ts.tv_nsec/1000000); \
+    fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); } } while(0)
+#endif
 
 /* ─── Cached rig state (updated by browser via WebSocket) ────────────────── */
 
@@ -88,6 +99,38 @@ static int   rig_ptt            = 0;
 static char  rig_vfo[16]        = "VFOA";
 static int   rig_split          = 0;
 static char  rig_tx_vfo[16]     = "VFOA";
+static char  rig_split_freq[32] = "0";
+static char  rig_split_mode[32] = "USB";
+static char  rig_split_bw[32]   = "2400";
+
+/*
+ * Cache guard: after a SET command, protect the cached value from stale
+ * rig-status overwrites for CACHE_GUARD_MS.  The server's 2 s poll cycle
+ * means a stale status can arrive after we've already optimistically
+ * updated the cache — without this guard, WSJTX reads back the old value.
+ */
+#define CACHE_GUARD_MS 3000
+#ifdef _WIN32
+static DWORD freq_set_at = 0;
+static DWORD ptt_set_at  = 0;
+static DWORD mode_set_at = 0;
+static int cache_guard_active(DWORD set_at) {
+    return set_at > 0 && (int)(GetTickCount() - set_at) < CACHE_GUARD_MS;
+}
+#else
+static struct timespec freq_set_at = {0, 0};
+static struct timespec ptt_set_at  = {0, 0};
+static struct timespec mode_set_at = {0, 0};
+static void stamp_now(struct timespec *ts) { clock_gettime(CLOCK_MONOTONIC, ts); }
+static int cache_guard_active(struct timespec *set_at) {
+    if (set_at->tv_sec == 0) return 0;
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    int ms = (int)((now.tv_sec - set_at->tv_sec) * 1000 +
+                    (now.tv_nsec - set_at->tv_nsec) / 1000000);
+    return ms < CACHE_GUARD_MS;
+}
+#endif
 
 /* ─── Pending command tracking ───────────────────────────────────────────── */
 
@@ -149,6 +192,8 @@ static void expire_cmds(void) {
     for (int i = 0; i < MAX_PENDING_CMDS; i++) {
         if (pending_cmds[i].in_use && !pending_cmds[i].responded &&
             ms_elapsed(&pending_cmds[i]) > CMD_TIMEOUT_MS) {
+            VLOG("TIMEOUT: cmd id=%d expired after %d ms with no response from browser",
+                 pending_cmds[i].id, ms_elapsed(&pending_cmds[i]));
             pending_cmds[i].responded = 1;
             snprintf(pending_cmds[i].response, sizeof(pending_cmds[i].response),
                      "RPRT -1\n");
@@ -474,10 +519,26 @@ static void handle_ws_message(const char *msg) {
     if (strcmp(event, "rig-status") == 0) {
         char data[1024];
         if (json_get_obj(msg, "data", data, sizeof(data)) < 0) return;
-        json_get_str(data, "frequency", rig_frequency, sizeof(rig_frequency));
-        json_get_str(data, "mode", rig_mode, sizeof(rig_mode));
-        json_get_str(data, "bandwidth", rig_bandwidth, sizeof(rig_bandwidth));
-        json_get_int(data, "ptt", &rig_ptt);
+#ifdef _WIN32
+        if (!cache_guard_active(freq_set_at))
+#else
+        if (!cache_guard_active(&freq_set_at))
+#endif
+            json_get_str(data, "frequency", rig_frequency, sizeof(rig_frequency));
+#ifdef _WIN32
+        if (!cache_guard_active(mode_set_at)) {
+#else
+        if (!cache_guard_active(&mode_set_at)) {
+#endif
+            json_get_str(data, "mode", rig_mode, sizeof(rig_mode));
+            json_get_str(data, "bandwidth", rig_bandwidth, sizeof(rig_bandwidth));
+        }
+#ifdef _WIN32
+        if (!cache_guard_active(ptt_set_at))
+#else
+        if (!cache_guard_active(&ptt_set_at))
+#endif
+            json_get_int(data, "ptt", &rig_ptt);
         json_get_str(data, "vfo", rig_vfo, sizeof(rig_vfo));
         json_get_int(data, "isSplit", &rig_split);
         json_get_str(data, "txVFO", rig_tx_vfo, sizeof(rig_tx_vfo));
@@ -586,6 +647,16 @@ static const char *handle_rigctld_cmd(sock_t tcp_sock, const char *line) {
         VLOG("  -> get_split: %d %s", rig_split, rig_tx_vfo);
         return resp;
     }
+    if (cmd[0] == 'i' && (cmd[1] == '\0' || cmd[1] == ' ' || cmd[1] == '\n')) {
+        snprintf(resp, sizeof(resp), "%s\n", rig_split_freq);
+        VLOG("  -> get_split_freq: %s", rig_split_freq);
+        return resp;
+    }
+    if (cmd[0] == 'x' && (cmd[1] == '\0' || cmd[1] == ' ' || cmd[1] == '\n')) {
+        snprintf(resp, sizeof(resp), "%s\n%s\n", rig_split_mode, rig_split_bw);
+        VLOG("  -> get_split_mode: %s %s", rig_split_mode, rig_split_bw);
+        return resp;
+    }
 
     /* ── SET commands (forward to browser) ── */
 
@@ -596,9 +667,13 @@ static const char *handle_rigctld_cmd(sock_t tcp_sock, const char *line) {
             snprintf(args, sizeof(args), "\"%s\"", freq);
             pending_cmd_t *pc = send_rig_cmd(tcp_sock, "set-frequency", args);
             if (pc) {
-                /* Update cache optimistically for faster readback */
                 snprintf(rig_frequency, sizeof(rig_frequency), "%s", freq);
-                return NULL; /* async */
+#ifdef _WIN32
+                freq_set_at = GetTickCount();
+#else
+                stamp_now(&freq_set_at);
+#endif
+                return NULL;
             }
         }
         return "RPRT -1\n";
@@ -615,6 +690,11 @@ static const char *handle_rigctld_cmd(sock_t tcp_sock, const char *line) {
             pending_cmd_t *pc = send_rig_cmd(tcp_sock, "set-mode", args);
             if (pc) {
                 snprintf(rig_mode, sizeof(rig_mode), "%s", mode);
+#ifdef _WIN32
+                mode_set_at = GetTickCount();
+#else
+                stamp_now(&mode_set_at);
+#endif
                 return NULL;
             }
         }
@@ -624,13 +704,21 @@ static const char *handle_rigctld_cmd(sock_t tcp_sock, const char *line) {
     if (cmd[0] == 'T' && cmd[1] == ' ') {
         int ptt = 0;
         if (sscanf(cmd + 2, "%d", &ptt) == 1) {
+            VLOG("PTT command: T %d (requesting %s)", ptt, ptt ? "TX" : "RX");
             char args[16];
             snprintf(args, sizeof(args), "%d", ptt);
             pending_cmd_t *pc = send_rig_cmd(tcp_sock, "set-ptt", args);
             if (pc) {
-                rig_ptt = ptt;
+                VLOG("PTT command queued as id=%d, awaiting browser response", pc->id);
+                rig_ptt = ptt > 0 ? 1 : 0;
+#ifdef _WIN32
+                ptt_set_at = GetTickCount();
+#else
+                stamp_now(&ptt_set_at);
+#endif
                 return NULL;
             }
+            VLOG("PTT command FAILED: could not queue (no WS client or no slot)");
         }
         return "RPRT -1\n";
     }
@@ -655,6 +743,37 @@ static const char *handle_rigctld_cmd(sock_t tcp_sock, const char *line) {
                  "{\"split\":%d,\"vfo\":\"%s\"}", split, vfo);
         pending_cmd_t *pc = send_rig_cmd(tcp_sock, "set-split-vfo", args);
         if (pc) return NULL;
+        return "RPRT -1\n";
+    }
+
+    if (cmd[0] == 'I' && cmd[1] == ' ') {
+        char freq[32];
+        if (sscanf(cmd + 2, "%31s", freq) == 1) {
+            char args[64];
+            snprintf(args, sizeof(args), "\"I %s\"", freq);
+            pending_cmd_t *pc = send_rig_cmd(tcp_sock, "send-raw", args);
+            if (pc) {
+                snprintf(rig_split_freq, sizeof(rig_split_freq), "%s", freq);
+                return NULL;
+            }
+        }
+        return "RPRT -1\n";
+    }
+
+    if (cmd[0] == 'X' && cmd[1] == ' ') {
+        char mode[32], bw[32];
+        if (sscanf(cmd + 2, "%31s %31s", mode, bw) >= 1) {
+            if (sscanf(cmd + 2, "%31s %31s", mode, bw) < 2)
+                strcpy(bw, "-1");
+            char args[128];
+            snprintf(args, sizeof(args), "\"X %s %s\"", mode, bw);
+            pending_cmd_t *pc = send_rig_cmd(tcp_sock, "send-raw", args);
+            if (pc) {
+                snprintf(rig_split_mode, sizeof(rig_split_mode), "%s", mode);
+                snprintf(rig_split_bw, sizeof(rig_split_bw), "%s", bw);
+                return NULL;
+            }
+        }
         return "RPRT -1\n";
     }
 
@@ -738,6 +857,47 @@ static const char *handle_rigctld_cmd(sock_t tcp_sock, const char *line) {
     if (strncmp(cmd, "get_powerstat", 13) == 0) {
         VLOG("  -> get_powerstat: 1 (ON)");
         return "1\n";
+    }
+
+    /* ── lock_mode — WSJTX checks if mode changes are allowed ── */
+
+    if (strncmp(cmd, "get_lock_mode", 13) == 0) {
+        VLOG("  -> get_lock_mode: 0 (unlocked)");
+        return "0\n";
+    }
+
+    if (strncmp(cmd, "set_lock_mode", 13) == 0) {
+        VLOG("  -> set_lock_mode: accepted (no-op)");
+        return "RPRT 0\n";
+    }
+
+    /* ── RIT/XIT — WSJTX queries these; always report zero offset ── */
+
+    if (strncmp(cmd, "get_rit", 7) == 0) {
+        VLOG("  -> get_rit: 0");
+        return "0\n";
+    }
+
+    if (strncmp(cmd, "set_rit", 7) == 0) {
+        VLOG("  -> set_rit: accepted (no-op)");
+        return "RPRT 0\n";
+    }
+
+    if (strncmp(cmd, "get_xit", 7) == 0) {
+        VLOG("  -> get_xit: 0");
+        return "0\n";
+    }
+
+    if (strncmp(cmd, "set_xit", 7) == 0) {
+        VLOG("  -> set_xit: accepted (no-op)");
+        return "RPRT 0\n";
+    }
+
+    /* ── q (quit) — WSJTX sends before disconnecting ── */
+
+    if (cmd[0] == 'q' && (cmd[1] == '\0' || cmd[1] == ' ' || cmd[1] == '\n')) {
+        VLOG("  -> quit");
+        return "";
     }
 
     /* ── Unknown command ── */
@@ -950,7 +1110,7 @@ int main(int argc, char *argv[]) {
 
     printf("READY %d %d\n", tcp_port, ws_port);
     fflush(stdout);
-    fprintf(stderr, "wsjtx-bridge v0.1.0: TCP (rigctld) on localhost:%d, WebSocket on localhost:%d\n",
+    fprintf(stderr, "wsjtx-bridge v0.2.0: TCP (rigctld) on localhost:%d, WebSocket on localhost:%d\n",
             tcp_port, ws_port);
 
 #if !defined(_WIN32) && !defined(__APPLE__)
@@ -1136,8 +1296,9 @@ int main(int argc, char *argv[]) {
             int delivered = 0;
             for (int j = 0; j < num_tcp_clients; j++) {
                 if (tcp_clients[j].sock == pending_cmds[i].tcp_sock) {
-                    VLOG("Delivering response id=%d to TCP client: %s",
-                         pending_cmds[i].id, pending_cmds[i].response);
+                    VLOG("Delivering response id=%d to TCP client (%d ms round-trip): %s",
+                         pending_cmds[i].id, ms_elapsed(&pending_cmds[i]),
+                         pending_cmds[i].response);
                     send_str(tcp_clients[j].sock, pending_cmds[i].response);
                     delivered = 1;
                     break;

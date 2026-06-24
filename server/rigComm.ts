@@ -1,7 +1,7 @@
 import net from "net";
 import { Socket } from "socket.io";
 import { ServerContext } from "./context.ts";
-import { vlogRig as vlog } from "./vlog.ts";
+import { vlogRig as vlog, vlogWsjtx } from "./vlog.ts";
 
 export function formatExtendedCommand(cmd: string): string {
   const trimmed = cmd.trim();
@@ -36,6 +36,7 @@ export function parseExtendedResponse(resp: string): string {
 
 export function executeRigCommand(ctx: ServerContext, cmd: string, useExtended = false): Promise<string> {
   const finalCmd = useExtended ? formatExtendedCommand(cmd) : cmd;
+  const startMs = Date.now();
 
   return new Promise((resolve, reject) => {
     if (!ctx.rigSocket || ctx.rigSocket.destroyed) {
@@ -55,6 +56,13 @@ export function executeRigCommand(ctx: ServerContext, cmd: string, useExtended =
       reject(`Rig command timeout: "${cmd}"`);
     }, 10000);
 
+    const finishWithTiming = () => {
+      const elapsed = Date.now() - startMs;
+      if (elapsed > 1000) {
+        vlog(`[RIG] SLOW command: "${cmd}" took ${elapsed}ms`);
+      }
+    };
+
     const onData = (data: Buffer) => {
       responseBuffer += data.toString();
 
@@ -64,6 +72,7 @@ export function executeRigCommand(ctx: ServerContext, cmd: string, useExtended =
           clearTimeout(timeout);
           ctx.rigSocket?.removeListener("data", onData);
           ctx.rigSocket?.removeListener("error", onError);
+          finishWithTiming();
           vlog(`[RIG] Response for "${cmd}": ${responseBuffer.trim()}`);
           const rprtCode = parseInt(rprtMatch[1], 10);
           if (rprtCode === 0 || rprtCode === 1) {
@@ -81,6 +90,7 @@ export function executeRigCommand(ctx: ServerContext, cmd: string, useExtended =
         clearTimeout(timeout);
         ctx.rigSocket?.removeListener("data", onData);
         ctx.rigSocket?.removeListener("error", onError);
+        finishWithTiming();
         vlog(`[RIG] Response for "${cmd}": ${responseBuffer.trim()}`);
         resolve(responseBuffer.trim());
       }
@@ -582,12 +592,17 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
   });
 
   socket.on("set-frequency", async (freq) => {
+    const t0 = Date.now();
+    vlogWsjtx(`[wsjtx:freq] set-frequency received: ${freq}`);
     try {
       await sendToRig(ctx, `F ${freq}`, true, true);
+      vlogWsjtx(`[wsjtx:freq] F ${freq} accepted by rigctld (${Date.now() - t0}ms)`);
       const confirmedFreq = await sendToRig(ctx, "f", true, true);
+      vlogWsjtx(`[wsjtx:freq] readback: ${confirmedFreq} (${Date.now() - t0}ms total)`);
       ctx.lastStatus = { ...ctx.lastStatus, frequency: confirmedFreq };
       ctx.io.emit("rig-status", ctx.lastStatus);
     } catch (err) {
+      vlogWsjtx(`[wsjtx:freq] FAILED: ${err} (${Date.now() - t0}ms)`);
       socket.emit("rig-error", "Failed to set frequency");
     }
   });
@@ -615,12 +630,18 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
   });
 
   socket.on("set-ptt", async (ptt) => {
+    const pttVal = ptt ? "1" : "0";
+    const t0 = Date.now();
+    vlogWsjtx(`[wsjtx:ptt] set-ptt received: ptt=${ptt} → sending T ${pttVal} to rigctld`);
     try {
-      await sendToRig(ctx, `T ${ptt ? "1" : "0"}`, true, true);
+      await sendToRig(ctx, `T ${pttVal}`, true, true);
+      vlogWsjtx(`[wsjtx:ptt] T ${pttVal} accepted by rigctld (${Date.now() - t0}ms)`);
       const confirmedPtt = (await sendToRig(ctx, "t", true, true)) === "1";
+      vlogWsjtx(`[wsjtx:ptt] readback: ptt=${confirmedPtt}, requested=${pttVal === "1"}, match=${confirmedPtt === (pttVal === "1")} (${Date.now() - t0}ms total)`);
       ctx.lastStatus = { ...ctx.lastStatus, ptt: confirmedPtt };
       ctx.io.emit("rig-status", ctx.lastStatus);
     } catch (err) {
+      vlogWsjtx(`[wsjtx:ptt] FAILED: ${err} (${Date.now() - t0}ms)`);
       socket.emit("rig-error", "Failed to set PTT");
     }
   });
