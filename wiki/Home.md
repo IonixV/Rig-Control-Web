@@ -48,4 +48,5 @@ Both layouts show the same information and controls, just arranged differently f
 - [Remote Access](Remote-Access) — Connect from another device over your network or VPN
 - [POTA, SOTA, and WWFF Spots](POTA-and-SOTA-Spots) — Live activator spots with click-to-tune
 - [Solar and Propagation](Solar-and-Propagation) — HF/VHF band conditions, solar indices, and the MUF world map
+- [WSJTX Integration](WSJTX-Integration) — Use WSJTX for FT8, FT4, and other digital modes via the wsjtx-bridge helper
 - [Diagnostic Logging](Diagnostic-Logging) — Capture debug output for troubleshooting and bug reports
