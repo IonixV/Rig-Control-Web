@@ -124,7 +124,7 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, waterfallAc
       if (!audioSettingsRef.current.inboundEnabled || audioStatusRef.current !== "playing" || !localAudioReadyRef.current) {
         return;
       }
-      if (inboundMutedRef.current && !cwDecodeEnabledRef.current && !waterfallActiveRef.current) {
+      if (inboundMutedRef.current && !cwDecodeEnabledRef.current && !waterfallActiveRef.current && !wsjtxStreamDestRef.current) {
         return;
       }
       playInboundAudio(data);
