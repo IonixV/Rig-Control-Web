@@ -501,12 +501,44 @@ export default function App() {
         const outputs = devices.filter(d => d.kind === "audiooutput");
         const inputs = devices.filter(d => d.kind === "audioinput");
 
-        const rxDevice = outputs.find(d => /RCW-WSJTX-RX/i.test(d.label));
-        const txDevice = inputs.find(d => /RCW-WSJTX-TX/i.test(d.label));
+        // Try Linux PipeWire devices first
+        let rxDevice = outputs.find(d => /RCW-WSJTX-RX/i.test(d.label));
+        let txDevice = inputs.find(d => /RCW-WSJTX-TX/i.test(d.label));
+
+        // Fall back to Windows VB-Audio virtual cables (need two distinct cables for bidirectional audio)
+        if (!rxDevice || !txDevice) {
+          const cablePatterns = [
+            { id: "vb-cable", pattern: /VB-Audio Virtual Cable/i },
+            { id: "hifi",    pattern: /VB-Audio Hi-Fi Cable/i },
+            { id: "cable-a", pattern: /VB-Audio Cable A\b/i },
+            { id: "cable-b", pattern: /VB-Audio Cable B\b/i },
+            { id: "cable-c", pattern: /VB-Audio Cable C\b/i },
+            { id: "cable-d", pattern: /VB-Audio Cable D\b/i },
+          ];
+          const foundCables: { id: string; output: MediaDeviceInfo; input: MediaDeviceInfo }[] = [];
+          for (const { id, pattern } of cablePatterns) {
+            const out = outputs.find(d => pattern.test(d.label));
+            const inp = inputs.find(d => pattern.test(d.label));
+            if (out && inp) foundCables.push({ id, output: out, input: inp });
+          }
+          if (foundCables.length >= 2) {
+            rxDevice = foundCables[0].output;
+            txDevice = foundCables[1].input;
+            console.log(`[WSJTX-AUTO] RX (browser→WSJTX): ${foundCables[0].id} — "${rxDevice.label}"`);
+            console.log(`[WSJTX-AUTO] TX (WSJTX→browser): ${foundCables[1].id} — "${txDevice.label}"`);
+          } else if (foundCables.length === 1) {
+            setWsjtxAutoSetupWarning(
+              `Only one virtual cable detected (${foundCables[0].id}). Install a second VB-Audio cable (either adding Hi-Fi CABLE or donating for VB-CABLE A&B at vb-audio.com), or configure manually.`
+            );
+            return;
+          }
+        }
 
         if (!rxDevice || !txDevice) {
-          setWsjtxAutoSetupWarning(
-            "Virtual audio devices not detected — run wsjtx-bridge with audio enabled or configure manually."
+          const isWindows = /windows/i.test(navigator.userAgent);
+          setWsjtxAutoSetupWarning(isWindows
+            ? "Virtual audio cables not detected — install VB-CABLE A&B (donation) or VB-CABLE and Hi-Fi CABLE from vb-audio.com, or configure manually."
+            : "Virtual audio devices not found. Run wsjtx-bridge-linux in a terminal first, or configure manually."
           );
           return;
         }
