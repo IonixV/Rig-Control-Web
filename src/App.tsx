@@ -461,6 +461,89 @@ export default function App() {
     return current ? current.label : (status.agc === 0 ? "OFF" : status.agc.toString());
   }, [status.agc, agcLevels]);
 
+  // ── WSJTX bridge auto-setup ───────────────────────────────────────────────
+  const [wsjtxAutoSetupActive, setWsjtxAutoSetupActive] = useState(false);
+  const [wsjtxAutoSetupWarning, setWsjtxAutoSetupWarning] = useState<string | null>(null);
+  const preWsjtxStateRef = useRef<{
+    inputDevice: string;
+    outboundMuted: boolean;
+  } | null>(null);
+  const wsjtxPendingUnmuteRef = useRef(false);
+
+  useEffect(() => {
+    if (!bridgeConnected) {
+      // Bridge disconnected — restore stashed state if we auto-configured
+      if (wsjtxAutoSetupActive) {
+        const stashed = preWsjtxStateRef.current;
+        if (stashed) {
+          setLocalAudioSettings(prev => ({ ...prev, inputDevice: stashed.inputDevice }));
+          localStorage.setItem("local-audio-input", stashed.inputDevice);
+          setOutboundMuted(stashed.outboundMuted);
+          if (stashed.outboundMuted) {
+            socket?.emit("mic-mute-notify");
+          } else {
+            socket?.emit("mic-unmute-request");
+          }
+        }
+        updateWsjtxOutput("");
+        preWsjtxStateRef.current = null;
+        setWsjtxAutoSetupActive(false);
+        wsjtxPendingUnmuteRef.current = false;
+      }
+      setWsjtxAutoSetupWarning(null);
+      return;
+    }
+
+    // Bridge just connected — auto-configure audio devices
+    (async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const outputs = devices.filter(d => d.kind === "audiooutput");
+        const inputs = devices.filter(d => d.kind === "audioinput");
+
+        const rxDevice = outputs.find(d => /RCW-WSJTX-RX/i.test(d.label));
+        const txDevice = inputs.find(d => /RCW-WSJTX-TX/i.test(d.label));
+
+        if (!rxDevice || !txDevice) {
+          setWsjtxAutoSetupWarning(
+            "Virtual audio devices not detected — run wsjtx-bridge with audio enabled or configure manually."
+          );
+          return;
+        }
+
+        setWsjtxAutoSetupWarning(null);
+
+        // Stash current state before switching
+        preWsjtxStateRef.current = {
+          inputDevice: localAudioSettings.inputDevice,
+          outboundMuted,
+        };
+
+        // Switch to virtual devices
+        setLocalAudioSettings(prev => ({ ...prev, inputDevice: txDevice.deviceId }));
+        localStorage.setItem("local-audio-input", txDevice.deviceId);
+        await updateWsjtxOutput(rxDevice.deviceId);
+
+        setWsjtxAutoSetupActive(true);
+
+        // Defer unmute until localAudioReady is true
+        wsjtxPendingUnmuteRef.current = true;
+      } catch (err) {
+        console.error("[WSJTX-AUTO] Failed to auto-configure audio:", err);
+        setWsjtxAutoSetupWarning("Failed to detect audio devices — configure manually.");
+      }
+    })();
+  }, [bridgeConnected]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Complete the auto-unmute once the audio pipeline is ready
+  useEffect(() => {
+    if (wsjtxPendingUnmuteRef.current && localAudioReady && audioStatus === "playing") {
+      wsjtxPendingUnmuteRef.current = false;
+      setOutboundMuted(false);
+      socket?.emit("mic-unmute-request");
+    }
+  }, [localAudioReady, audioStatus, socket, setOutboundMuted]);
+
   // ── Cross-hook bridge ─────────────────────────────────────────────────────
   const handleJoinAudio = useCallback(async () => {
     const explicitInput = localStorage.getItem("local-audio-input");
@@ -1069,6 +1152,8 @@ export default function App() {
           wsjtxBridgeConnected={bridgeConnected}
           wsjtxWsPort={wsjtxWsPort}
           setWsjtxWsPort={setWsjtxWsPort}
+          wsjtxAutoSetupWarning={wsjtxAutoSetupWarning}
+          wsjtxAutoSetupActive={wsjtxAutoSetupActive}
         />
 
         {/* Rigctld Settings Modal */}

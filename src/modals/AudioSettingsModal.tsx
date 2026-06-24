@@ -67,6 +67,8 @@ export interface AudioSettingsModalProps {
   wsjtxBridgeConnected: boolean;
   wsjtxWsPort: number;
   setWsjtxWsPort: (port: number) => void;
+  wsjtxAutoSetupWarning: string | null;
+  wsjtxAutoSetupActive: boolean;
 }
 
 function AudioSettingsModal({
@@ -103,6 +105,8 @@ function AudioSettingsModal({
   wsjtxBridgeConnected,
   wsjtxWsPort,
   setWsjtxWsPort,
+  wsjtxAutoSetupWarning,
+  wsjtxAutoSetupActive,
 }: AudioSettingsModalProps) {
   if (!isOpen) return null;
   return (
@@ -266,6 +270,20 @@ function AudioSettingsModal({
                   </button>
                 </div>
               </div>
+
+              {wsjtxBridgeEnabled && wsjtxAutoSetupWarning && (
+                <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                  <AlertTriangle size={12} className="text-yellow-500 mt-0.5 shrink-0" />
+                  <p className="text-[0.625rem] text-yellow-400">{wsjtxAutoSetupWarning}</p>
+                </div>
+              )}
+
+              {wsjtxBridgeEnabled && wsjtxAutoSetupActive && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                  <Link size={12} className="text-emerald-500 shrink-0" />
+                  <p className="text-[0.625rem] text-emerald-400">Audio devices auto-configured for WSJTX bridge</p>
+                </div>
+              )}
 
               {wsjtxBridgeEnabled && (
                 <div className="space-y-3">
