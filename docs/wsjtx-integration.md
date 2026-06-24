@@ -59,9 +59,27 @@ cables.
 
 ### Windows
 
-Install [VB-Audio Virtual Cable](https://vb-audio.com/Cable/) (free).  The
-installer creates `CABLE Input` and `CABLE Output` devices.  For a second
-cable (TX path), download VB-Cable A+B from the same site.
+Two virtual audio cables are required for bidirectional audio (RX and TX
+paths).  RigControl Web auto-detects the following VB-Audio products:
+
+**Option A — Two free cables (recommended):**
+1. Install [VB-CABLE](https://vb-audio.com/Cable/) (free/donationware)
+2. Install [Hi-Fi CABLE & ASIO Bridge](https://vb-audio.com/Cable/) (free/donationware, separate download)
+
+**Option B — Donation bundle:**
+1. Install [VB-CABLE A+B](https://vb-audio.com/Cable/) (~5 EUR donation)
+
+Auto-setup assigns the first detected cable as **RX** (browser → WSJTX) and
+the second as **TX** (WSJTX → browser).  Detection priority:
+VB-CABLE → Hi-Fi CABLE → Cable A → Cable B → Cable C → Cable D.
+
+With Option A (VB-CABLE + Hi-Fi CABLE):
+- RX cable: `CABLE Input / CABLE Output (VB-Audio Virtual Cable)`
+- TX cable: `Hi-Fi Cable Input / Hi-Fi Cable Output (VB-Audio Hi-Fi Cable)`
+
+With Option B (VB-CABLE A+B):
+- RX cable: `CABLE-A Input / CABLE-A Output (VB-Audio Cable A)`
+- TX cable: `CABLE-B Input / CABLE-B Output (VB-Audio Cable B)`
 
 ## Step 2: Start the Helper
 
@@ -97,19 +115,22 @@ Open Audio Settings in RigControl Web:
    section.  The status should show "Connected" (green) if the helper is
    running.
 
-2. **WSJTX Audio Output** — select the virtual cable that WSJTX will read
-   from.  Virtual cables are marked with ★ in the dropdown.
-   - Linux: `RCW-WSJTX-RX`
+2. **Audio auto-setup** — on Linux and Windows, audio devices are
+   auto-configured when the bridge connects.  The status banner shows
+   "Auto-configured" (green) when successful.  If auto-setup fails, configure
+   manually:
+
+   **WSJTX Audio Output** (RX cable — browser plays radio audio here):
+   - Linux: `RCW-WSJTX-RX` (auto-detected)
    - macOS: `BlackHole 2ch`
-   - Windows: `CABLE Input (VB-Audio Virtual Cable)`
+   - Windows: `CABLE Input (VB-Audio Virtual Cable)` (auto-detected)
 
-3. **Local Input (Microphone)** — set to the virtual cable that WSJTX writes
-   to.
-   - Linux: `Monitor of RCW-WSJTX-TX`
+   **Local Input (Microphone)** (TX cable — captures WSJTX transmitted audio):
+   - Linux: `RCW-WSJTX-TX` (auto-detected)
    - macOS: Second BlackHole device or loopback
-   - Windows: Second VB-Cable output
+   - Windows: `Hi-Fi Cable Output (VB-Audio Hi-Fi Cable)` (auto-detected)
 
-4. **Unmute your mic** when ready to transmit via WSJTX.
+3. **Unmute your mic** when ready to transmit via WSJTX.
 
 ## Step 4: WSJTX Configuration
 
@@ -119,14 +140,16 @@ In WSJTX → Settings → Radio:
 - **PTT Method:** CAT (or RIG — both work through the bridge)
 
 In WSJTX → Settings → Audio:
-- **Soundcard Input:**
-  - Linux: `Monitor of RCW-WSJTX-RX`
+- **Soundcard Input** (WSJTX hears radio — RX cable output):
+  - Linux: `RCW-WSJTX-RX`
   - macOS: `BlackHole 2ch`
-  - Windows: `CABLE Output (VB-Audio Virtual Cable)`
-- **Soundcard Output:**
+  - Windows (VB-CABLE + Hi-Fi): `CABLE Output (VB-Audio Virtual Cable)`
+  - Windows (A+B): `CABLE-A Output (VB-Audio Cable A)`
+- **Soundcard Output** (WSJTX transmits — TX cable input):
   - Linux: `RCW-WSJTX-TX`
   - macOS: Second BlackHole device
-  - Windows: Second VB-Cable input
+  - Windows (VB-CABLE + Hi-Fi): `Hi-Fi Cable Input (VB-Audio Hi-Fi Cable)`
+  - Windows (A+B): `CABLE-B Input (VB-Audio Cable B)`
 
 ## Testing
 
