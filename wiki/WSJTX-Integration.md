@@ -31,19 +31,33 @@ WSJTX ──TCP (rigctld)──→ wsjtx-bridge (localhost)
 - Virtual audio cables (see platform-specific setup below)
 - Chrome or Edge browser (required for `setSinkId` audio routing)
 
+### Tested platforms
+
+This integration has been tested on **Windows 11 Pro** and **modern Fedora** (PipeWire) only. **macOS is untested** due to lack of hardware — the instructions below are based on research and may require adjustment. Community feedback is welcome.
+
+### Linux audio server requirements
+
+Automatic virtual audio device creation requires **PipeWire** (`pw-loopback`). Distros that ship PipeWire as the default audio server:
+
+- **Fedora 34+** (since 2021)
+- **Ubuntu 22.04+** (since 2022)
+- **Debian 12+** (since 2023)
+
+PulseAudio-only systems (e.g. Ubuntu 20.04, Debian 11, older Fedora) are **not supported** by the automatic audio setup. PulseAudio users will need to create virtual audio devices manually (e.g. via `pactl load-module module-null-sink`) and configure them by hand in Steps 3 and 4.
+
 ---
 
 ## Step 1: Virtual Audio Setup
 
-### Linux (fully automated)
+### Linux (PipeWire — fully automated)
 
-No manual setup needed. The `wsjtx-bridge` helper automatically creates virtual audio devices via PipeWire (`pw-loopback`) on startup and removes them on exit. Requires PipeWire (standard on Fedora, Ubuntu 22.04+, and most modern distros).
+No manual setup needed. The `wsjtx-bridge` helper automatically creates virtual audio devices via PipeWire (`pw-loopback`) on startup and removes them on exit. See [Linux audio server requirements](#linux-audio-server-requirements) above for supported distros.
 
-Use `--no-audio` to skip automatic virtual audio creation if you prefer to manage devices manually.
+Use `--no-audio` to skip automatic virtual audio creation if you prefer to manage devices manually or are running PulseAudio.
 
 ### macOS
 
-Two virtual audio devices are required for bidirectional audio (RX and TX paths). Audio must be configured manually on macOS — auto-setup is not yet supported.
+Two virtual audio devices are required for bidirectional audio (RX and TX paths). Audio must be configured manually on macOS — auto-setup is not yet supported. **macOS is untested** — see [Tested platforms](#tested-platforms).
 
 **Option A — BlackHole 2ch + 16ch (recommended, free):**
 
