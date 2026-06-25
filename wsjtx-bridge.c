@@ -570,6 +570,7 @@ static void handle_ws_message(const char *msg) {
 /* ─── Send a rig command to browser via WebSocket, return pending_cmd ───── */
 
 static sock_t ws_client = SOCK_INVALID;
+static sock_t g_close_after_cmd = SOCK_INVALID;
 
 static pending_cmd_t *send_rig_cmd(sock_t tcp_sock,
                                     const char *cmd_name, const char *args_json) {
@@ -897,7 +898,8 @@ static const char *handle_rigctld_cmd(sock_t tcp_sock, const char *line) {
 
     if (cmd[0] == 'q' && (cmd[1] == '\0' || cmd[1] == ' ' || cmd[1] == '\n')) {
         VLOG("  -> quit");
-        return "";
+        g_close_after_cmd = tcp_sock;
+        return NULL;
     }
 
     /* ── Unknown command ── */
@@ -1110,7 +1112,7 @@ int main(int argc, char *argv[]) {
 
     printf("READY %d %d\n", tcp_port, ws_port);
     fflush(stdout);
-    fprintf(stderr, "wsjtx-bridge v0.2.0: TCP (rigctld) on localhost:%d, WebSocket on localhost:%d\n",
+    fprintf(stderr, "wsjtx-bridge v0.2.1: TCP (rigctld) on localhost:%d, WebSocket on localhost:%d\n",
             tcp_port, ws_port);
 
 #if !defined(_WIN32) && !defined(__APPLE__)
@@ -1206,6 +1208,7 @@ int main(int argc, char *argv[]) {
             /* Process complete lines */
             char *start = tcp_clients[i].buf;
             char *nl;
+            int client_closed = 0;
             while ((nl = strchr(start, '\n')) != NULL) {
                 *nl = '\0';
                 /* Trim \r */
@@ -1218,7 +1221,18 @@ int main(int argc, char *argv[]) {
                 /* If response is NULL, it's async (pending_cmd will deliver) */
 
                 start = nl + 1;
+
+                /* 'q' handler sets g_close_after_cmd — close immediately so WSJTX
+                 * sees EOF without waiting for its own timeout (~20 s). */
+                if (g_close_after_cmd == tcp_clients[i].sock) {
+                    g_close_after_cmd = SOCK_INVALID;
+                    tcp_client_remove(i);
+                    i--;
+                    client_closed = 1;
+                    break;
+                }
             }
+            if (client_closed) continue;
 
             /* Shift remaining data */
             int remaining = tcp_clients[i].buf_len - (int)(start - tcp_clients[i].buf);
