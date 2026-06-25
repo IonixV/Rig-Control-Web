@@ -43,13 +43,28 @@ Use `--no-audio` to skip automatic virtual audio creation if you prefer to manag
 
 ### macOS
 
-Install [BlackHole](https://github.com/ExistentialAudio/BlackHole) (free, open-source):
+Two virtual audio devices are required for bidirectional audio (RX and TX paths). Audio must be configured manually on macOS — auto-setup is not yet supported.
+
+**Option A — BlackHole 2ch + 16ch (recommended, free):**
+
+Install both [BlackHole](https://github.com/ExistentialAudio/BlackHole) channel variants — they appear as two independent virtual audio devices:
 
 ```bash
 brew install blackhole-2ch
+brew install blackhole-16ch
 ```
 
-BlackHole provides a single 2-channel virtual audio device. You may need a second virtual device for the TX path — install `blackhole-16ch` or use [Loopback](https://rogueamoeba.com/loopback/) if you need two independent cables.
+After installation, verify both devices appear in **Audio MIDI Setup** (Applications → Utilities):
+- `BlackHole 2ch` — used as the **RX** cable (browser → WSJTX)
+- `BlackHole 16ch` — used as the **TX** cable (WSJTX → browser)
+
+**Option B — VB-CABLE A+B for Mac (donationware, ~$5–$25):**
+
+Purchase from the [VB-Audio shop](https://shop.vb-audio.com/en/mac-apps/30-vb-cable-ab-mac.html). Provides two independent virtual cables (Cable A and Cable B). Supports macOS 10.10+ on both Intel and Apple Silicon.
+
+> **Note:** The free [VB-CABLE for Mac](https://shop.vb-audio.com/en/mac-apps/29-vb-cable-mac.html) (`brew install --cask vb-cable`) provides only one virtual cable, which is not sufficient by itself. You would need to pair it with BlackHole for a second cable, but using two BlackHole devices (Option A) is simpler and fully free.
+>
+> Hi-Fi CABLE is **not available on macOS** — it is a Windows-only product.
 
 ### Windows
 
@@ -86,13 +101,12 @@ Auto-setup assigns the first detected cable as **RX** (browser → WSJTX) and th
 
 Run the `wsjtx-bridge` binary on your local machine:
 
+**Linux:**
 ```bash
-./wsjtx-bridge          # Linux
-./wsjtx-bridge          # macOS
-wsjtx-bridge.exe        # Windows
+./wsjtx-bridge
 ```
 
-On Linux you should see:
+Expected output:
 ```
 READY 4540 4541
 wsjtx-bridge: Virtual audio devices created (PipeWire)
@@ -101,6 +115,34 @@ wsjtx-bridge: Virtual audio devices created (PipeWire)
   RCW WSJTX Audio Output:  RCW-WSJTX-RX
   RCW Local Input (Mic):   RCW-WSJTX-TX
 ```
+
+**macOS:**
+```bash
+./wsjtx-bridge
+```
+
+Expected output:
+```
+READY 4540 4541
+wsjtx-bridge v0.2.0: TCP (rigctld) on localhost:4540, WebSocket on localhost:4541
+```
+
+Virtual audio is not created automatically on macOS — use the devices you installed in Step 1.
+
+**Windows:**
+```
+wsjtx-bridge.exe
+```
+
+Expected output:
+```
+READY 4540 4541
+wsjtx-bridge v0.2.0: TCP (rigctld) on localhost:4540, WebSocket on localhost:4541
+```
+
+Virtual audio is not created automatically on Windows — use the VB-Audio cables you installed in Step 1.
+
+---
 
 The helper listens on:
 - **TCP port 4540** — rigctld protocol for WSJTX
@@ -116,17 +158,23 @@ Open Audio Settings in RigControl Web:
 
 1. **Enable WSJTX Bridge** — toggle on in the WSJTX / Digital Mode Bridge section. The status should show "Connected" (green) if the helper is running.
 
-2. **Audio auto-setup** — on Linux and Windows, audio devices are auto-configured when the bridge connects. The status banner shows "Auto-configured" (green) when successful. If auto-setup fails, configure manually:
+2. **Audio auto-setup** — on Linux and Windows, audio devices are auto-configured when the bridge connects. The status banner shows "Auto-configured" (green) when successful. On macOS, manual configuration is required.
 
-   **WSJTX Audio Output** (RX cable — browser plays radio audio here):
+   If auto-setup fails or you're on macOS, configure the two audio routes manually:
+
+   **WSJTX Audio Output** (RX cable — browser plays radio audio here for WSJTX to decode):
    - Linux: `RCW-WSJTX-RX` (auto-detected)
-   - macOS: `BlackHole 2ch`
-   - Windows: `CABLE Input (VB-Audio Virtual Cable)` (auto-detected)
+   - macOS (BlackHole): `BlackHole 2ch`
+   - macOS (VB-CABLE A+B): `VB-Cable A`
+   - Windows (VB-CABLE + Hi-Fi): `CABLE Input (VB-Audio Virtual Cable)` (auto-detected)
+   - Windows (A+B): `CABLE-A Input (VB-Audio Cable A)` (auto-detected)
 
    **Local Input (Microphone)** (TX cable — captures WSJTX transmitted audio):
    - Linux: `RCW-WSJTX-TX` (auto-detected)
-   - macOS: Second BlackHole device or loopback
-   - Windows: `Hi-Fi Cable Output (VB-Audio Hi-Fi Cable)` (auto-detected)
+   - macOS (BlackHole): `BlackHole 16ch`
+   - macOS (VB-CABLE A+B): `VB-Cable B`
+   - Windows (VB-CABLE + Hi-Fi): `Hi-Fi Cable Output (VB-Audio Hi-Fi Cable)` (auto-detected)
+   - Windows (A+B): `CABLE-B Output (VB-Audio Cable B)` (auto-detected)
 
 3. **Unmute your mic** when ready to transmit via WSJTX.
 
@@ -143,10 +191,40 @@ In WSJTX → Settings → **Radio:**
 
 In WSJTX → Settings → **Audio:**
 
-| Setting | Linux | macOS | Windows (VB-CABLE + Hi-Fi) | Windows (A+B) |
-|---------|-------|-------|---------------------------|---------------|
-| **Soundcard Input** (hears radio) | `RCW-WSJTX-RX` | `BlackHole 2ch` | `CABLE Output (VB-Audio Virtual Cable)` | `CABLE-A Output (VB-Audio Cable A)` |
-| **Soundcard Output** (transmits) | `RCW-WSJTX-TX` | Second BlackHole device | `Hi-Fi Cable Input (VB-Audio Hi-Fi Cable)` | `CABLE-B Input (VB-Audio Cable B)` |
+**Linux:**
+
+| Setting | Device |
+|---------|--------|
+| **Soundcard Input** (hears radio) | `RCW-WSJTX-RX` |
+| **Soundcard Output** (transmits) | `RCW-WSJTX-TX` |
+
+**macOS (BlackHole 2ch + 16ch):**
+
+| Setting | Device |
+|---------|--------|
+| **Soundcard Input** (hears radio) | `BlackHole 2ch` |
+| **Soundcard Output** (transmits) | `BlackHole 16ch` |
+
+**macOS (VB-CABLE A+B):**
+
+| Setting | Device |
+|---------|--------|
+| **Soundcard Input** (hears radio) | `VB-Cable A` |
+| **Soundcard Output** (transmits) | `VB-Cable B` |
+
+**Windows (VB-CABLE + Hi-Fi CABLE):**
+
+| Setting | Device |
+|---------|--------|
+| **Soundcard Input** (hears radio) | `CABLE Output (VB-Audio Virtual Cable)` |
+| **Soundcard Output** (transmits) | `Hi-Fi Cable Input (VB-Audio Hi-Fi Cable)` |
+
+**Windows (VB-CABLE A+B):**
+
+| Setting | Device |
+|---------|--------|
+| **Soundcard Input** (hears radio) | `CABLE-A Output (VB-Audio Cable A)` |
+| **Soundcard Output** (transmits) | `CABLE-B Input (VB-Audio Cable B)` |
 
 ---
 
@@ -186,6 +264,14 @@ In WSJTX → Settings → **Audio:**
 **Windows: "Virtual audio cables not detected"**
 - Install VB-CABLE and Hi-Fi CABLE from [vb-audio.com](https://vb-audio.com/Cable/), or donate for VB-CABLE A+B.
 - Restart the browser after installing new audio drivers.
+
+**macOS: No virtual audio devices appear in dropdowns**
+- Verify both devices are installed: open **Audio MIDI Setup** (Applications → Utilities) and confirm you see `BlackHole 2ch` and `BlackHole 16ch` (or `VB-Cable A` and `VB-Cable B` if using VB-CABLE A+B).
+- If you installed via Homebrew, try `brew reinstall blackhole-2ch blackhole-16ch` and restart.
+- macOS may require granting microphone permission to Chrome/Edge — check **System Settings → Privacy & Security → Microphone**.
+
+**macOS: Audio auto-setup is not supported**
+- macOS virtual audio devices must be configured manually in RigControl Web. See Step 3 for the correct device assignments.
 
 **Audio latency / missed decodes**
 - Network audio adds ~100-300 ms depending on your connection. WSJTX compensates internally, but high-latency or lossy connections may affect decode rates.
