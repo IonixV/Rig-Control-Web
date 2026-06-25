@@ -97,9 +97,19 @@ Auto-setup assigns the first detected cable as **RX** (browser → WSJTX) and th
 
 ---
 
-## Step 2: Start the Helper
+## Step 2: Download and Start the Helper
 
-Run the `wsjtx-bridge` binary on your local machine:
+Download the `wsjtx-bridge` binary for your platform:
+
+| Platform | Download |
+|----------|----------|
+| Linux | [wsjtx-bridge-linux](https://jbdubbs.github.io/Rig-Control-Web/downloads/wsjtx-bridge-linux) |
+| macOS | [wsjtx-bridge-mac](https://jbdubbs.github.io/Rig-Control-Web/downloads/wsjtx-bridge-mac) |
+| Windows | [wsjtx-bridge.exe](https://jbdubbs.github.io/Rig-Control-Web/downloads/wsjtx-bridge.exe) |
+
+On Linux and macOS, make the binary executable after downloading: `chmod +x wsjtx-bridge-*`
+
+Run it on your local machine:
 
 **Linux:**
 ```bash
