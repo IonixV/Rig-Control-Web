@@ -149,6 +149,7 @@ export interface CompactLayoutProps {
 
   // Controls
   powerSupported: boolean;
+  poweringOn: boolean;
   handleSetPower: (state: boolean) => void;
   isCompactControlsCollapsed: boolean;
   isCompactRFPowerCollapsed: boolean;
@@ -344,6 +345,7 @@ function CompactLayout({
   setLocalNRLevel,
   setLocalNBLevel,
   powerSupported,
+  poweringOn,
   handleSetPower,
   handleSetPTT,
   handleSetFunc,
@@ -691,6 +693,7 @@ function CompactLayout({
               <ControlsPanelHeaderAction
                 powerSupported={powerSupported}
                 powerState={status.powerState ?? 'unknown'}
+                poweringOn={poweringOn}
                 handleSetPower={handleSetPower}
               />
             }

@@ -277,7 +277,7 @@ export async function probeVfoCapability(ctx: ServerContext): Promise<void> {
 
 async function probePowerCapability(ctx: ServerContext): Promise<void> {
   try {
-    const result = await sendToRig(ctx, "j", true);
+    const result = await sendToRig(ctx, "get_powerstat", true);
     ctx.powerSupported = true;
     ctx.powerState = result.trim() === "1" ? 'on' : 'off';
     vlog(`[RIG] Power control supported; state: ${ctx.powerState}`);
@@ -290,6 +290,7 @@ async function probePowerCapability(ctx: ServerContext): Promise<void> {
 
 async function triggerPowerOff(ctx: ServerContext): Promise<void> {
   if (ctx.lastStatus.ptt) {
+    vlog("[RIG][POWER] PTT active — clearing before power off");
     await sendToRig(ctx, "T 0", false, true).catch(() => {});
   }
   const { cwSetKey, stopCwTick } = await import("./cw.ts");
@@ -297,7 +298,10 @@ async function triggerPowerOff(ctx: ServerContext): Promise<void> {
   stopCwTick(ctx);
   const { stopAudio } = await import("./audio.ts");
   ctx.audioWasPlaying = ctx.audioStatus === 'playing';
+  if (ctx.audioWasPlaying) vlog("[RIG][POWER] Audio was playing — stopping before power off");
   await stopAudio(ctx);
+  const queued = ctx.rigCommandQueue.length;
+  if (queued > 0) vlog(`[RIG][POWER] Draining ${queued} queued command(s)`);
   while (ctx.rigCommandQueue.length > 0) {
     ctx.rigCommandQueue.shift()!.reject("Radio powered off");
   }
@@ -306,7 +310,7 @@ async function triggerPowerOff(ctx: ServerContext): Promise<void> {
   ctx.lastStatus = { ...ctx.lastStatus, ptt: false, powerState: 'off' };
   ctx.io.emit("rig-status", ctx.lastStatus);
   ctx.io.emit("spectrum-data", { id: 0, name: "", amplitudes: [], timestamp: Date.now() });
-  vlog("[RIG] Radio powered off — polling suspended");
+  vlog("[RIG][POWER] Local state set to off — polling suspended");
 }
 
 function onPowerOn(ctx: ServerContext): void {
@@ -334,7 +338,7 @@ export async function pollRig(ctx: ServerContext): Promise<void> {
     if (now - ctx.lastPowerCheck < 5000) return;
     ctx.lastPowerCheck = now;
     try {
-      const result = await sendToRig(ctx, "j", true);
+      const result = await sendToRig(ctx, "get_powerstat", true);
       if (result.trim() === "1") {
         ctx.powerState = 'on';
         ctx.lastStatus = { ...ctx.lastStatus, powerState: 'on' };
@@ -420,7 +424,7 @@ export async function pollRig(ctx: ServerContext): Promise<void> {
       tuner = (await sendToRig(ctx, "u TUNER", true).catch(() => "0")) === "1";
 
       if (ctx.powerSupported) {
-        const ps = await sendToRig(ctx, "j", true).catch(() => null);
+        const ps = await sendToRig(ctx, "get_powerstat", true).catch(() => null);
         if (ps !== null && ps.trim() === "0") {
           vlog("[RIG] Radio powered off (detected during slow poll)");
           await triggerPowerOff(ctx);
@@ -726,22 +730,58 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
   });
 
   socket.on("set-power", async ({ state }: { state: boolean }) => {
+    vlog(`[RIG][POWER] set-power received: state=${state}`);
     if (!ctx.powerSupported) {
+      vlog("[RIG][POWER] Rejected — power control not supported by this rig");
       socket.emit("rig-op-error", "Power control not supported by this rig");
       return;
     }
     try {
       if (!state) {
+        vlog("[RIG][POWER] Initiating power-off sequence");
         await triggerPowerOff(ctx);
-        await sendToRig(ctx, "J 0", true, true);
+        vlog("[RIG][POWER] Sending set_powerstat 0 to rig");
+        await sendToRig(ctx, "set_powerstat 0", true, true);
+        vlog("[RIG][POWER] Power-off command acknowledged by rigctld");
       } else {
-        await sendToRig(ctx, "J 1", true, true);
-        ctx.powerState = 'on';
-        ctx.lastStatus = { ...ctx.lastStatus, powerState: 'on' };
-        ctx.io.emit("rig-status", ctx.lastStatus);
-        onPowerOn(ctx);
+        vlog("[RIG][POWER] Sending set_powerstat 1 to rig");
+        await sendToRig(ctx, "set_powerstat 1", true, true);
+        vlog("[RIG][POWER] Power-on command acknowledged — polling get_powerstat every 500 ms (10 s window)");
+        const t0 = Date.now();
+        const deadline = t0 + 10000;
+        let confirmed = false;
+        let polls = 0;
+        while (Date.now() < deadline) {
+          await new Promise<void>(r => setTimeout(r, 500));
+          if (ctx.powerState === 'on') {
+            vlog(`[RIG][POWER] Power-on confirmed by poll loop after ${Date.now() - t0} ms`);
+            confirmed = true;
+            break;
+          }
+          polls++;
+          try {
+            const ps = await sendToRig(ctx, "get_powerstat", true, true);
+            vlog(`[RIG][POWER] Poll ${polls}: get_powerstat=${ps.trim()} (${Date.now() - t0} ms elapsed)`);
+            if (ps.trim() === "1") { confirmed = true; break; }
+          } catch (pollErr) {
+            vlog(`[RIG][POWER] Poll ${polls}: get_powerstat error — ${pollErr} (${Date.now() - t0} ms elapsed)`);
+          }
+        }
+        if (confirmed && ctx.powerState !== 'on') {
+          vlog(`[RIG][POWER] Radio confirmed on after ${Date.now() - t0} ms — resuming normal operations`);
+          ctx.powerState = 'on';
+          ctx.lastStatus = { ...ctx.lastStatus, powerState: 'on' };
+          ctx.io.emit("rig-status", ctx.lastStatus);
+          onPowerOn(ctx);
+        } else if (confirmed) {
+          vlog(`[RIG][POWER] Radio confirmed on (by poll loop) after ${Date.now() - t0} ms`);
+        } else {
+          vlog("[RIG][POWER] Timed out — radio did not confirm power-on within 10 seconds");
+          socket.emit("rig-op-error", "Radio did not respond within 10 seconds");
+        }
       }
     } catch (err) {
+      vlog(`[RIG][POWER] set-power failed: ${err}`);
       socket.emit("rig-op-error", `Failed to set power: ${err}`);
     }
   });

@@ -309,6 +309,7 @@ export default function App() {
     handleVfoOp,
     handleSendRaw,
     powerSupported,
+    poweringOn,
     handleSetPower,
     effectivelyConnected,
   } = useRigControl({
@@ -744,6 +745,7 @@ export default function App() {
             status={status}
             connected={effectivelyConnected}
             powerSupported={powerSupported}
+            poweringOn={poweringOn}
             handleSetPower={handleSetPower}
             availableModes={availableModes}
             socket={socket}
@@ -904,6 +906,7 @@ export default function App() {
             socket={socket}
             vfoSupported={vfoSupported}
             powerSupported={powerSupported}
+            poweringOn={poweringOn}
             handleSetPower={handleSetPower}
             isPhoneVFOCollapsed={isCompactVFOCollapsed}
             setIsPhoneVFOCollapsed={setIsCompactVFOCollapsed}

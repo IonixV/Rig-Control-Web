@@ -1,5 +1,5 @@
-import React, { useState, useRef } from "react";
-import { Mic, RefreshCw, Signal, Zap, Waves, Activity, Settings, Power } from "lucide-react";
+import React from "react";
+import { Mic, RefreshCw, Signal, Zap, Waves, Activity, Settings, Power, Loader2 } from "lucide-react";
 import { cn } from "../utils";
 import type { RigStatus, CwSettings, NbCapabilities, NrCapabilities, AnfCapabilities } from "../types";
 
@@ -241,44 +241,31 @@ export default function ControlsPanel({
 interface ControlsPanelHeaderActionProps {
   powerSupported: boolean;
   powerState: 'on' | 'off' | 'unknown';
+  poweringOn: boolean;
   handleSetPower: (state: boolean) => void;
 }
 
-export function ControlsPanelHeaderAction({ powerSupported, powerState, handleSetPower }: ControlsPanelHeaderActionProps) {
-  const [confirmPending, setConfirmPending] = useState(false);
-  const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
+export function ControlsPanelHeaderAction({ powerSupported, powerState, poweringOn, handleSetPower }: ControlsPanelHeaderActionProps) {
   if (!powerSupported) return null;
 
-  const handleClick = () => {
-    if (powerState === 'on') {
-      if (!confirmPending) {
-        setConfirmPending(true);
-        confirmTimer.current = setTimeout(() => setConfirmPending(false), 3000);
-      } else {
-        clearTimeout(confirmTimer.current!);
-        setConfirmPending(false);
-        handleSetPower(false);
-      }
-    } else {
-      if (confirmTimer.current) clearTimeout(confirmTimer.current);
-      setConfirmPending(false);
-      handleSetPower(true);
-    }
-  };
+  if (poweringOn) {
+    return (
+      <span className="p-1 text-amber-400" title="Waiting for radio to power on…">
+        <Loader2 size={14} className="animate-spin" />
+      </span>
+    );
+  }
 
   return (
     <button
-      onClick={handleClick}
+      onClick={() => handleSetPower(powerState !== 'on')}
       title={
-        confirmPending ? 'Click again to confirm power off' :
         powerState === 'on' ? 'Radio ON — click to power off' :
         powerState === 'off' ? 'Radio OFF — click to power on' :
         'Power state unknown'
       }
       className={cn(
         "p-1 rounded transition-colors",
-        confirmPending ? "text-amber-400 hover:text-amber-300" :
         powerState === 'on' ? "text-emerald-500 hover:text-emerald-400" :
         powerState === 'off' ? "text-red-500 hover:text-red-400" :
         "text-[#8e9299] hover:text-white"

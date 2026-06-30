@@ -132,6 +132,7 @@ export interface PhoneLayoutProps {
   setLocalNRLevel: React.Dispatch<React.SetStateAction<number>>;
   setLocalNBLevel: React.Dispatch<React.SetStateAction<number>>;
   powerSupported: boolean;
+  poweringOn: boolean;
   handleSetPower: (state: boolean) => void;
   handleSetPTT: (state: boolean) => void;
   handleSetFunc: (func: string, state: boolean) => void;
@@ -309,6 +310,7 @@ function PhoneLayout({
   setLocalNRLevel,
   setLocalNBLevel,
   powerSupported,
+  poweringOn,
   handleSetPower,
   handleSetPTT,
   handleSetFunc,
@@ -580,6 +582,7 @@ function PhoneLayout({
               <ControlsPanelHeaderAction
                 powerSupported={powerSupported}
                 powerState={status.powerState ?? 'unknown'}
+                poweringOn={poweringOn}
                 handleSetPower={handleSetPower}
               />
             }

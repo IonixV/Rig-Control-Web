@@ -51,6 +51,8 @@ export function useRigControl({
   const [rigConnecting, setRigConnecting] = useState<{ attempt: number; maxAttempts: number } | null>(null);
   const [opError, setOpError] = useState<string | null>(null);
   const opErrorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [poweringOn, setPoweringOn] = useState(false);
+  const poweringOnTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [rawCommand, setRawCommand] = useState("");
   const [consoleLogs, setConsoleLogs] = useState<{ cmd: string; resp: string; time: string }[]>([]);
   const [availableModes, setAvailableModes] = useState<string[]>(MODES_FALLBACK);
@@ -363,6 +365,11 @@ export function useRigControl({
   const handleSetPower = useCallback((state: boolean) => {
     setStatus(prev => ({ ...prev, powerState: state ? 'on' : 'off' }));
     socket?.emit("set-power", { state });
+    if (state) {
+      setPoweringOn(true);
+      if (poweringOnTimer.current) clearTimeout(poweringOnTimer.current);
+      poweringOnTimer.current = setTimeout(() => setPoweringOn(false), 12000);
+    }
   }, [socket]);
 
   // ── Socket events ─────────────────────────────────────────────────────────
@@ -436,6 +443,8 @@ export function useRigControl({
       setOpError(msg);
       if (opErrorTimer.current) clearTimeout(opErrorTimer.current);
       opErrorTimer.current = setTimeout(() => setOpError(null), 4000);
+      if (poweringOnTimer.current) clearTimeout(poweringOnTimer.current);
+      setPoweringOn(false);
     };
 
     const onRawResponse = (data: { cmd: string; resp: string }) => {
@@ -444,6 +453,11 @@ export function useRigControl({
 
     const onRigStatus = (newStatus: RigStatus) => {
       if (!newStatus) return;
+      if (newStatus.powerState === 'on' && poweringOnTimer.current) {
+        clearTimeout(poweringOnTimer.current);
+        poweringOnTimer.current = null;
+        setPoweringOn(false);
+      }
       setPendingVfoOp(null);
       const wasJustFinished = tuneJustFinishedRef.current;
       if (tuningTimeoutRef.current !== null) {
@@ -539,6 +553,7 @@ export function useRigControl({
       socket.off("rig-status", onRigStatus);
       socket.off("debug-flags", onDebugFlags);
       if (opErrorTimer.current) clearTimeout(opErrorTimer.current);
+      if (poweringOnTimer.current) clearTimeout(poweringOnTimer.current);
     };
   }, [socket]);
 
@@ -549,6 +564,7 @@ export function useRigControl({
     effectivelyConnected,
     vfoSupported,
     powerSupported,
+    poweringOn,
     handleSetPower,
     host, setHost,
     port, setPort,
