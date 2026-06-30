@@ -277,7 +277,7 @@ export async function probeVfoCapability(ctx: ServerContext): Promise<void> {
 
 async function probePowerCapability(ctx: ServerContext): Promise<void> {
   try {
-    const result = await sendToRig(ctx, "J ?", true);
+    const result = await sendToRig(ctx, "j", true);
     ctx.powerSupported = true;
     ctx.powerState = result.trim() === "1" ? 'on' : 'off';
     vlog(`[RIG] Power control supported; state: ${ctx.powerState}`);
@@ -334,7 +334,7 @@ export async function pollRig(ctx: ServerContext): Promise<void> {
     if (now - ctx.lastPowerCheck < 5000) return;
     ctx.lastPowerCheck = now;
     try {
-      const result = await sendToRig(ctx, "J ?", true);
+      const result = await sendToRig(ctx, "j", true);
       if (result.trim() === "1") {
         ctx.powerState = 'on';
         ctx.lastStatus = { ...ctx.lastStatus, powerState: 'on' };
@@ -420,7 +420,7 @@ export async function pollRig(ctx: ServerContext): Promise<void> {
       tuner = (await sendToRig(ctx, "u TUNER", true).catch(() => "0")) === "1";
 
       if (ctx.powerSupported) {
-        const ps = await sendToRig(ctx, "J ?", true).catch(() => null);
+        const ps = await sendToRig(ctx, "j", true).catch(() => null);
         if (ps !== null && ps.trim() === "0") {
           vlog("[RIG] Radio powered off (detected during slow poll)");
           await triggerPowerOff(ctx);
