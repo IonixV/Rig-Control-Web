@@ -122,6 +122,10 @@ export interface ServerContext {
   rigSocket: net.Socket | null;
   isConnected: boolean;
   vfoSupported: boolean;
+  powerSupported: boolean;
+  powerState: 'on' | 'off' | 'unknown';
+  lastPowerCheck: number;
+  audioWasPlaying: boolean;
   rigConfig: { host: string; port: number };
   lastStatus: {
     frequency: string;
@@ -147,6 +151,7 @@ export interface ServerContext {
     nrLevel: number;
     anf: boolean;
     tuner: boolean;
+    powerState: 'on' | 'off' | 'unknown';
     timestamp?: number;
   };
   visibleMeters: string[];
@@ -293,6 +298,10 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
     rigSocket: null,
     isConnected: false,
     vfoSupported: true,
+    powerSupported: false,
+    powerState: 'unknown',
+    lastPowerCheck: 0,
+    audioWasPlaying: false,
     rigConfig: { host: "", port: 0 },
     lastStatus: {
       frequency: "14074000",
@@ -318,6 +327,7 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
       nrLevel: 8 / 15,
       anf: false,
       tuner: false,
+      powerState: 'unknown',
     },
     visibleMeters: ["swr", "alc"],
     pollCycleCount: 0,

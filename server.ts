@@ -171,7 +171,13 @@ export async function startServer(appPath?: string, userDataPath?: string) {
     socket.emit("anf-capabilities", { supported: ctx.rigctldSettings.anfSupported });
 
     if (ctx.isConnected) {
-      socket.emit("rig-connected", { host: ctx.rigConfig.host, port: ctx.rigConfig.port });
+      socket.emit("rig-connected", {
+        host: ctx.rigConfig.host,
+        port: ctx.rigConfig.port,
+        vfoSupported: ctx.vfoSupported,
+        powerSupported: ctx.powerSupported,
+      });
+      socket.emit("rig-status", ctx.lastStatus);
     }
 
     if (fs.existsSync(RADIOS_FILE)) {

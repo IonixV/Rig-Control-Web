@@ -32,7 +32,7 @@ import SpotsPanel, { SpotSettingsGear } from "../panels/SpotsPanel";
 import SpotComboPanel from "../panels/SpotComboPanel";
 import SpotSettingsModal from "../modals/SpotSettingsModal";
 import ComboSpotSettingsModal from "../modals/ComboSpotSettingsModal";
-import ControlsPanel from "../panels/ControlsPanel";
+import ControlsPanel, { ControlsPanelHeaderAction } from "../panels/ControlsPanel";
 import TabbedMeterPanel, {
   TabbedMeterHeaderContent,
 } from "../panels/TabbedMeterPanel";
@@ -131,6 +131,8 @@ export interface PhoneLayoutProps {
   setLocalRFLevel: React.Dispatch<React.SetStateAction<number>>;
   setLocalNRLevel: React.Dispatch<React.SetStateAction<number>>;
   setLocalNBLevel: React.Dispatch<React.SetStateAction<number>>;
+  powerSupported: boolean;
+  handleSetPower: (state: boolean) => void;
   handleSetPTT: (state: boolean) => void;
   handleSetFunc: (func: string, state: boolean) => void;
   handleVfoOp: (op: string) => void;
@@ -306,6 +308,8 @@ function PhoneLayout({
   setLocalRFLevel,
   setLocalNRLevel,
   setLocalNBLevel,
+  powerSupported,
+  handleSetPower,
   handleSetPTT,
   handleSetFunc,
   handleVfoOp,
@@ -572,6 +576,13 @@ function PhoneLayout({
             setIsCollapsed={setIsPhoneQuickControlsCollapsed}
             bodyClassName="p-3 flex flex-col gap-4"
             headerSize="md"
+            headerActions={
+              <ControlsPanelHeaderAction
+                powerSupported={powerSupported}
+                powerState={status.powerState ?? 'unknown'}
+                handleSetPower={handleSetPower}
+              />
+            }
           >
             <ControlsPanel
               variant="phone"
@@ -817,14 +828,16 @@ function PhoneLayout({
 
   return (
     <div className={cn("space-y-2 animate-in fade-in duration-300", isEditMode && "pb-16")}>
-      {/* CW mode warning — always at top, not part of the configurable panel order */}
-      {cwSettings.enabled &&
-        connected &&
-        !["CW", "CWR", "CW-R"].includes(status?.mode || "") && (
-          <div className="bg-amber-900/40 border border-amber-500/60 text-amber-300 text-xs font-bold px-3 py-2 rounded-xl text-center">
-            Radio not in CW mode — Switch mode to key
-          </div>
-        )}
+      {/* Status banners — power-down takes priority over CW mode warning */}
+      {status?.powerState === 'off' ? (
+        <div className="bg-red-900/40 border border-red-500/60 text-red-300 text-xs font-bold px-3 py-2 rounded-xl text-center">
+          Radio powered down — Power on to resume
+        </div>
+      ) : cwSettings.enabled && connected && !["CW", "CWR", "CW-R"].includes(status?.mode || "") ? (
+        <div className="bg-amber-900/40 border border-amber-500/60 text-amber-300 text-xs font-bold px-3 py-2 rounded-xl text-center">
+          Radio not in CW mode — Switch mode to key
+        </div>
+      ) : null}
 
       {visibleItems.map((item, idx) => (
         <div key={item.i} className="relative">

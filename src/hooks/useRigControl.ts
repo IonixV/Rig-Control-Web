@@ -30,6 +30,7 @@ export function useRigControl({
   // ── State ─────────────────────────────────────────────────────────────────
   const [connected, setConnected] = useState(false);
   const [vfoSupported, setVfoSupported] = useState(true);
+  const [powerSupported, setPowerSupported] = useState(false);
   const [host, setHost] = useState(() => localStorage.getItem("last-host") || "127.0.0.1");
   const [port, setPort] = useState(() => parseInt(localStorage.getItem("last-port") || "4532"));
   const [status, setStatus] = useState<RigStatus>(() => {
@@ -359,6 +360,11 @@ export function useRigControl({
     socket?.emit("send-raw", cmd);
   }, [socket]);
 
+  const handleSetPower = useCallback((state: boolean) => {
+    setStatus(prev => ({ ...prev, powerState: state ? 'on' : 'off' }));
+    socket?.emit("set-power", { state });
+  }, [socket]);
+
   // ── Socket events ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!socket) return;
@@ -389,11 +395,12 @@ export function useRigControl({
       setError(null);
     };
 
-    const onRigConnected = ({ vfoSupported: vfoSup }: { vfoSupported?: boolean } = {}) => {
-      console.log("[RIG] Connected successfully, vfoSupported:", vfoSup !== false);
+    const onRigConnected = ({ vfoSupported: vfoSup, powerSupported: powerSup }: { vfoSupported?: boolean; powerSupported?: boolean } = {}) => {
+      console.log("[RIG] Connected successfully, vfoSupported:", vfoSup !== false, "powerSupported:", powerSup === true);
       setRigConnecting(null);
       setConnected(true);
       setVfoSupported(vfoSup !== false);
+      setPowerSupported(powerSup === true);
       setError(null);
       socket.emit("set-autoconnect-eligible", true);
       isAutoconnectAttempt.current = false;
@@ -535,9 +542,14 @@ export function useRigControl({
     };
   }, [socket]);
 
+  const effectivelyConnected = connected && status?.powerState !== 'off';
+
   return {
     connected, setConnected,
+    effectivelyConnected,
     vfoSupported,
+    powerSupported,
+    handleSetPower,
     host, setHost,
     port, setPort,
     status, setStatus,

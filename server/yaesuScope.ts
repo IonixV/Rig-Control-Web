@@ -170,11 +170,11 @@ export function startYaesuScope(ctx: ServerContext): void {
     ctx.yaesuScopeError = null;
     ctx.io.emit("yaesu-scope-status", { running: false, error: null });
 
-    /* Auto-restart if spectrum is still enabled and source is still ft4222 */
-    if (ctx.spectrumSettings.enabled && ctx.spectrumSettings.source === "ft4222") {
+    /* Auto-restart if spectrum is still enabled and source is still ft4222 and radio is not powered off */
+    if (ctx.spectrumSettings.enabled && ctx.spectrumSettings.source === "ft4222" && ctx.powerState !== 'off') {
       vlogSpectrum(`[YAESU-SCOPE] Restarting in ${RESTART_DELAY_MS}ms`);
       setTimeout(() => {
-        if (ctx.spectrumSettings.enabled && ctx.spectrumSettings.source === "ft4222") {
+        if (ctx.spectrumSettings.enabled && ctx.spectrumSettings.source === "ft4222" && ctx.powerState !== 'off') {
           startYaesuScope(ctx);
         }
       }, RESTART_DELAY_MS);

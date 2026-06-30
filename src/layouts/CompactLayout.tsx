@@ -37,7 +37,7 @@ import RfLevelsPanel from "../panels/RfLevelsPanel";
 import VfoPanel, { VfoCollapsedHeader } from "../panels/VfoPanel";
 import VideoFeedPanel, { VideoFeedHeaderActions } from "../panels/VideoFeedPanel";
 import { AudioFeedHeaderActions } from "../panels/AudioFeedPanel";
-import ControlsPanel from "../panels/ControlsPanel";
+import ControlsPanel, { ControlsPanelHeaderAction } from "../panels/ControlsPanel";
 import CwDecodePanel from "../panels/CwDecodePanel";
 import { SpotSettingsGear } from "../panels/SpotsPanel";
 import SpotComboPanel from "../panels/SpotComboPanel";
@@ -148,6 +148,8 @@ export interface CompactLayoutProps {
   handleJoinAudio: () => void;
 
   // Controls
+  powerSupported: boolean;
+  handleSetPower: (state: boolean) => void;
   isCompactControlsCollapsed: boolean;
   isCompactRFPowerCollapsed: boolean;
   setIsCompactControlsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
@@ -341,6 +343,8 @@ function CompactLayout({
   setLocalRFLevel,
   setLocalNRLevel,
   setLocalNBLevel,
+  powerSupported,
+  handleSetPower,
   handleSetPTT,
   handleSetFunc,
   handleVfoOp,
@@ -683,6 +687,13 @@ function CompactLayout({
             className="shadow-lg"
             bodyClassName="p-2"
             headerSize="sm"
+            headerActions={
+              <ControlsPanelHeaderAction
+                powerSupported={powerSupported}
+                powerState={status.powerState ?? 'unknown'}
+                handleSetPower={handleSetPower}
+              />
+            }
           >
             <ControlsPanel
               variant="compact"

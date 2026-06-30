@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 import {
-  Power,
+  Plug,
+  Unplug,
   Settings,
   Mic,
   Server,
@@ -307,6 +308,9 @@ export default function App() {
     cycleAgc,
     handleVfoOp,
     handleSendRaw,
+    powerSupported,
+    handleSetPower,
+    effectivelyConnected,
   } = useRigControl({
     socket,
     nrCapabilities,
@@ -643,12 +647,22 @@ export default function App() {
             <img src="/rcw-r-64.png" className="w-7 h-7 flex-shrink-0" alt="" />
             <h1 className="text-xl font-bold tracking-tighter uppercase truncate">RigControl Web</h1>
           </div>
-          {isCompact && cwSettings.enabled && connected && !['CW', 'CWR', 'CW-R'].includes(status?.mode || '') && (
-            <div className="flex-1 flex justify-center px-2">
-              <span className="bg-amber-900/40 border border-amber-500/60 text-amber-300 text-xs font-bold px-3 py-1 rounded-lg text-center">
-                Radio not in CW mode — Switch mode to key
-              </span>
-            </div>
+          {isCompact && (
+            status?.powerState === 'off' ? (
+              <div className="flex-1 flex justify-center px-2">
+                <span className="bg-red-900/40 border border-red-500/60 text-red-300 text-xs font-bold px-3 py-1 rounded-lg text-center">
+                  Radio powered down — Power on to resume
+                </span>
+              </div>
+            ) : cwSettings.enabled && connected && !['CW', 'CWR', 'CW-R'].includes(status?.mode || '') ? (
+              <div className="flex-1 flex justify-center px-2">
+                <span className="bg-amber-900/40 border border-amber-500/60 text-amber-300 text-xs font-bold px-3 py-1 rounded-lg text-center">
+                  Radio not in CW mode — Switch mode to key
+                </span>
+              </div>
+            ) : (
+              <div className="flex-1" />
+            )
           )}
           <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             <button
@@ -660,7 +674,7 @@ export default function App() {
                   : "bg-emerald-500/20 text-emerald-500 border border-emerald-500/50 hover:bg-emerald-500 hover:text-white"
               )}
             >
-              <Power size={16} className="flex-shrink-0" />
+              {connected ? <Unplug size={16} className="flex-shrink-0" /> : <Plug size={16} className="flex-shrink-0" />}
               <span className="hidden sm:inline">{connected ? "Disconnect" : "Connect"}</span>
             </button>
             <button
@@ -728,7 +742,9 @@ export default function App() {
         {isPhone ? (
           <PhoneLayout
             status={status}
-            connected={connected}
+            connected={effectivelyConnected}
+            powerSupported={powerSupported}
+            handleSetPower={handleSetPower}
             availableModes={availableModes}
             socket={socket}
             vfoStep={vfoStep}
@@ -883,10 +899,12 @@ export default function App() {
         ) : (
           <CompactLayout
             status={status}
-            connected={connected}
+            connected={effectivelyConnected}
             availableModes={availableModes}
             socket={socket}
             vfoSupported={vfoSupported}
+            powerSupported={powerSupported}
+            handleSetPower={handleSetPower}
             isPhoneVFOCollapsed={isCompactVFOCollapsed}
             setIsPhoneVFOCollapsed={setIsCompactVFOCollapsed}
             vfoStep={vfoStep}
@@ -1228,7 +1246,7 @@ export default function App() {
           stickyBarRef={stickyBarRef}
           cwSettings={cwSettings}
           status={status}
-          connected={connected}
+          connected={effectivelyConnected}
           handleSetPTT={handleSetPTT}
           ditPressedRef={ditPressedRef}
           dahPressedRef={dahPressedRef}

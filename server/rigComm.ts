@@ -275,6 +275,52 @@ export async function probeVfoCapability(ctx: ServerContext): Promise<void> {
   }
 }
 
+async function probePowerCapability(ctx: ServerContext): Promise<void> {
+  try {
+    const result = await sendToRig(ctx, "J ?", true);
+    ctx.powerSupported = true;
+    ctx.powerState = result.trim() === "1" ? 'on' : 'off';
+    vlog(`[RIG] Power control supported; state: ${ctx.powerState}`);
+  } catch {
+    ctx.powerSupported = false;
+    ctx.powerState = 'unknown';
+    vlog("[RIG] Power control not supported by this rig");
+  }
+}
+
+async function triggerPowerOff(ctx: ServerContext): Promise<void> {
+  if (ctx.lastStatus.ptt) {
+    await sendToRig(ctx, "T 0", false, true).catch(() => {});
+  }
+  const { cwSetKey, stopCwTick } = await import("./cw.ts");
+  cwSetKey(ctx, false);
+  stopCwTick(ctx);
+  const { stopAudio } = await import("./audio.ts");
+  ctx.audioWasPlaying = ctx.audioStatus === 'playing';
+  await stopAudio(ctx);
+  while (ctx.rigCommandQueue.length > 0) {
+    ctx.rigCommandQueue.shift()!.reject("Radio powered off");
+  }
+  ctx.powerState = 'off';
+  ctx.lastPowerCheck = Date.now();
+  ctx.lastStatus = { ...ctx.lastStatus, ptt: false, powerState: 'off' };
+  ctx.io.emit("rig-status", ctx.lastStatus);
+  ctx.io.emit("spectrum-data", { id: 0, name: "", amplitudes: [], timestamp: Date.now() });
+  vlog("[RIG] Radio powered off — polling suspended");
+}
+
+function onPowerOn(ctx: ServerContext): void {
+  if (ctx.spectrumSettings.enabled && ctx.spectrumSettings.source === "ft4222") {
+    import("./yaesuScope.ts").then(({ startYaesuScope }) => startYaesuScope(ctx));
+  }
+  if (ctx.audioWasPlaying) {
+    ctx.audioWasPlaying = false;
+    import("./audio.ts").then(({ startAudio }) => {
+      setTimeout(() => startAudio(ctx), 2000);
+    });
+  }
+}
+
 export function stopPolling(ctx: ServerContext): void {
   if (ctx.pollingTimeout) {
     clearTimeout(ctx.pollingTimeout);
@@ -283,6 +329,24 @@ export function stopPolling(ctx: ServerContext): void {
 }
 
 export async function pollRig(ctx: ServerContext): Promise<void> {
+  if (ctx.powerState === 'off') {
+    const now = Date.now();
+    if (now - ctx.lastPowerCheck < 5000) return;
+    ctx.lastPowerCheck = now;
+    try {
+      const result = await sendToRig(ctx, "J ?", true);
+      if (result.trim() === "1") {
+        ctx.powerState = 'on';
+        ctx.lastStatus = { ...ctx.lastStatus, powerState: 'on' };
+        ctx.io.emit("rig-status", ctx.lastStatus);
+        vlog("[RIG] Radio powered on — resuming polling");
+        onPowerOn(ctx);
+        // fall through to normal poll this cycle
+      }
+    } catch { /* still off or not responding */ }
+    if (ctx.powerState === 'off') return;
+  }
+
   if (!ctx.isConnected) {
     if (ctx.rigConfig.host && ctx.rigConfig.host !== "mock") {
       vlog("Attempting background reconnection...");
@@ -354,6 +418,15 @@ export async function pollRig(ctx: ServerContext): Promise<void> {
       nrLevel = parseFloat(await sendToRig(ctx, "l NR", true).catch(() => "0"));
       anf = (await sendToRig(ctx, "u ANF", true).catch(() => "0")) === "1";
       tuner = (await sendToRig(ctx, "u TUNER", true).catch(() => "0")) === "1";
+
+      if (ctx.powerSupported) {
+        const ps = await sendToRig(ctx, "J ?", true).catch(() => null);
+        if (ps !== null && ps.trim() === "0") {
+          vlog("[RIG] Radio powered off (detected during slow poll)");
+          await triggerPowerOff(ctx);
+          return;
+        }
+      }
     }
 
     if (ctx.pendingQuickPolls.size > 0) {
@@ -396,6 +469,7 @@ export async function pollRig(ctx: ServerContext): Promise<void> {
       nrLevel,
       anf,
       tuner,
+      powerState: ctx.powerState,
       timestamp: now,
     };
 
@@ -424,6 +498,9 @@ export function startPolling(ctx: ServerContext): void {
 
 export function resetRigState(ctx: ServerContext): void {
   ctx.vfoSupported = true;
+  ctx.powerSupported = false;
+  ctx.powerState = 'unknown';
+  ctx.lastPowerCheck = 0;
   ctx.lastStatus = {
     frequency: "14074000",
     mode: "USB",
@@ -448,6 +525,7 @@ export function resetRigState(ctx: ServerContext): void {
     nrLevel: 8 / 15,
     anf: false,
     tuner: false,
+    powerState: 'unknown',
   };
 }
 
@@ -484,7 +562,8 @@ export function connectToRig(ctx: ServerContext, host: string, port: number, soc
     ctx.isConnected = true;
     await probeVfoCapability(ctx);
     await probeCapabilities(ctx);
-    ctx.io.emit("rig-connected", { host, port, vfoSupported: ctx.vfoSupported });
+    await probePowerCapability(ctx);
+    ctx.io.emit("rig-connected", { host, port, vfoSupported: ctx.vfoSupported, powerSupported: ctx.powerSupported });
     if (ctx.spectrumSettings.enabled && ctx.spectrumSupported) {
       try {
         await sendToRig(ctx, "U SPECTRUM 1", true);
@@ -643,6 +722,27 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
     } catch (err) {
       vlogWsjtx(`[wsjtx:ptt] FAILED: ${err} (${Date.now() - t0}ms)`);
       socket.emit("rig-error", "Failed to set PTT");
+    }
+  });
+
+  socket.on("set-power", async ({ state }: { state: boolean }) => {
+    if (!ctx.powerSupported) {
+      socket.emit("rig-op-error", "Power control not supported by this rig");
+      return;
+    }
+    try {
+      if (!state) {
+        await triggerPowerOff(ctx);
+        await sendToRig(ctx, "J 0", true, true);
+      } else {
+        await sendToRig(ctx, "J 1", true, true);
+        ctx.powerState = 'on';
+        ctx.lastStatus = { ...ctx.lastStatus, powerState: 'on' };
+        ctx.io.emit("rig-status", ctx.lastStatus);
+        onPowerOn(ctx);
+      }
+    } catch (err) {
+      socket.emit("rig-op-error", `Failed to set power: ${err}`);
     }
   });
 

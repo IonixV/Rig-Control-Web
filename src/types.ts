@@ -61,6 +61,7 @@ export interface RigStatus {
   alc: number;
   powerMeter: number;
   vdd: number;
+  powerState: 'on' | 'off' | 'unknown';
   timestamp: number;
 }
 
