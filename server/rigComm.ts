@@ -1,7 +1,7 @@
 import net from "net";
 import { Socket } from "socket.io";
 import { ServerContext } from "./context.ts";
-import { vlogRig as vlog, vlogWsjtx } from "./vlog.ts";
+import { vlogRig as vlog, vlogWsjtx, ts } from "./vlog.ts";
 
 export function formatExtendedCommand(cmd: string): string {
   const trimmed = cmd.trim();
@@ -40,7 +40,7 @@ export function executeRigCommand(ctx: ServerContext, cmd: string, useExtended =
 
   return new Promise((resolve, reject) => {
     if (!ctx.rigSocket || ctx.rigSocket.destroyed) {
-      console.error(`[RIG] Command rejected (not connected): "${cmd}"`);
+      console.error(`[${ts()}] [RIG] Command rejected (not connected): "${cmd}"`);
       return reject("Not connected to rig");
     }
 
@@ -48,7 +48,7 @@ export function executeRigCommand(ctx: ServerContext, cmd: string, useExtended =
     const timeout = setTimeout(() => {
       ctx.rigSocket?.removeListener("data", onData);
       ctx.rigSocket?.removeListener("error", onError);
-      console.warn(`[RIG] Command timed out: "${cmd}" (extended=${useExtended}) — destroying socket to reset state`);
+      console.warn(`[${ts()}] [RIG] Command timed out: "${cmd}" (extended=${useExtended}) — destroying socket to reset state`);
       if (ctx.rigSocket) {
         ctx.rigSocket.destroy();
         ctx.isConnected = false;
@@ -79,7 +79,7 @@ export function executeRigCommand(ctx: ServerContext, cmd: string, useExtended =
             try {
               resolve(parseExtendedResponse(responseBuffer));
             } catch (e) {
-              console.error(`[RIG] Parse error for "${cmd}":`, e);
+              console.error(`[${ts()}] [RIG] Parse error for "${cmd}":`, e);
               reject(e);
             }
           } else {
@@ -99,7 +99,7 @@ export function executeRigCommand(ctx: ServerContext, cmd: string, useExtended =
     const onError = (err: Error) => {
       clearTimeout(timeout);
       ctx.rigSocket?.removeListener("data", onData);
-      console.error(`[RIG] Socket error during command "${cmd}":`, err.message);
+      console.error(`[${ts()}] [RIG] Socket error during command "${cmd}":`, err.message);
       reject(err);
     };
 
@@ -334,9 +334,7 @@ export function stopPolling(ctx: ServerContext): void {
 
 export async function pollRig(ctx: ServerContext): Promise<void> {
   if (ctx.powerState === 'off') {
-    const now = Date.now();
-    if (now - ctx.lastPowerCheck < 5000) return;
-    ctx.lastPowerCheck = now;
+    if (Date.now() - ctx.lastPowerCheck < 5000) return;
     try {
       const result = await sendToRig(ctx, "get_powerstat", true);
       if (result.trim() === "1") {
@@ -348,6 +346,7 @@ export async function pollRig(ctx: ServerContext): Promise<void> {
         // fall through to normal poll this cycle
       }
     } catch { /* still off or not responding */ }
+    ctx.lastPowerCheck = Date.now();
     if (ctx.powerState === 'off') return;
   }
 
@@ -479,7 +478,7 @@ export async function pollRig(ctx: ServerContext): Promise<void> {
 
     ctx.io.emit("rig-status", ctx.lastStatus);
   } catch (err) {
-    console.error(`[RIG] Poll cycle ${ctx.pollCycleCount} failed:`, err);
+    console.error(`[${ts()}] [RIG] Poll cycle ${ctx.pollCycleCount} failed:`, err);
   }
 }
 
@@ -564,6 +563,7 @@ export function connectToRig(ctx: ServerContext, host: string, port: number, soc
   sock.connect(port, host, async () => {
     vlog(`Connected to rigctld at ${host}:${port}`);
     ctx.isConnected = true;
+    ctx.autoReconnect = true;
     await probeVfoCapability(ctx);
     await probeCapabilities(ctx);
     await probePowerCapability(ctx);
@@ -602,6 +602,15 @@ export function connectToRig(ctx: ServerContext, host: string, port: number, soc
     ctx.isConnected = false;
     ctx.io.emit("rig-disconnected");
     stopPolling(ctx);
+    if (ctx.autoReconnect && ctx.rigConfig.host && ctx.rigConfig.host !== "mock") {
+      vlog("[RIG] Scheduling auto-reconnect in 5s...");
+      ctx.pollingTimeout = setTimeout(() => {
+        if (!ctx.isConnected && ctx.autoReconnect) {
+          vlog("[RIG] Attempting auto-reconnect...");
+          connectToRig(ctx, ctx.rigConfig.host, ctx.rigConfig.port);
+        }
+      }, 5000);
+    }
   });
 }
 
@@ -612,6 +621,7 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
   });
 
   socket.on("disconnect-rig", () => {
+    ctx.autoReconnect = false;
     resetRigState(ctx);
     if (ctx.rigSocket) {
       ctx.rigSocket.destroy();
@@ -782,7 +792,11 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
       }
     } catch (err) {
       vlog(`[RIG][POWER] set-power failed: ${err}`);
-      socket.emit("rig-op-error", `Failed to set power: ${err}`);
+      if (state && String(err).includes('timeout')) {
+        vlog("[RIG][POWER] Power-on timeout is expected during radio boot — auto-reconnect will resume when ready");
+      } else {
+        socket.emit("rig-op-error", `Failed to set power: ${err}`);
+      }
     }
   });
 
