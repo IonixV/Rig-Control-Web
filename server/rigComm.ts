@@ -279,8 +279,12 @@ async function probePowerCapability(ctx: ServerContext): Promise<void> {
   try {
     const result = await sendToRig(ctx, "get_powerstat", true);
     ctx.powerSupported = true;
+    const previousState = ctx.powerState;
     ctx.powerState = result.trim() === "1" ? 'on' : 'off';
     vlog(`[RIG] Power control supported; state: ${ctx.powerState}`);
+    if (ctx.powerState === 'on' && previousState !== 'on') {
+      onPowerOn(ctx);
+    }
   } catch {
     ctx.powerSupported = false;
     ctx.powerState = 'unknown';
