@@ -122,9 +122,21 @@ wpctl inspect <source-id> | grep node.name
 
 Skip this step if your device already negotiates a correct, stable rate on its own. Some radios' USB audio interfaces have a real hardware/firmware limitation that only manifests at their advertised default rate. The FT-710 is one example: it advertises 48 kHz support in its USB descriptors, but has a clocking bug that causes the device to drop in and out of the OS roughly once a second when actually driven at 48 kHz — 44.1 kHz is stable.
 
-If your device needs a specific rate, two settings work together, and **testing showed both are required** — a per-device rate pin alone was not sufficient to keep the FT-710 stable:
+If your device needs a specific rate, the **permanent global clock-rate override** below is the one that actually matters — testing confirmed it is sufficient on its own (20+ seconds of stable operation, correct rate negotiated directly on the hardware node, and a working audio link), with no per-device rule present at all. A **per-device rate pin alone, with no global override in place, is not sufficient** — tested separately, it produced the FT-710's known once-a-second dropout.
 
-- **Per-device rate pin.** Add a WirePlumber rule matched by vendor/product ID, e.g. `~/.config/wireplumber/wireplumber.conf.d/51-fixed-rate.conf`:
+- **Permanent global clock-rate override (required).** Add `~/.config/pipewire/pipewire.conf.d/44100-rate.conf`:
+
+  ```
+  context.properties = {
+      default.clock.rate = 44100
+  }
+  ```
+
+  A **temporary, session-only** equivalent exists (`pw-metadata -n settings 0 clock.force-rate 44100`), but it does not survive a WirePlumber/PipeWire restart or a reboot — it is only useful for a quick test. Use the permanent config file above so the fix actually persists; this was confirmed the hard way during testing, when a WirePlumber restart silently dropped a rate that had only been set via the temporary command, and the FT-710 promptly started dropping out again.
+
+  > Exact paths can vary by distribution — consult your distro's PipeWire/WirePlumber documentation if these drop-in locations don't apply to your setup.
+
+- **Per-device rate pin (optional).** The global override above changes the rate for your *entire* PipeWire graph, which is fine for a dedicated shack computer but may be unwelcome if the same machine is also used for other audio at a different rate. If you'd rather scope the rate change to just the radio's device, add a WirePlumber rule matched by vendor/product ID, e.g. `~/.config/wireplumber/wireplumber.conf.d/51-fixed-rate.conf`:
 
   ```
   monitor.alsa.rules = [
@@ -139,19 +151,7 @@ If your device needs a specific rate, two settings work together, and **testing 
   ]
   ```
 
-  (substitute your own device's vendor/product ID and required rate — `0x0d8c`/`0x0013` above is the FT-710's C-Media codec)
-
-- **Permanent global clock-rate override.** Add `~/.config/pipewire/pipewire.conf.d/44100-rate.conf`:
-
-  ```
-  context.properties = {
-      default.clock.rate = 44100
-  }
-  ```
-
-  A **temporary, session-only** equivalent exists (`pw-metadata -n settings 0 clock.force-rate 44100`), but it does not survive a WirePlumber/PipeWire restart or a reboot — it is only useful for a quick test. Use the permanent config file above so the fix actually persists; this was confirmed the hard way during testing, when a WirePlumber restart silently dropped a rate that had only been set via the temporary command, and the FT-710 promptly started dropping out again.
-
-  > Exact paths can vary by distribution — consult your distro's PipeWire/WirePlumber documentation if these drop-in locations don't apply to your setup.
+  (substitute your own device's vendor/product ID — `0x0d8c`/`0x0013` above is the FT-710's C-Media codec). This was tested alongside the global override above and made no observable difference to stability — the global override alone already fully resolves the dropout. It's included here only as a documented option for isolating the rate change if you need to, not because it's required.
 
 **3. Pin RigControl Web's Backend Input/Output to the exact node**
 
