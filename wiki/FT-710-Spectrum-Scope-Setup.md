@@ -22,6 +22,8 @@ Your FT-710 uses a single USB cable. When connected, your computer sees three se
 
 You do not need a second cable for the spectrum scope.
 
+> **USB Audio note:** the FT-710's USB Audio interface only works correctly at 44.1 kHz — on Linux/PipeWire this requires a specific setup (forcing PipeWire's global sample rate and selecting the `pipewire [ALSA, 44.1k]` device), and it can be affected by a PipeWire default-device quirk after using the [radio power on/off button](Controls#radio-power-onoff). See [Audio and Video → Linux: Radio Power Cycling and USB Audio Reconnection](Audio-and-Video#linux-radio-power-cycling-and-usb-audio-reconnection) for details — this is unrelated to the spectrum scope setup on this page.
+
 ### Enable the spectrum output on the radio
 
 The spectrum USB output is off by default. Turn it on through the FT-710's menu:

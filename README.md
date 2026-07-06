@@ -2,7 +2,7 @@
 
 A web-first app for controlling your radio and making CW and SSB contacts!  
 
-- Full support for making voice and CW contacts (FT8 coming soon)
+- Full support for making voice and CW contacts, plus FT8/FT4/WSPR and other digital modes via the WSJTX Bridge
 - CW keyer in iambic and straight modes (via keyboard, "vBand adapter", or Tiny MIDI).  You can send real CW!  Not macros!
 - Audio via your radio's virtual USB Audio Device, Digirig or similar.  
 - Spectrum scope available on supported Icom radios (IC-7300, IC-7300MK2, IC-7610, IC-7850/7851, IC-705, IC-9700, IC-905) and the Yaesu FT-710.
@@ -59,9 +59,11 @@ Developers who want to run from source will find build instructions in the [Deve
   - Panel height is set when adding the panel via the **Add Panel** picker.
 - **Phone View**: Dedicated portrait-optimized layout for operating from a phone or tablet.
 - **Split VFO Support**: Full control over split operations with visual feedback.
+- **Radio Power On/Off**: For radios that support Hamlib's `set_powerstat`, a Power button lets you power the radio on or off remotely. Rig controls lock while the radio is off, backend audio and the FT-710 spectrum scope resume automatically once it powers back on, and the connection auto-reconnects if it drops unexpectedly (e.g. during a power cycle).
 - **Works With All Hamlib-Compatible Software**: Configure your logging app or other Hamlib enabled application to use "Hamlib NET rigctl" at `127.0.0.1:4532`.
   - WSJT-X, WSJT-X Improved, FLDigi, VarAC, JS8Call, and more.
   - This means not having to split serial ports to use multiple apps.
+- **WSJTX Bridge (Remote Digital Modes)**: Operate FT8, FT4, WSPR, and other digital modes with WSJT-X while controlling your radio remotely through RigControl Web. A small helper binary (`wsjtx-bridge`) runs on your local operating machine, bridging WSJT-X's rig control to RigControl Web over your existing encrypted browser connection and auto-configuring virtual audio devices for RX/TX. See the [WSJTX Integration wiki page](https://github.com/jbdubbs/Rig-Control-Web/wiki/WSJTX-Integration) for setup.
 - **Remote Access**: Access your shack from anywhere over your own VPN (or via not-included reverse proxy) by pointing a browser to your rig computer's IP on port 3000. (e.g. https://192.168.1.2:3000)
   - The server runs over **HTTPS** using an auto-generated self-signed certificate.
   - On first launch, your browser will show a certificate warning. Navigate to Advanced.... then proceed to the site anyway.
@@ -88,6 +90,7 @@ Developers who want to run from source will find build instructions in the [Deve
     - For audio, use MME or DirectSound devices from the backend audio device selector. WASAPI requires the Windows audio device to be configured at 48 kHz in Sound settings (for example, FT-710 only works at 44,100).
   - **Linux kernel 6.0 or higher** (tested on Fedora 43) — The Electron AppImage includes a bundled `rigctld`. For `npm run dev` (web server mode), Hamlib 4.7.0+ must be installed separately — see the warning below.
     - Most Linux distros, including extremely modern ones seem to still be bundling Hamlib 4.6.5.  This will NOT work.  Install from the Hamlib GitHub page.
+    - For audio on PipeWire systems, radios that only support 44.1 kHz (e.g. the FT-710) require forcing PipeWire's global sample rate to 44.1 kHz and selecting the resulting `pipewire [ALSA, 44.1k]` device — see [Linux: Radio Power Cycling and USB Audio Reconnection](https://github.com/jbdubbs/Rig-Control-Web/wiki/Audio-and-Video#linux-radio-power-cycling-and-usb-audio-reconnection) in the wiki for full setup steps and a known PipeWire default-device caveat after power-cycling the radio.
   - **macOS**
     - Completely untested.  No testing hardware.
 

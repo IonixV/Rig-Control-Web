@@ -43,7 +43,7 @@ Both layouts show the same information and controls, just arranged differently f
 - [Hamlib UDP Spectrum Scope](Hamlib-UDP-Spectrum-Scope) — Live panadapter for IC-7300, IC-7300MK2, IC-7610, IC-7850/7851, IC-705, IC-9700, and IC-905
 - [FT-710 Spectrum Scope Setup](FT-710-Spectrum-Scope-Setup) — Live panadapter for the Yaesu FT-710 via USB
 - [Connecting the Local Client](Connecting-the-Local-Client) — Connect to your rig and understand the status display
-- [Controls](Controls) — VFO, mode, meters, PTT, and radio function buttons
+- [Controls](Controls) — VFO, mode, meters, PTT, radio power on/off, and radio function buttons
 - [Audio and Video](Audio-and-Video) — Set up the audio feed and video display
 - [Remote Access](Remote-Access) — Connect from another device over your network or VPN
 - [POTA, SOTA, and WWFF Spots](POTA-and-SOTA-Spots) — Live activator spots with click-to-tune

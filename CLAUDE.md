@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-RigControl Web (`v1.0.0`) is a full-stack web + Electron desktop application for controlling amateur radio equipment via Hamlib's `rigctld`. It provides a real-time dashboard with frequency/mode/meter display, bidirectional Opus audio, browser-native H.264 video streaming, POTA/SOTA/WWFF spot integration, a CW iambic keyer, a GGMorse-based CW decoder, solar/propagation data, and a user-configurable panel grid layout. All transport runs over HTTPS (self-signed EC P-256 certificate, auto-generated at startup).
+RigControl Web (`v1.0.0`) is a full-stack web + Electron desktop application for controlling amateur radio equipment via Hamlib's `rigctld`. It provides a real-time dashboard with frequency/mode/meter display, bidirectional Opus audio, browser-native H.264 video streaming, POTA/SOTA/WWFF spot integration, a CW iambic keyer, a GGMorse-based CW decoder, Hamlib UDP and FT-710 (FT4222 USB-SPI) spectrum scopes, solar/propagation data, a user-configurable panel grid layout, JWT-based user authentication with an admin panel, radio power on/off control (`set_powerstat`) with auto-reconnect, and a WSJTX rig-control/audio bridge for remote digital-mode operation. All transport runs over HTTPS (self-signed EC P-256 certificate, auto-generated at startup).
 
 ## Commands
 
@@ -68,7 +68,7 @@ Express + Socket.io Server  (server.ts orchestrator + server/ modules)
 - **`server/tls.ts`** — Auto-generates/reuses an EC P-256 self-signed certificate covering `localhost` and all LAN IPs (required for `getUserMedia`/`setSinkId` in browser contexts).
 - **`server/settings.ts`** — Reads/writes `settings.json`; emits `settings-data` on connect or change.
 - **`server/rigctld.ts`** — Spawns and monitors the `rigctld` child process; buffers the last 100 log lines.
-- **`server/rigComm.ts`** — Owns the TCP socket to `rigctld`; polls rig state every 2 s; implements `executeRigCommand` with extended-mode RPRT handling.
+- **`server/rigComm.ts`** — Owns the TCP socket to `rigctld`; polls rig state every 2 s; implements `executeRigCommand` with extended-mode RPRT handling. Also implements radio power on/off control (`get_powerstat`/`set_powerstat`, see Radio Power Control below) and auto-reconnect: an unexpected socket drop (not a user-initiated disconnect) schedules a reconnect attempt every 5 s until it succeeds; rig log lines are timestamped (`HH:MM:SS.mmm`) so reconnect timing is visible in the log view.
 - **`server/audio.ts`** — Manages `naudiodon` I/O streams and `libopus-node` encode/decode; enforces last-interacted-wins mic policy via `activeAudioClientId`.
 - **`server/cw.ts`** — Server-side iambic state machine (A/B/straight); drives DTR/RTS via the `cw-key-helper` C binary subprocess; 5 s stuck-key watchdog.
 - **`server/video.ts`** — Relays WebCodecs H.264 chunks from the Electron source to remote clients; buffers the latest keyframe.
@@ -119,7 +119,7 @@ Per-message deflate compression (`perMessageDeflate: false`) is explicitly disab
 ### Socket.io Communication Patterns
 
 **Client → Server (commands):**
-- Rig control: `connect-rig`, `set-frequency`, `set-mode`, `set-ptt`, `set-func`, `set-level`, `set-split-vfo`, `vfo-op`, `send-raw`
+- Rig control: `connect-rig`, `set-frequency`, `set-mode`, `set-ptt`, `set-func`, `set-level`, `set-split-vfo`, `vfo-op`, `send-raw`, `set-power` (`{ state: boolean }` — radio power on/off via `set_powerstat`)
 - Process control: `start-rigctld`, `stop-rigctld`, `kill-existing-rigctld`, `test-rigctld`
 - Settings: `save-settings`, `toggle-auto-start`, `get-settings`
 - Video: `control-video`, `update-video-settings`, `get-video-devices`
@@ -129,7 +129,7 @@ Per-message deflate compression (`perMessageDeflate: false`) is explicitly disab
 
 **Server → Client (state):**
 - `rig-status` — Polled every 2 s: frequency, mode, PTT, VFO state, meters
-- `rig-connected` — Includes `{ vfoSupported }` flag from VFO capability probe
+- `rig-connected` — Includes `{ vfoSupported, powerSupported }` flags from capability probes
 - `rigctld-status`, `rigctld-log` — Process health and buffered log (last 100 lines)
 - `audio-inbound` — PCM/Opus packets from radio to browser
 - `settings-data` — Full settings object on connect or change
@@ -183,6 +183,16 @@ Two mutually exclusive source modes, selected via `spectrumSettings.source`:
 ### MUF Map Panel
 
 `MufMapPanel` embeds SVG world propagation maps from `prop.kc2g.com` (MUFD or foF2). Supports scroll-to-zoom (cursor-anchored), drag, and pinch-to-zoom. Uses `width/height = scale * 100%` on the image wrapper for crisp SVG rasterization. Height is configured at panel-add time via the two-step `PanelPicker` config flow and stored in `GridItem.heightPx`.
+
+### Radio Power Control
+
+For radios that support Hamlib's `set_powerstat`/`get_powerstat` (probed once per connect via `probePowerCapability()` in `server/rigComm.ts`, lowercase `get_powerstat` for the get form since Hamlib's extended protocol is case-sensitive get/set), a Power button appears in the `ControlsPanel` header (`ControlsPanelHeaderAction` in `src/panels/ControlsPanel.tsx`).
+
+- **Power off:** `set_powerstat 0` is sent; the server clears PTT and the CW key, drains the queued-command backlog, stops backend audio (`stopAudio(ctx)`), clears spectrum data, and suspends the normal 2 s poll loop in favor of a `get_powerstat` probe every 5 s so the server notices when the radio comes back on. `status.powerState` becomes `'off'`; the frontend's `effectivelyConnected = connected && status?.powerState !== 'off'` gates all rig controls and a red "Radio powered down — Power on to resume" banner is shown (`src/App.tsx`), taking priority over the CW-mode warning in both compact and phone layouts.
+- **Power on:** `set_powerstat 1` is sent, then the server polls `get_powerstat` every 500 ms for up to 10 s waiting for confirmation (a timeout is treated as expected — the radio may still be booting — not surfaced as a user error). The frontend shows an amber spinner (`poweringOn`) during this window. Once confirmed, `onPowerOn(ctx)` resumes polling, restarts backend audio after a 2 s delay (USB re-enumeration), and restarts the FT4222 scope reader if `spectrumSettings.source === "ft4222"`. `onPowerOn(ctx)` is called both from the off→on poll transition and from `probePowerCapability()` on every (re)connect, so a power-on detected via the auto-reconnect path (below) also restarts the FT4222 reader without requiring a manual spectrum source toggle.
+- New sockets connecting while the radio is off receive the correct power state immediately via `pushInitialState`.
+
+**Linux note:** on radios whose USB Audio interface disappears from the OS entirely when powered off (e.g. the FT-710), see the "Linux: Radio Power Cycling and USB Audio Reconnection" section of `wiki/Audio-and-Video.md` for a PipeWire default-device caveat that can leave backend audio broken after a power cycle until the user manually reassigns PipeWire's default device.
 
 ### CW Keyer
 
@@ -238,6 +248,7 @@ The Windows target uses a custom NSIS include script (`buildResources/installer.
 - Some radios (e.g. FT-891) return `RPRT -11` for certain commands in incompatible modes (e.g. NB in FM). These are handled gracefully as immediate rejections; no socket destruction occurs.
 - Verify `rigctld` binary availability in the production Electron environment.
 - **CW keying via DTR/RTS on Windows when rigctld shares the same serial port:** On Windows, `CreateFile` on a COM port is exclusive by default (share mode 0). When `rigctld` holds the radio's USB serial port for CI-V, `cw-key-helper` cannot open the same port and fails with `ERROR_ACCESS_DENIED` (error 5). This affects radios like the IC-7300 that expose a single USB virtual COM port for both CI-V and hardware CW keying. **Workaround:** use a separate USB-to-serial adapter wired to the radio's key jack, or install a virtual COM port pair driver (e.g. com0com) and configure `rigctld` to use the virtual port so the real port is free for `cw-key-helper`. On Linux and macOS, Hamlib does not set `TIOCEXCL`, so the port can be shared between `rigctld` and `cw-key-helper` without this issue (see separate note about baud-rate interference in `cw-key-helper.c`).
+- **Linux: backend audio doesn't resume correctly after a radio power cycle:** On radios whose USB Audio interface disappears from the OS when powered off (e.g. the FT-710), PipeWire re-targets its default ALSA/Pulse sink and source away from the radio the moment it vanishes, and does not automatically switch back when the device reappears. If the Backend Input/Output selection resolves through that "default" device rather than a device pinned to specific hardware, backend audio stays broken after every power cycle until the user manually reassigns PipeWire's default device back to the radio. The FT-710 additionally requires PipeWire's global sample rate to be forced to 44.1 kHz and the `pipewire [ALSA, 44.1k]` device selected explicitly — its direct hardware device identifier only exposes 48 kHz. See "Linux: Radio Power Cycling and USB Audio Reconnection" in `wiki/Audio-and-Video.md`.
 - **IC-7300 single-USB-port CW keying:** The IC-7300's `USB Keying (CW)` and `USB Send` radio menu settings cannot be set to the same line. For CW keying via DTR, set `USB Keying (CW) = DTR` and `USB Send` to any other value (e.g. RTS or OFF). The `rigctld-ptt` CW keying method only toggles PTT per element; it does not assert the radio's CW key input and will not produce a CW tone on the IC-7300.
 - **Dual spectrum scope (IC-7610, IC-7850/7851):** The IC-7610 and IC-7850/7851 expose two independent spectrum scopes (Main and Sub) via Hamlib. RigControl Web currently reads only `packet.spectra[0]` (Main scope). To support Sub scope, a scope selector UI, a second `spectrum-data` channel or scope ID field, and possibly a second `SpectrumHamlibPanel` instance would be needed. Deferred for a future release.
 - **Backend audio device list is not preloaded:** `server/audio.ts` (`listAudioDevices`/`get-audio-devices`) only enumerates `naudiodon` devices on-demand when a client emits `get-audio-devices` (triggered by `onFocus` on the Backend Input/Output dropdowns in `AudioSettingsModal.tsx`, or when the audio settings modal opens). This causes a noticeable delay and dropdown layout shift on first use. Fix: cache the enumerated list in `ServerContext` (e.g. `audioDeviceList`, mirroring the existing `videoDeviceList` pattern), populate it once during `initAudioEngine` at startup, send it to clients via `pushInitialState` on connect, and broadcast (`ctx.io.emit`) an updated list to all clients when `get-audio-devices` is used as a manual refresh. Deferred for a future release.

@@ -61,6 +61,25 @@ Click the tab labels (SIGNAL, SWR, ALC, VDD) to switch which meter is graphed. O
 
 ---
 
+## Radio Power On/Off
+
+For radios that support Hamlib's `set_powerstat` command, a **Power** button appears in the **Quick Controls** panel header (the power icon, next to the panel title). If your radio doesn't support it, the button is hidden.
+
+- **Green** power icon — the radio is on.
+- **Red** power icon — the radio is off.
+- **Amber spinner** — waiting (up to ~10 seconds) for the radio to confirm it has powered on while it boots.
+
+Click the button to toggle power:
+
+- **Powering off** immediately releases PTT and the CW key, stops backend audio, clears the spectrum scope, and switches rig polling to a slow check every 5 seconds so RigControl Web notices when you power the radio back on.
+- **Powering on** resumes normal polling once the radio confirms, then automatically restarts backend audio and the FT-710 spectrum scope reader after a short delay for USB re-enumeration.
+
+While the radio is off, a red **"Radio powered down — Power on to resume"** banner is shown and all rig controls are disabled until it powers back on.
+
+> **Linux users:** if your radio's USB Audio device disappears when powered off and audio doesn't come back correctly when it powers back on, see [Audio and Video → Linux: Radio Power Cycling and USB Audio Reconnection](Audio-and-Video#linux-radio-power-cycling-and-usb-audio-reconnection) — this covers a known PipeWire default-device issue and the required setup for radios (like the FT-710) that only work at 44.1 kHz.
+
+---
+
 ## Quick Controls
 
 The **Quick Controls** panel contains buttons for the most commonly used radio functions. All of these send commands directly to the radio through `rigctld`.

@@ -86,6 +86,55 @@ Think of it this way: **backend audio = the radio's end; local audio = your end*
 
 ---
 
+### Linux: Radio Power Cycling and USB Audio Reconnection
+
+If your radio supports [remote power on/off](Controls#radio-power-onoff), powering it off can make its USB Audio interface disappear from the operating system entirely — not just go silent — if the audio interface shares the same USB device as the radio's CAT/serial control (this is the case on radios like the Yaesu FT-710). RigControl Web watches for the backend audio device to come back and automatically restarts the backend audio engine a couple of seconds after the radio reports it has powered back on.
+
+On Linux systems running **PipeWire**, this reappearance is not always clean:
+
+- The instant the radio's USB Audio device disappears, PipeWire re-targets its **default** ALSA/PulseAudio sink and source to whatever device is next available.
+- When the radio's USB Audio device comes back online after power-on, PipeWire does **not** automatically switch its default back to it — the default stays pointed at whatever it fell back to.
+- If your **Backend Input**/**Backend Output** selection in RigControl Web resolves through that system "default" device rather than a device pinned to the radio's specific hardware, backend audio into and out of RigControl Web will remain broken after every power cycle until the default is reassigned back to the radio.
+
+**Workaround:** After powering the radio back on, check PipeWire's current default input/output (`wpctl status`, or a graphical mixer such as `pavucontrol` or `qpwgraph`) and reassign it to the radio's USB Audio device if it hasn't switched back on its own. Re-opening **Backend Audio Engine** settings and re-selecting the correct device (restarting backend audio if needed) also restores it for the current session.
+
+#### FT-710: Required 44.1 kHz Virtual Device
+
+The FT-710's USB Audio interface only operates correctly at a **44.1 kHz** sample rate. Selecting the radio's own PipeWire, ALSA, or PulseAudio device identifier directly still opens the device at 48 kHz and will not work, even though the identifier appears to point at the same hardware.
+
+The supported setup on Linux/PipeWire is:
+
+1. **Force PipeWire's global sample rate to 44.1 kHz.** Two ways to do this:
+
+   - **Temporary (until reboot/PipeWire restart)** — run this once per session:
+
+     ```bash
+     pw-metadata -n settings 0 clock.force-rate 44100
+     ```
+
+   - **Permanent** — add a `clock.rate` override, for example a drop-in config file:
+
+     ```
+     # ~/.config/pipewire/pipewire.conf.d/44100-rate.conf
+     context.properties = {
+         default.clock.rate = 44100
+     }
+     ```
+
+     then restart the user PipeWire services:
+
+     ```bash
+     systemctl --user restart pipewire pipewire-pulse wireplumber
+     ```
+
+     > Exact steps can vary by distribution — consult your distro's PipeWire documentation if this drop-in path doesn't apply to your setup.
+
+2. In RigControl Web's **Audio Settings**, under **Backend Audio Engine**, select the device labeled **`pipewire [ALSA, 44.1k]`** for both **Backend Input** and **Backend Output** — not the FT-710's own hardware device entry. RigControl Web's device list shows the sample rate PipeWire reports at the time it enumerates devices in brackets after the host API name, so once the global rate is forced to 44.1 kHz this entry will read `44.1k`.
+
+> Because this relies on PipeWire's default-device routing, the `pipewire [ALSA, 44.1k]` selection is subject to the same power-cycle caveat described above. After the radio powers off and back on, confirm this device is still selected and still resolves to the radio — PipeWire's default may have silently fallen back to another device in the meantime.
+
+---
+
 ### Starting and Joining Audio
 
 Once the backend audio engine is running, the **Join Audio** button appears in the **Audio Feed** panel header on the main screen.
