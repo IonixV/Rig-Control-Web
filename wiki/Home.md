@@ -44,6 +44,7 @@ Both layouts show the same information and controls, just arranged differently f
 - [FT-710 Spectrum Scope Setup](FT-710-Spectrum-Scope-Setup) — Live panadapter for the Yaesu FT-710 via USB
 - [Connecting the Local Client](Connecting-the-Local-Client) — Connect to your rig and understand the status display
 - [Controls](Controls) — VFO, mode, meters, PTT, radio power on/off, and radio function buttons
+- [CW Keying Setup](CW-Keying-Setup) — Get your radio actually transmitting CW from the keyer (radio menu settings and troubleshooting)
 - [Audio and Video](Audio-and-Video) — Set up the audio feed and video display
 - [Remote Access](Remote-Access) — Connect from another device over your network or VPN
 - [POTA, SOTA, and WWFF Spots](POTA-and-SOTA-Spots) — Live activator spots with click-to-tune
