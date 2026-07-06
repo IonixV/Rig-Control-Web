@@ -96,42 +96,114 @@ On Linux systems running **PipeWire**, this reappearance is not always clean:
 - When the radio's USB Audio device comes back online after power-on, PipeWire does **not** automatically switch its default back to it — the default stays pointed at whatever it fell back to.
 - If your **Backend Input**/**Backend Output** selection in RigControl Web resolves through that system "default" device rather than a device pinned to the radio's specific hardware, backend audio into and out of RigControl Web will remain broken after every power cycle until the default is reassigned back to the radio.
 
-**Workaround:** After powering the radio back on, check PipeWire's current default input/output (`wpctl status`, or a graphical mixer such as `pavucontrol` or `qpwgraph`) and reassign it to the radio's USB Audio device if it hasn't switched back on its own. Re-opening **Backend Audio Engine** settings and re-selecting the correct device (restarting backend audio if needed) also restores it for the current session.
+#### Permanent Fix: Pin the Radio's Audio Device Directly (Recommended)
 
-#### FT-710: Required 44.1 kHz Virtual Device
+> The steps below are written against the **Yaesu FT-710**, the radio this was developed and validated against — including a full power-off/power-on cycle of the real radio while RigControl Web was running. The technique itself is generic and not FT-710-specific: it applies to **any radio, or any USB audio device**, where you want Backend Input/Output to survive PipeWire's default-device drift after a reconnect, and/or where the device needs a specific sample rate it doesn't otherwise negotiate correctly on its own. Substitute your own device's vendor/product ID, node names, and required sample rate throughout.
 
-The FT-710's USB Audio interface only operates correctly at a **44.1 kHz** sample rate. Selecting the radio's own PipeWire, ALSA, or PulseAudio device identifier directly still opens the device at 48 kHz and will not work, even though the identifier appears to point at the same hardware.
+Instead of relying on PipeWire's dynamic "default" sink/source — which can silently drift to the wrong device after any USB reconnect — pin RigControl Web's Backend Input/Output directly to the radio's specific PipeWire node by name. This bypasses default-device selection entirely, so it is unaffected by whatever PipeWire currently considers "default."
 
-The supported setup on Linux/PipeWire is:
+**1. Identify the device**
 
-1. **Force PipeWire's global sample rate to 44.1 kHz.** Two ways to do this:
+With the radio connected and powered on:
 
-   - **Temporary (until reboot/PipeWire restart)** — run this once per session:
+```bash
+wpctl status
+```
 
-     ```bash
-     pw-metadata -n settings 0 clock.force-rate 44100
-     ```
+Find your radio's audio interface under `Audio → Devices`. Note that many radios present themselves as a generic-sounding device rather than under the radio's brand name — the FT-710, for example, shows up as a plain **"USB Audio Device"** backed by a C-Media USB audio codec chip. Note its device ID, then look up its vendor/product ID and its sink/source node names:
 
-   - **Permanent** — add a `clock.rate` override, for example a drop-in config file:
+```bash
+wpctl inspect <device-id> | grep -E "vendor.id|product.id"
+wpctl inspect <sink-id> | grep node.name
+wpctl inspect <source-id> | grep node.name
+```
 
-     ```
-     # ~/.config/pipewire/pipewire.conf.d/44100-rate.conf
-     context.properties = {
-         default.clock.rate = 44100
-     }
-     ```
+**2. Pin the sample rate, if your device needs one**
 
-     then restart the user PipeWire services:
+Skip this step if your device already negotiates a correct, stable rate on its own. Some radios' USB audio interfaces have a real hardware/firmware limitation that only manifests at their advertised default rate. The FT-710 is one example: it advertises 48 kHz support in its USB descriptors, but has a clocking bug that causes the device to drop in and out of the OS roughly once a second when actually driven at 48 kHz — 44.1 kHz is stable.
 
-     ```bash
-     systemctl --user restart pipewire pipewire-pulse wireplumber
-     ```
+If your device needs a specific rate, two settings work together, and **testing showed both are required** — a per-device rate pin alone was not sufficient to keep the FT-710 stable:
 
-     > Exact steps can vary by distribution — consult your distro's PipeWire documentation if this drop-in path doesn't apply to your setup.
+- **Per-device rate pin.** Add a WirePlumber rule matched by vendor/product ID, e.g. `~/.config/wireplumber/wireplumber.conf.d/51-fixed-rate.conf`:
 
-2. In RigControl Web's **Audio Settings**, under **Backend Audio Engine**, select the device labeled **`pipewire [ALSA, 44.1k]`** for both **Backend Input** and **Backend Output** — not the FT-710's own hardware device entry. RigControl Web's device list shows the sample rate PipeWire reports at the time it enumerates devices in brackets after the host API name, so once the global rate is forced to 44.1 kHz this entry will read `44.1k`.
+  ```
+  monitor.alsa.rules = [
+    {
+      matches = [
+        { device.vendor.id = "0x0d8c", device.product.id = "0x0013" }
+      ]
+      actions = {
+        update-props = { audio.rate = 44100 }
+      }
+    }
+  ]
+  ```
 
-> Because this relies on PipeWire's default-device routing, the `pipewire [ALSA, 44.1k]` selection is subject to the same power-cycle caveat described above. After the radio powers off and back on, confirm this device is still selected and still resolves to the radio — PipeWire's default may have silently fallen back to another device in the meantime.
+  (substitute your own device's vendor/product ID and required rate — `0x0d8c`/`0x0013` above is the FT-710's C-Media codec)
+
+- **Permanent global clock-rate override.** Add `~/.config/pipewire/pipewire.conf.d/44100-rate.conf`:
+
+  ```
+  context.properties = {
+      default.clock.rate = 44100
+  }
+  ```
+
+  A **temporary, session-only** equivalent exists (`pw-metadata -n settings 0 clock.force-rate 44100`), but it does not survive a WirePlumber/PipeWire restart or a reboot — it is only useful for a quick test. Use the permanent config file above so the fix actually persists; this was confirmed the hard way during testing, when a WirePlumber restart silently dropped a rate that had only been set via the temporary command, and the FT-710 promptly started dropping out again.
+
+  > Exact paths can vary by distribution — consult your distro's PipeWire/WirePlumber documentation if these drop-in locations don't apply to your setup.
+
+**3. Pin RigControl Web's Backend Input/Output to the exact node**
+
+Create (or add to) `~/.config/alsa/asoundrc`. Verify this is the path your system's ALSA config actually loads — check the `@hooks` section of `/usr/share/alsa/alsa.conf`; some systems load `~/.config/alsa/asound.conf` or plain `~/.asoundrc` instead.
+
+```
+pcm.ft710_out {
+    type pipewire
+    playback_node "alsa_output.usb-C-Media_Electronics_Inc._USB_Audio_Device-00.analog-stereo"
+    hint {
+        show on
+        description "FT-710 (pinned, 44.1k)"
+    }
+}
+ctl.ft710_out { type pipewire }
+
+pcm.ft710_in {
+    type pipewire
+    capture_node "alsa_input.usb-C-Media_Electronics_Inc._USB_Audio_Device-00.mono-fallback"
+    hint {
+        show on
+        description "FT-710 (pinned, 44.1k)"
+    }
+}
+ctl.ft710_in { type pipewire }
+```
+
+Use the exact `node.name` values from Step 1's `wpctl inspect` output for your own device — the strings above are the FT-710's and will not match a different radio or a different machine. `playback_node`/`capture_node` bind this PCM directly to that one hardware node, bypassing PipeWire's "default" indirection entirely regardless of what PipeWire currently considers default. The `hint` block gives the device a friendly label in RigControl Web's device dropdown; name the `pcm`/`ctl` blocks and the `description` after your own device if it isn't an FT-710.
+
+**4. Reload and verify**
+
+```bash
+systemctl --user restart wireplumber pipewire pipewire-pulse
+aplay -L | grep -A1 ft710
+arecord -L | grep -A1 ft710
+```
+
+Both should list your new pinned device with the friendly description from the `hint` block.
+
+**5. Select the pinned device in RigControl Web**
+
+Open **Audio Settings** and select your new pinned device (e.g. **FT-710 (pinned, 44.1k)**) for both **Backend Input** and **Backend Output**. RigControl Web resolves the saved Backend Input/Output selection by device **name**, not by its numeric position in the device list, so this selection stays correct even if the set of available audio devices changes later — custom PipeWire PCMs like these are not guaranteed a stable numeric position between restarts.
+
+This setup was validated end-to-end against a real FT-710, including an actual radio power-off/power-on cycle: the radio's USB audio interface disappeared and reappeared, and backend audio recovered automatically with no manual PipeWire reassignment required.
+
+#### Quick/Temporary Method
+
+If you would rather not edit config files, you can rely on PipeWire's `default` device instead, at the cost of the reconnection caveat described at the top of this section.
+
+1. If your device needs a specific sample rate, force PipeWire's global clock rate — for a one-off test, `pw-metadata -n settings 0 clock.force-rate 44100` (session-only; does not survive a restart); for anything durable, use the permanent config file from Step 2 above.
+2. In **Audio Settings**, select the device labeled **`pipewire [ALSA, 44.1k]`** (or whatever rate is shown) for both **Backend Input** and **Backend Output** — RigControl Web's device list shows the sample rate PipeWire reports at enumeration time in brackets after the host API name.
+3. After every radio power cycle, check `wpctl status` (or a graphical mixer such as `pavucontrol` or `qpwgraph`) to confirm PipeWire's default sink/source is still pointed at the radio, and reassign it manually if it fell back to another device.
 
 ---
 
