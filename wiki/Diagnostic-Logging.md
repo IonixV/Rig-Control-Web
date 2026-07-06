@@ -16,6 +16,7 @@ RigControl Web supports six diagnostic flags. Launch the app with one or more of
 | `--debug-cw` | CW keyer state machine, DTR/RTS serial line changes |
 | `--debug-infra` | Server startup, shutdown steps, TLS certificate, settings file reads/writes |
 | `--debug-spectrum` | Spectrum scope (both sources) — Hamlib UDP socket binding, multicast interface joins, per-packet receive/parse/emit trace, 10 s throughput counter; FT4222 reader lifecycle, frame parse errors, resync events, restart timing |
+| `--debug-spots` | POTA, SOTA, and WWFF spot fetching — HTTP request/response status, spot counts, filter pipeline (dedup, age, mode, band drop counts), sample timestamps for diagnosing clock-related filtering issues |
 | `--debug-all` | All of the above at once |
 
 Flags can be combined. For example, if your problem involves audio and the rig connection together, use `--debug-rig --debug-audio`.
@@ -86,7 +87,7 @@ To open DevTools:
 - **Firefox:** Press `F12` or `Ctrl+Shift+K`
 - **Safari:** Enable the Developer menu in Preferences → Advanced, then press `Cmd+Option+C`
 
-Switch to the **Console** tab. Filter by `[RIG]`, `[AUDIO]`, `[VIDEO]`, `[CW]`, or `[INFRA]` to narrow down to the relevant subsystem.
+Switch to the **Console** tab. Filter by `[RIG]`, `[AUDIO]`, `[VIDEO]`, `[CW]`, `[INFRA]`, or `[spots` to narrow down to the relevant subsystem.
 
 To save the console output: right-click anywhere in the Console panel → **Save as...** (Chrome/Edge) or copy the visible output.
 

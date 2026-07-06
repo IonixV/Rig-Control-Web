@@ -146,7 +146,9 @@ The physical key signal can be sent three ways (configured in KEYER settings):
 |--------|-------------|
 | **DTR** | Keys a DTR line on a serial port (most common — works with Digirig, SignaLink, and similar) |
 | **RTS** | Keys an RTS line on the same or a different serial port |
-| **CAT PTT** | Uses Hamlib's PTT command to key the radio. **Last resort only** — most radios process CAT commands too slowly for clean CW timing. Only use this if your radio is specifically known to handle fast CAT keying. |
+| **CAT PTT** | Uses Hamlib's PTT command to key the radio. **Last resort only** — most radios will key up but produce no CW tone with this method. Only use this if your radio is specifically known to handle fast CAT keying. |
+
+For step-by-step instructions on setting up your radio and the app for CW keying — including radio menu settings and troubleshooting — see the [CW Keying Setup](CW-Keying-Setup) page.
 
 ---
 

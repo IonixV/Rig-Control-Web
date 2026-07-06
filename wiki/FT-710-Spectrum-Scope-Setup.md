@@ -4,8 +4,6 @@ The Yaesu FT-710 can stream its live spectrum waterfall to RigControl Web over U
 
 This guide covers Linux (Fedora/RHEL and Debian/Ubuntu), macOS, and Windows.
 
-> **FT-710 only.** The other Yaesu radios that are marketed as SCU-LAN10 compatible — the FTDX101MP, FTDX101D, and FTDX10 — do **not** expose an FT4222H USB device to the host PC. Those radios route spectrum data through the physical SCU-LAN10 Ethernet bridge accessory using Yaesu's proprietary remote-control protocol. RigControl Web does not support that path; this feature is specific to the FT-710.
-
 ---
 
 ## Before you start
@@ -34,8 +32,6 @@ The spectrum USB output is off by default. Turn it on through the FT-710's menu:
 4. Find **SCU-LAN10** and set it to **ON**.
 5. Press **FUNC** (or wait about 3 seconds) to save the setting.
 6. Touch **BACK** to return to normal operation.
-
-> **Why is it called "SCU-LAN10"?** The SCU-LAN10 is Yaesu's optional Ethernet remote-control accessory. On the FT-710, enabling this menu option activates the radio's built-in FTDI FT4222H USB-to-SPI chip, which streams spectrum data directly over the USB cable — no SCU-LAN10 hardware required. The FTDX101 and FTDX10 have the same menu option but use different hardware; their spectrum data only becomes available through the physical SCU-LAN10 device over Ethernet.
 
 ---
 
@@ -132,14 +128,22 @@ sudo restorecon /usr/local/lib/libft4222.so*
 
 ### Step 6 — Allow non-root access to the USB device
 
-Without this step, RigControl Web would need to run as root to read from the FT4222H. Create a udev rule to grant access to the logged-in user automatically:
+Without this step, RigControl Web would need to run as root to read from the FT4222H. Create a udev rule to grant access automatically:
 
 ```bash
 sudo tee /etc/udev/rules.d/50-ftdi-ft4222.rules > /dev/null << 'EOF'
 # FTDI FT4222H (Yaesu FT-710 spectrum scope)
-SUBSYSTEM=="usb", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="601c", MODE="0660", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="601c", MODE="0660", GROUP="dialout", TAG+="uaccess"
 EOF
 ```
+
+This rule grants access two ways: `TAG+="uaccess"` covers users logged into the local graphical desktop (seat0), and `GROUP="dialout"` covers everyone else — including remote-desktop/RDP sessions, which systemd-logind does not treat as seat sessions and therefore does not grant `uaccess` ACLs to. Make sure your user is in the `dialout` group (the same group used for the radio's CAT serial port):
+
+```bash
+sudo usermod -aG dialout $USER
+```
+
+(Log out and back in for the new group membership to take effect.)
 
 Apply the rule:
 
@@ -149,6 +153,8 @@ sudo udevadm trigger
 ```
 
 Unplug and reconnect the USB cable so the rule takes effect on the device.
+
+> **Remote desktop / headless setups:** If you connect to this machine via a remote desktop session (e.g. GNOME Remote Desktop/RDP, VNC, X11 forwarding), `uaccess` alone is not enough — only `GROUP="dialout"` will grant your session access. If the scope still reports `device not found (status 2)` after confirming the device is connected and the library is installed, check `getfacl /dev/bus/usb/<bus>/<device>` (from `lsusb`) and confirm your user is in `dialout` (`groups`).
 
 ---
 
@@ -199,35 +205,46 @@ No further configuration is needed for USB device access on macOS. If the app st
 
 With the radio connected and powered on, open **Device Manager** (right-click the Start button → Device Manager).
 
-Expand **Universal Serial Bus controllers** (or **Universal Serial Bus devices**) and look for **FT4222H**. If it is listed, the device is recognized.
+Look for two **FT4222H** entries. They will typically appear under **Universal Serial Bus controllers** with the stock FTDI driver. You should see both **Interface 0** and **Interface 1** listed.
 
-If it does not appear, check the USB connection and confirm SCU-LAN10 is enabled in the radio (see above).
+If they do not appear, check the USB connection and confirm SCU-LAN10 is enabled in the radio (see above).
 
 > The CP2105 CAT serial port will appear separately under **Ports (COM & LPT)** — this is expected.
 
-### Step 2 — Replace the default FTDI driver
+### Step 2 — Verify the FTDI D2XX driver is loaded
 
-Windows loads the wrong driver for the FT4222H by default. Use [Zadig](https://zadig.akeo.ie/), a free utility, to replace it:
+RigControl Web communicates with the FT4222H through FTDI's D2XX API, which requires the stock **FTDI driver** that Windows installs automatically. **Do not replace this driver** with WinUSB, libusb, or any other third-party driver — doing so will prevent the spectrum scope from working.
 
-1. Download and open **Zadig**.
-2. From the menu, choose **Options → List All Devices**.
-3. Select **FT4222H** from the dropdown.
-4. Set the target driver to **WinUSB**.
-5. Click **Replace Driver**.
+To verify the correct driver is loaded:
 
-> This only affects the FT4222H spectrum device — the CP2105 CAT serial port is untouched.
+1. In Device Manager, right-click one of the **FT4222H** entries and choose **Properties**.
+2. Go to the **Driver** tab.
+3. The **Driver Provider** should be **FTDI**. If it shows **libusb-win32**, **WinUSB**, or anything else, the driver has been replaced and needs to be restored (see below).
+
+**If the driver was replaced (e.g. by a third-party tool):**
+
+1. In Device Manager, right-click the FT4222H device → **Uninstall device**.
+2. Check **Attempt to remove the driver** and click **Uninstall**.
+3. Repeat for the second FT4222H interface.
+4. Unplug the FT-710's USB cable, wait a few seconds, and plug it back in.
+5. Windows will automatically reinstall the stock FTDI driver.
 
 ### Step 3 — Install the FT4222 library files
 
-Go to the [FT4222H Software Examples page](https://ftdichip.com/software-examples/ft4222h-software-examples/) and download the Windows package. It contains two files:
+Go to the [FT4222H Software Examples page](https://ftdichip.com/software-examples/ft4222h-software-examples/) and download the Windows package. It contains two DLL files that RigControl Web needs at runtime:
 
 - `ftd2xx.dll`
 - `LibFT4222-64.dll`
 
-Copy both files to **one** of these locations:
+Copy both files to `%LOCALAPPDATA%\RIGCONTROL WEB\`. To open this folder quickly, press **Win+R**, paste the following, and press Enter:
 
-- `C:\Windows\System32\` — available to all applications system-wide
-- The folder where `RigControl Web.exe` is installed — keeps them alongside the app
+```
+%LOCALAPPDATA%\RIGCONTROL WEB
+```
+
+If the `RIGCONTROL WEB` folder does not exist yet, create it first.
+
+> **Upgrading from a previous version?** If you previously placed the DLLs in the program directory (e.g. `C:\Program Files\RIGCONTROL WEB\`), the installer will automatically copy them to `%LOCALAPPDATA%\RIGCONTROL WEB` during the upgrade — no manual action required.
 
 RigControl Web will show a clear error on startup if either file is missing.
 
@@ -254,10 +271,13 @@ Check the error message shown in the Spectrum Scope settings panel.
 
 | Error | Most likely cause | Fix |
 |-------|-------------------|-----|
-| `libft4222 not found` | Library not installed or not on search path | Redo the install steps for your platform |
+| `libft4222 not found` | Library not installed or not on search path | Redo the install steps for your platform; on Windows, ensure the DLLs are in `%LOCALAPPDATA%\RIGCONTROL WEB` |
 | `No FT4222 device found` | Radio not connected, or SCU-LAN10 not enabled | Check USB cable and radio menu |
-| `LIBUSB_ERROR_ACCESS` / permission denied | udev rule missing or not applied (Linux) | Redo Step 6 and replug the USB cable |
-| `libft4222 not found` on macOS | Quarantine flag still set | Run the `xattr -d` command from Step 3 |
+| `device not found` + `using the FTDI D2XX driver` (Windows) | The FT4222H driver was replaced with WinUSB or libusb | Restore the stock FTDI driver — see Windows Step 2 |
+| `LIBUSB_ERROR_ACCESS` / permission denied (Linux) | udev rule missing or not applied | Redo Linux Step 6 and replug the USB cable |
+| `device not found (status 2)` despite `lsusb` showing the device (Linux) | Permission denied on the device node — common over remote desktop/RDP sessions, where `uaccess` ACLs are not granted | Redo Linux Step 6 with `GROUP="dialout"`, confirm your user is in `dialout` (`groups`), then replug the USB cable |
+| `device not found` on macOS | USB access blocked by macOS security | Check **System Settings → Privacy & Security** for blocked USB access; also verify the quarantine flag was removed (macOS Step 3) |
+| `libft4222 not found` on macOS | Quarantine flag still set | Run the `xattr -d` command from macOS Step 3 |
 
 ### Check the debug log
 

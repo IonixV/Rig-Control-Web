@@ -76,3 +76,44 @@ For SSB spots, the app automatically selects **USB** for frequencies above 10 MH
 ## Collapsing Panels
 
 In all layouts you can collapse any spots panel by clicking the collapse arrow in the panel header to reclaim screen space when you are not actively hunting.
+
+---
+
+## Troubleshooting
+
+### Spots Panel Shows "No spots in the last X min..." Even Though Activators Are On the Air
+
+The most common cause is **an incorrect system clock on your computer**. Spots are fetched from the POTA, SOTA, and WWFF APIs with UTC timestamps, and the app compares those timestamps to your local system clock to calculate spot age. If your computer's clock is even a few minutes fast, every spot will appear older than it actually is and the max-age filter will drop them all.
+
+**To check and fix (Windows):**
+
+1. Open **Settings → Time & date**.
+2. Make sure **Set time automatically** is turned **On**.
+3. Click **Sync now** to force an immediate NTP time sync.
+4. Verify the **Time zone** is set correctly for your location — a wrong timezone with a manually corrected local time still produces incorrect UTC, which is what the spot age calculation uses.
+
+**To check and fix (Linux):**
+
+```
+timedatectl status
+```
+
+Verify that `System clock synchronized: yes` and the timezone is correct. If the clock is out of sync, run:
+
+```
+sudo timedatectl set-ntp true
+```
+
+**How to confirm this is the issue:** Launch the app with `--debug-spots` and open the browser DevTools console (`F12` → Console tab). Look for the `[spots:pota] Filter pipeline` log line — it prints the `cutoff` timestamp (derived from your system clock) and the `sample spotTime` (from the API). If the cutoff is significantly ahead of the sample time, your clock is fast and spots are being filtered as too old.
+
+### Only One Spot Type Appears (e.g., POTA But Not SOTA or WWFF)
+
+If you are using the **All Spots** panel, all three spot types (POTA, SOTA, WWFF) are fetched automatically. If you are using individual panels (POTA Spots, SOTA Spots, WWFF Spots), only the types with a panel in your layout will be fetched. Add the missing panel via **Edit → Add Panel** or switch to the **All Spots** combined panel.
+
+### Spots Load on One Machine But Not Another
+
+Spots are fetched browser-side directly from external APIs (api.pota.app, api2.sota.org.uk, spots.wwff.co). If one machine works and another does not, check:
+
+- **System clock** — see above. This is the most common cause.
+- **Firewall or security software** — the fetch requests are outbound HTTPS to the spot APIs. Corporate firewalls, VPNs, or antivirus software may block these connections on one machine but not another.
+- **Network connectivity** — verify you can reach the APIs by opening `https://api.pota.app/spot/` in a browser tab on the affected machine.

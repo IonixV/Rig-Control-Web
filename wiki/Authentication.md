@@ -116,6 +116,28 @@ Deletes the user database (`users.json`) and rotates the JWT secret (`auth.json`
 
 ---
 
+## Resetting Accounts on Reinstall
+
+User accounts (`users.json`), the JWT secret (`auth.json`), the audit log (`audit.json`), and your settings (`settings.json`) are stored in the application's data directory, **outside** the program folder:
+
+| Platform | Data directory |
+|----------|----------------|
+| Windows | `%APPDATA%\RigControl Web` |
+| Linux | `~/.config/RigControl Web` |
+| macOS | `~/Library/Application Support/RigControl Web` |
+
+Because this directory lives outside the installed program, it **survives a normal uninstall/reinstall**. This is why, after reinstalling, your previous login still works and old settings reappear.
+
+To reset login accounts and settings, use one of these approaches:
+
+- **In-app (any platform):** Log in with the existing admin account and use the Admin panel's [Factory Reset](#factory-reset), or reset individual passwords.
+- **Windows uninstaller:** When you uninstall RigControl Web, the uninstaller asks **"Also delete RigControl Web user data (saved settings and login accounts)?"** Choose **Yes** to remove the data directory along with the app. The prompt defaults to **No**, so your data is preserved across an upgrade unless you explicitly opt in.
+- **Manual:** With the app fully closed, delete the platform data directory listed above.
+
+After the data is removed, the next launch reseeds the default `ADMIN` / `admin` account (with a forced password change), exactly as on first launch.
+
+---
+
 ## Rate Limiting
 
 The server enforces rate limits to resist brute-force attacks:
