@@ -53,6 +53,19 @@ export async function listAudioDevices(ctx: ServerContext): Promise<{ inputs: an
   }
 }
 
+// PortAudio device IDs are ordinal positions in the current enumeration, not
+// stable identifiers — custom named ALSA PCMs (e.g. PipeWire target.object
+// pins) can shift slots between enumerations even with no hardware change.
+// Resolve by the saved device name first; fall back to the legacy numeric-id
+// interpretation for settings saved before this field switched meaning.
+function resolveDeviceId(ctx: ServerContext, saved: string): number {
+  const devices = ctx.portAudio.getDevices();
+  const byName = devices.find((d: any) => d.name === saved);
+  if (byName) return byName.id;
+  const numeric = parseInt(saved, 10);
+  return isNaN(numeric) ? -1 : numeric;
+}
+
 export async function stopAudio(ctx: ServerContext): Promise<void> {
   vlog("[AUDIO] Stopping audio streaming...");
   if (ctx.outboundTimer) { clearInterval(ctx.outboundTimer); ctx.outboundTimer = null; }
@@ -96,13 +109,13 @@ export async function startAudio(ctx: ServerContext): Promise<void> {
 
   if (ctx.audioSettings.inputDevice) {
     try {
-      const deviceId = parseInt(ctx.audioSettings.inputDevice, 10);
+      const deviceId = resolveDeviceId(ctx, ctx.audioSettings.inputDevice);
       ctx.audioInputProcess = new ctx.portAudio.AudioIO({
         inOptions: {
           channelCount: 1,
           sampleFormat: ctx.portAudio.SampleFormat16Bit,
           sampleRate: 48000,
-          deviceId: isNaN(deviceId) ? -1 : deviceId,
+          deviceId,
           closeOnError: true,
           framesPerBuffer: 0,
           maxQueue: 10,
@@ -145,13 +158,13 @@ export async function startAudio(ctx: ServerContext): Promise<void> {
 
   if (ctx.audioSettings.outputDevice) {
     try {
-      const deviceId = parseInt(ctx.audioSettings.outputDevice, 10);
+      const deviceId = resolveDeviceId(ctx, ctx.audioSettings.outputDevice);
       ctx.audioOutputProcess = new ctx.portAudio.AudioIO({
         outOptions: {
           channelCount: 1,
           sampleFormat: ctx.portAudio.SampleFormat16Bit,
           sampleRate: 48000,
-          deviceId: isNaN(deviceId) ? -1 : deviceId,
+          deviceId,
           closeOnError: false,
           framesPerBuffer: 0,
           maxQueue: 20,

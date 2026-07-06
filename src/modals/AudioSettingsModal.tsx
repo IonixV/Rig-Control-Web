@@ -411,7 +411,7 @@ function AudioSettingsModal({
                       const label = isWASAPI
                         ? `${d.name} [WASAPI${wasapiIncompatible ? ` – set device to 48k in Windows` : ''}]`
                         : `${d.name}${api || rate ? ` [${[api, rate].filter(Boolean).join(', ')}]` : ''}`;
-                      return <option key={d.altName} value={d.altName} disabled={wasapiIncompatible}>{label}</option>;
+                      return <option key={d.altName} value={d.name} disabled={wasapiIncompatible}>{label}</option>;
                     })}
                   </select>
                 </div>
@@ -459,7 +459,7 @@ function AudioSettingsModal({
                       const label = isWASAPI
                         ? `${d.name} [WASAPI${wasapiIncompatible ? ` – set device to 48k in Windows` : ''}]`
                         : `${d.name}${api || rate ? ` [${[api, rate].filter(Boolean).join(', ')}]` : ''}`;
-                      return <option key={d.altName} value={d.altName} disabled={wasapiIncompatible}>{label}</option>;
+                      return <option key={d.altName} value={d.name} disabled={wasapiIncompatible}>{label}</option>;
                     })}
                   </select>
                 </div>
