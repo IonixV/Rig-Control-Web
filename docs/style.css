@@ -16,6 +16,8 @@
   --accent: #22c55e;
   --accent-dim: rgba(34, 197, 94, 0.12);
   --amber: #f59e0b;
+  --discord: #5865f2;
+  --discord-hover: #4752c4;
 }
 
 html {
@@ -95,6 +97,15 @@ a:hover {
 .nav-links a:hover {
   color: var(--text);
   text-decoration: none;
+}
+
+.nav-links a.discord-link i {
+  color: var(--discord);
+  margin-right: 4px;
+}
+
+.nav-links a.discord-link:hover {
+  color: var(--discord);
 }
 
 /* ---- HERO ---- */
@@ -177,6 +188,16 @@ a:hover {
 .btn-secondary:hover {
   background: var(--bg-card-hover);
   color: var(--text);
+}
+
+.btn-discord {
+  background: var(--discord);
+  color: #fff;
+}
+
+.btn-discord:hover {
+  background: var(--discord-hover);
+  color: #fff;
 }
 
 /* ---- SCREENSHOTS ---- */
@@ -374,6 +395,14 @@ a.platform-card:hover {
 
 .footer a:hover {
   color: var(--text);
+}
+
+.footer a.discord-link {
+  color: var(--discord);
+}
+
+.footer a.discord-link:hover {
+  color: var(--discord-hover);
 }
 
 /* ---- RESPONSIVE ---- */
