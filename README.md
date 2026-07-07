@@ -126,34 +126,7 @@ Built installers are placed in the `build/` directory.
 
 ### Diagnostic Logging
 
-By default the app runs quietly — only errors and key status messages are printed. To enable diagnostic output for specific subsystems, launch with one or more `--debug-*` flags:
-
-| Flag | What it enables |
-|------|----------------|
-| `--debug-rig` | Hamlib command traffic, capability detection, poll cycle details |
-| `--debug-audio` | Audio pipeline — encoding, decoding, device selection, jitter buffer |
-| `--debug-video` | Video chunk relay, encoder/decoder events |
-| `--debug-cw` | CW keyer state machine, DTR/RTS line changes |
-| `--debug-spectrum` | FT4222 spectrum reader lifecycle, frame parse errors, restart events |
-| `--debug-infra` | Server startup, shutdown steps, TLS certificate, settings I/O |
-| `--debug-all` | All subsystems at once |
-
-Flags can be combined (e.g. `--debug-rig --debug-audio`).
-
-**Windows:**
-```
-"RigControl Web.exe" --debug-rig
-```
-**Linux:**
-```
-rigcontrol-web --debug-rig
-```
-**Development:**
-```
-npm run dev -- --debug-rig
-```
-
-Debug flags are forwarded to connected browser clients, which print matching diagnostic output to their DevTools console for the same subsystems.
+See the [Diagnostic Logging wiki page](https://github.com/jbdubbs/Rig-Control-Web/wiki/Diagnostic-Logging) for `--debug-*` flags and how to capture logs for a bug report.
 
 ## License
 
