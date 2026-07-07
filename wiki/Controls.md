@@ -113,6 +113,8 @@ Keys can be rebound in the KEYER settings tab — click the binding field and pr
 
 The default Left Ctrl / Right Ctrl bindings also match the vBand USB paddle interface, so a vBand plugged into a USB port works without any rebinding.
 
+The [N6ARA TinyMIDI](https://n6ara.com/product/n6ara-tinymidi/) is also supported the same way — it is a Bluetooth CW paddle that can pair as either a MIDI device or a Bluetooth keyboard. RigControl Web only supports the **keyboard** mode (not MIDI); pair it as a keyboard, then use the KEYER settings rebind fields above to map its dit/dah paddle presses to keys if they don't already match the Left Ctrl / Right Ctrl defaults.
+
 ### Touch Paddles (Phone and Tablet)
 
 When the rig is in a CW mode (`CW`, `CWR`) and the keyer is enabled, the PTT button at the bottom of the phone layout is automatically replaced by two large touch paddle buttons:
