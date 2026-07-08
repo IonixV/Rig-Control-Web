@@ -234,7 +234,7 @@ export default function AdminTab({ socket, callsign }: Props) {
           {users.map((u) => (
             <div
               key={u.callsign}
-              className="flex items-center justify-between bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 gap-2"
+              className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 gap-2"
             >
               <div className="flex items-center gap-2 min-w-0">
                 <span className="text-xs font-mono font-bold text-white truncate">
@@ -254,7 +254,7 @@ export default function AdminTab({ socket, callsign }: Props) {
                   <span className="text-[0.6rem] text-orange-400">pw reset</span>
                 )}
               </div>
-              <div className="flex items-center gap-1 flex-shrink-0">
+              <div className="grid grid-cols-3 gap-1 sm:flex sm:items-center sm:flex-shrink-0">
                 <button
                   onClick={() => handleChangeRole(u.callsign, u.role)}
                   disabled={u.callsign === callsign}
@@ -455,9 +455,9 @@ export default function AdminTab({ socket, callsign }: Props) {
               ["Node.js", systemInfo.nodeVersion],
               ["TLS Cert Expiry", systemInfo.certExpiry],
             ].map(([label, value]) => (
-              <div key={label} className="flex justify-between text-xs">
-                <span className="text-[#8e9299]">{label}</span>
-                <span className="font-mono text-white">{value}</span>
+              <div key={label} className="flex justify-between gap-3 text-xs">
+                <span className="text-[#8e9299] flex-shrink-0">{label}</span>
+                <span className="font-mono text-white text-right">{value}</span>
               </div>
             ))}
           </div>
