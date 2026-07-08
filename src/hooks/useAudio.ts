@@ -71,10 +71,17 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, waterfallAc
   useEffect(() => { localAudioSettingsRef.current = localAudioSettings; }, [localAudioSettings]);
   useEffect(() => { inboundVolumeRef.current = inboundVolume; }, [inboundVolume]);
 
-  useEffect(() => {
+  // Single source of truth for "does the inbound gain node reflect mute state" —
+  // called both when inboundMuted changes and whenever the gain node itself is
+  // (re)created (e.g. on rejoin), so the two can never drift apart.
+  const applyInboundMute = useCallback(() => {
     if (!inboundGainRef.current) return;
-    inboundGainRef.current.gain.value = inboundMuted ? 0 : inboundVolumeRef.current;
-  }, [inboundMuted]);
+    inboundGainRef.current.gain.value = inboundMutedRef.current ? 0 : inboundVolumeRef.current;
+  }, []);
+
+  useEffect(() => {
+    applyInboundMute();
+  }, [inboundMuted, applyInboundMute]);
 
   // Collapse backend engine panel when audio starts playing
   useEffect(() => { if (audioStatus === "playing") setIsBackendEngineCollapsed(true); }, [audioStatus]);
@@ -291,8 +298,8 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, waterfallAc
         analyserNode.smoothingTimeConstant = 0.6;
         analyserNodeRef.current = analyserNode;
         const gainNode = ctx.createGain();
-        gainNode.gain.value = inboundVolumeRef.current;
         inboundGainRef.current = gainNode;
+        applyInboundMute();
         playbackNodeRef.current.connect(analyserNode);
         analyserNode.connect(gainNode);
         gainNode.connect(ctx.destination);
@@ -371,7 +378,7 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, waterfallAc
 
     setLocalAudioReady(true);
     setAudioWasRestarted(false);
-  }, [stopMicCapture]);
+  }, [stopMicCapture, applyInboundMute]);
 
   const updateWsjtxOutput = useCallback(async (deviceId: string) => {
     vlogWsjtx(`updateWsjtxOutput called, deviceId=${deviceId || "(none)"}`);
