@@ -69,7 +69,7 @@ export default function ControlsPanel({
       disabled={!connected || isTuning}
       className={cn(
         isPhone ? btnBasePhone : btnBase, extraClass,
-        (!connected || isTuning) && "cursor-not-allowed",
+        (!connected || isTuning) && "opacity-50 cursor-not-allowed",
         isTuning ? "bg-red-500/20 border-red-500 text-red-500"
           : (status.tuner || tuneJustFinished) ? "bg-emerald-500/10 border-emerald-500 text-emerald-500"
           : "bg-[#0a0a0a] border-[#2a2b2e] hover:border-emerald-500"
