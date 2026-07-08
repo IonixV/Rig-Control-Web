@@ -1,0 +1,139 @@
+name: Release (Windows Only)
+
+# For patch releases that only touch Windows-specific code, where rebuilding
+# and re-releasing Linux/macOS installers would be pure churn. Triggered
+# manually (not by tag push) so it never collides with build.yml's `v*` tag
+# trigger, which always builds all three platforms. The release tag itself
+# is created by softprops/action-gh-release as part of publishing the
+# release (a GitHub API tag-create, not a `git push --tags`), which does not
+# fire push-based workflow triggers — so build.yml still won't run.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, e.g. 1.1.1 (must match package.json "version")'
+        required: true
+      prerelease:
+        description: 'Mark the GitHub Release as a pre-release'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Verify version input matches package.json
+        shell: pwsh
+        run: |
+          $pkgVersion = (Get-Content package.json | ConvertFrom-Json).version
+          if ($pkgVersion -ne "${{ github.event.inputs.version }}") {
+            Write-Error "Input version '${{ github.event.inputs.version }}' does not match package.json version '$pkgVersion'. Bump package.json (and the App Version string in src/modals/SettingsModal.tsx) first."
+            exit 1
+          }
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Compile CW key helper
+        shell: cmd
+        run: cl cw-key-helper.c /Fe:bin\windows\cw-key-helper.exe /O2 /nologo
+
+      - name: Compile FT4222 scope reader
+        shell: cmd
+        run: cl ft4222-scope-reader.c /Fe:bin\windows\ft4222-scope-reader.exe /O2 /nologo
+
+      - name: Compile WSJTX bridge helper
+        shell: cmd
+        run: cl wsjtx-bridge.c /Fe:bin\windows\wsjtx-bridge.exe /O2 /nologo ws2_32.lib advapi32.lib
+
+      - name: Check rigctld binary
+        shell: pwsh
+        run: |
+          if (Test-Path "bin\windows\rigctld.exe") {
+            Write-Host "[rigctld] Binary already exists at bin\windows\rigctld.exe — skipping build."
+            echo "RIGCTLD_EXISTS=true" >> $env:GITHUB_ENV
+          } else {
+            Write-Host "[rigctld] Binary not found — will build via MSYS2."
+            echo "RIGCTLD_EXISTS=false" >> $env:GITHUB_ENV
+          }
+
+      - name: Set up MSYS2 for rigctld build
+        if: env.RIGCTLD_EXISTS != 'true'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: false
+          install: >-
+            autoconf
+            automake
+            libtool
+            make
+            git
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-glib2
+            mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-readline
+
+      - name: Build rigctld (MSYS2)
+        if: env.RIGCTLD_EXISTS != 'true'
+        shell: msys2 {0}
+        run: |
+          set -e
+          git clone --depth=1 https://github.com/Hamlib/Hamlib.git hamlib-src
+          cd hamlib-src
+          autoreconf -fi
+          ./configure --disable-shared --enable-static --without-tcl --without-cxx-binding LDFLAGS="-static-libgcc -static-libstdc++"
+          make -j$(nproc)
+          mkdir -p ../bin/windows
+          BIN=""
+          for CANDIDATE in tests/rigctld.exe tests/.libs/rigctld.exe src/rigctld.exe src/.libs/rigctld.exe; do
+            [ -f "$CANDIDATE" ] && BIN="$CANDIDATE" && break
+          done
+          [ -n "$BIN" ] || { echo "[rigctld] Binary not found after build"; exit 1; }
+          cp "$BIN" ../bin/windows/rigctld.exe
+          ldd "$BIN" | grep '/mingw64/bin/' | awk '{print $3}' | xargs -I{} cp {} ../bin/windows/
+          cd ..
+          rm -rf hamlib-src
+
+      - name: Build
+        run: npm run electron:build -- --win --publish never
+
+      - name: Collect artifacts
+        shell: bash
+        run: |
+          mkdir -p build/artifacts
+          cp build/*.exe build/artifacts/ 2>/dev/null || true
+          ls -lh build/artifacts/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: rigcontrol-web-win-v${{ github.event.inputs.version }}
+          path: build/artifacts/*
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          name: v${{ github.event.inputs.version }}
+          prerelease: ${{ github.event.inputs.prerelease }}
+          generate_release_notes: true
+          files: build/artifacts/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -56,10 +56,30 @@ export async function listAudioDevices(ctx: ServerContext): Promise<{ inputs: an
 // PortAudio device IDs are ordinal positions in the current enumeration, not
 // stable identifiers — custom named ALSA PCMs (e.g. PipeWire target.object
 // pins) can shift slots between enumerations even with no hardware change.
-// Resolve by the saved device name first; fall back to the legacy numeric-id
-// interpretation for settings saved before this field switched meaning.
+// Resolving by name alone is not enough either: on Windows, PortAudio
+// enumerates the same physical device once per host API (MME, DirectSound,
+// WASAPI, WDM-KS), all sharing an identical `name` — so name-only lookup
+// always resolves to whichever host API happens to be enumerated first,
+// regardless of which one the user picked. The current format is a JSON
+// {name, hostAPIName} pair, which is both stable across restarts and unique
+// per host API. Older saved formats are supported as fallbacks: a bare
+// device name (settings saved between the name-only fix and this one) and a
+// raw ordinal id (settings saved before either fix).
 function resolveDeviceId(ctx: ServerContext, saved: string): number {
   const devices = ctx.portAudio.getDevices();
+
+  try {
+    const parsed = JSON.parse(saved);
+    if (parsed && typeof parsed.name === "string" && typeof parsed.hostAPIName === "string") {
+      const exact = devices.find((d: any) => d.name === parsed.name && d.hostAPIName === parsed.hostAPIName);
+      if (exact) return exact.id;
+      const byNameOnly = devices.find((d: any) => d.name === parsed.name);
+      return byNameOnly ? byNameOnly.id : -1;
+    }
+  } catch {
+    // Not JSON — fall through to legacy formats below.
+  }
+
   const byName = devices.find((d: any) => d.name === saved);
   if (byName) return byName.id;
   const numeric = parseInt(saved, 10);
