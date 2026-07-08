@@ -13,7 +13,7 @@ import { sendToRig, startPolling, stopPolling, registerRigCommHandlers } from ".
 import { initAudioEngine, stopAudio, registerAudioHandlers } from "./server/audio.ts";
 import { syncKeyerPort, closeKeyerPort, cwSetKey, stopCwTick, registerCwHandlers } from "./server/cw.ts";
 import { registerVideoHandlers } from "./server/video.ts";
-import { registerSolarHandlers } from "./server/solar.ts";
+import { registerSolarHandlers, pushSolarData } from "./server/solar.ts";
 import { startSpectrumListener, stopSpectrumListener } from "./server/spectrum.ts";
 import { startYaesuScope, stopYaesuScope } from "./server/yaesuScope.ts";
 import {
@@ -203,6 +203,7 @@ export async function startServer(appPath?: string, userDataPath?: string) {
     registerCwHandlers(socket, ctx);
     registerVideoHandlers(socket, ctx);
     registerSolarHandlers(socket, ctx);
+    pushSolarData(socket, ctx);
     registerAdminHandlers(socket, ctx);
     registerSettingsHandlers(
       socket,

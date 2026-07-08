@@ -90,14 +90,25 @@ export async function refreshSolarData(ctx: ServerContext): Promise<void> {
   };
 }
 
+async function sendFreshSolarData(ctx: ServerContext, socket: Socket): Promise<void> {
+  const age = ctx.solarData ? Date.now() - ctx.solarData.fetchedAt : Infinity;
+  if (age > ONE_HOUR) {
+    await refreshSolarData(ctx);
+  }
+  if (ctx.solarData) {
+    socket.emit("solar-data", ctx.solarData);
+  }
+}
+
 export function registerSolarHandlers(socket: Socket, ctx: ServerContext): void {
-  socket.on("request-solar-data", async () => {
-    const age = ctx.solarData ? Date.now() - ctx.solarData.fetchedAt : Infinity;
-    if (age > ONE_HOUR) {
-      await refreshSolarData(ctx);
-    }
-    if (ctx.solarData) {
-      socket.emit("solar-data", ctx.solarData);
-    }
+  socket.on("request-solar-data", () => {
+    sendFreshSolarData(ctx, socket).catch(e => console.error("[Solar] request-solar-data failed:", e));
   });
+}
+
+// Proactively pushes solar data (fetching first if missing/stale) once a socket is
+// authenticated, so the client doesn't have to race an early client-initiated
+// request against server-side auth-gated listener registration.
+export function pushSolarData(socket: Socket, ctx: ServerContext): void {
+  sendFreshSolarData(ctx, socket).catch(e => console.error("[Solar] initial push failed:", e));
 }
