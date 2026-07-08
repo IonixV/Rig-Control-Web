@@ -286,9 +286,12 @@ async function probePowerCapability(ctx: ServerContext): Promise<void> {
       onPowerOn(ctx);
     }
   } catch {
-    ctx.powerSupported = false;
+    // A failed/timed-out probe here doesn't necessarily mean the rig lacks power control — it
+    // commonly happens right after an auto-reconnect, while the radio's USB/serial link is still
+    // settling. Only resetRigState() (manual connect/disconnect) clears powerSupported to false;
+    // a transient probe failure here must not silently hide a capability already confirmed true.
     ctx.powerState = 'unknown';
-    vlog("[RIG] Power control not supported by this rig");
+    vlog("[RIG] Power capability probe failed (rig may not support it, or link isn't ready yet)");
   }
 }
 
