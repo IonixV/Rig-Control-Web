@@ -538,8 +538,11 @@ export function resetRigState(ctx: ServerContext): void {
 
 const CONNECT_MAX_ATTEMPTS = 5;
 const CONNECT_RETRY_DELAY_MS = 1000;
+const AUTO_RECONNECT_RETRY_DELAY_MS = 5000;
+const AUTO_RECONNECT_TIMEOUT_MS = 30000;
+const SOCKET_CONNECT_TIMEOUT_MS = 10000;
 
-export function connectToRig(ctx: ServerContext, host: string, port: number, socket?: Socket, attempt = 1): void {
+export function connectToRig(ctx: ServerContext, host: string, port: number, socket?: Socket, attempt = 1, auto = false): void {
   if (ctx.isConnected && ctx.rigConfig.host === host && ctx.rigConfig.port === port) {
     vlog(`Already connected to rigctld at ${host}:${port}. Informing client.`);
     if (socket) {
@@ -558,19 +561,40 @@ export function connectToRig(ctx: ServerContext, host: string, port: number, soc
     ctx.rigConfig = { host, port };
   }
 
-  ctx.io.emit("rig-connecting", { attempt, maxAttempts: CONNECT_MAX_ATTEMPTS });
+  ctx.io.emit("rig-connecting", { attempt, maxAttempts: CONNECT_MAX_ATTEMPTS, auto });
 
   const sock = new net.Socket();
   ctx.rigSocket = sock;
   let retrying = false;
 
+  // Bound the TCP handshake itself — without this, a host that accepts the SYN but never
+  // completes the connection (or a fully unreachable rigctld) can hang for Node's default
+  // ~2min connect timeout, which would blow well past the 30s auto-reconnect give-up budget.
+  sock.setTimeout(SOCKET_CONNECT_TIMEOUT_MS);
+  sock.once("timeout", () => {
+    vlog(`[RIG] Connection attempt to ${host}:${port} timed out after ${SOCKET_CONNECT_TIMEOUT_MS}ms`);
+    sock.destroy(new Error(`connect timeout after ${SOCKET_CONNECT_TIMEOUT_MS}ms`));
+  });
+
   sock.connect(port, host, async () => {
+    sock.setTimeout(0);
     vlog(`Connected to rigctld at ${host}:${port}`);
+    // Note: the TCP handshake can complete even if rigctld is frozen/unresponsive (the OS
+    // finishes it from the accept backlog independently of the app calling accept()), so this
+    // callback firing is not proof the rig is actually reachable — that's only established once
+    // the capability probes below succeed against a socket that's still alive.
     ctx.isConnected = true;
     ctx.autoReconnect = true;
     await probeVfoCapability(ctx);
     await probeCapabilities(ctx);
     await probePowerCapability(ctx);
+    if (sock.destroyed) {
+      // A probe above hit its own command timeout and destroyed this socket; the close handler
+      // is already driving the retry/give-up sequence. Don't declare success (or reset the
+      // auto-reconnect budget) for a connection that's already dead.
+      return;
+    }
+    ctx.autoReconnectStartedAt = null;
     ctx.io.emit("rig-connected", { host, port, vfoSupported: ctx.vfoSupported, powerSupported: ctx.powerSupported });
     if (ctx.spectrumSettings.enabled && ctx.spectrumSupported) {
       try {
@@ -589,14 +613,21 @@ export function connectToRig(ctx: ServerContext, host: string, port: number, soc
       sock.destroy();
       ctx.rigSocket = null;
       vlog(`Rig connection refused at ${host}:${port}, retry ${attempt}/${CONNECT_MAX_ATTEMPTS - 1}...`);
-      setTimeout(() => connectToRig(ctx, host, port, socket, attempt + 1), CONNECT_RETRY_DELAY_MS);
+      setTimeout(() => connectToRig(ctx, host, port, socket, attempt + 1, auto), CONNECT_RETRY_DELAY_MS);
     } else {
-      console.error("Rig socket error:", err);
       ctx.isConnected = false;
-      const msg = err.code === "ECONNREFUSED"
-        ? `Could not connect to rigctld at ${host}:${port} — connection refused after ${CONNECT_MAX_ATTEMPTS} attempts`
-        : `Could not connect to rigctld at ${host}:${port} — ${err.message}`;
-      ctx.io.emit("rig-error", msg);
+      if (auto) {
+        // Silent auto-reconnect: don't surface a scary error for a single failed attempt —
+        // the close handler below decides whether to keep quietly retrying or, once the
+        // AUTO_RECONNECT_TIMEOUT_MS budget is exhausted, emit the one user-facing message.
+        vlog(`[RIG] Auto-reconnect attempt failed (${err.message}); close handler will retry or give up`);
+      } else {
+        console.error("Rig socket error:", err);
+        const msg = err.code === "ECONNREFUSED"
+          ? `Could not connect to rigctld at ${host}:${port} — connection refused after ${CONNECT_MAX_ATTEMPTS} attempts`
+          : `Could not connect to rigctld at ${host}:${port} — ${err.message}`;
+        ctx.io.emit("rig-error", msg);
+      }
     }
   });
 
@@ -607,13 +638,25 @@ export function connectToRig(ctx: ServerContext, host: string, port: number, soc
     ctx.io.emit("rig-disconnected");
     stopPolling(ctx);
     if (ctx.autoReconnect && ctx.rigConfig.host && ctx.rigConfig.host !== "mock") {
+      if (ctx.autoReconnectStartedAt === null) {
+        ctx.autoReconnectStartedAt = Date.now();
+      }
+      const elapsed = Date.now() - ctx.autoReconnectStartedAt;
+      if (elapsed >= AUTO_RECONNECT_TIMEOUT_MS) {
+        vlog(`[RIG] Auto-reconnect gave up after ${elapsed}ms without success`);
+        ctx.autoReconnect = false;
+        ctx.autoReconnectStartedAt = null;
+        ctx.io.emit("rig-error", "Automatic reconnect failed after 30s — reconnect manually when the radio is ready.");
+        return;
+      }
+      ctx.io.emit("rig-connecting", { attempt: 0, maxAttempts: CONNECT_MAX_ATTEMPTS, auto: true });
       vlog("[RIG] Scheduling auto-reconnect in 5s...");
       ctx.pollingTimeout = setTimeout(() => {
         if (!ctx.isConnected && ctx.autoReconnect) {
           vlog("[RIG] Attempting auto-reconnect...");
-          connectToRig(ctx, ctx.rigConfig.host, ctx.rigConfig.port);
+          connectToRig(ctx, ctx.rigConfig.host, ctx.rigConfig.port, undefined, 1, true);
         }
-      }, 5000);
+      }, AUTO_RECONNECT_RETRY_DELAY_MS);
     }
   });
 }
@@ -626,6 +669,7 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
 
   socket.on("disconnect-rig", () => {
     ctx.autoReconnect = false;
+    ctx.autoReconnectStartedAt = null;
     resetRigState(ctx);
     if (ctx.rigSocket) {
       ctx.rigSocket.destroy();

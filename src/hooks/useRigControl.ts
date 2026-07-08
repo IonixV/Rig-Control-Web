@@ -48,7 +48,7 @@ export function useRigControl({
   const [vfoA, setVfoA] = useState(() => localStorage.getItem("last-vfoA") || "14074000");
   const [vfoB, setVfoB] = useState(() => localStorage.getItem("last-vfoB") || "7074000");
   const [error, setError] = useState<string | null>(null);
-  const [rigConnecting, setRigConnecting] = useState<{ attempt: number; maxAttempts: number } | null>(null);
+  const [rigConnecting, setRigConnecting] = useState<{ attempt: number; maxAttempts: number; auto?: boolean } | null>(null);
   const [opError, setOpError] = useState<string | null>(null);
   const opErrorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [poweringOn, setPoweringOn] = useState(false);
@@ -82,6 +82,7 @@ export function useRigControl({
   const skipPollsCount = useRef(0);
   const pttRef = useRef(false);
   const connectedRef = useRef(false);
+  const uiConnectedRef = useRef(false);
   const hasAttemptedAutoconnect = useRef(false);
   const isAutoconnectAttempt = useRef(false);
   const nrCapabilitiesRef = useRef(nrCapabilities);
@@ -196,7 +197,7 @@ export function useRigControl({
 
   // ── Rig control handlers ──────────────────────────────────────────────────
   const handleConnect = useCallback(() => {
-    if (connectedStateRef.current) {
+    if (uiConnectedRef.current) {
       socket?.emit("set-autoconnect-eligible", false);
       socket?.emit("disconnect-rig");
     } else {
@@ -558,10 +559,13 @@ export function useRigControl({
   }, [socket]);
 
   const effectivelyConnected = connected && status?.powerState !== 'off';
+  const uiConnected = connected || rigConnecting?.auto === true;
+  useEffect(() => { uiConnectedRef.current = uiConnected; }, [uiConnected]);
 
   return {
     connected, setConnected,
     effectivelyConnected,
+    uiConnected,
     vfoSupported,
     powerSupported,
     poweringOn,

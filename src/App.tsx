@@ -263,6 +263,7 @@ export default function App() {
 
   const {
     connected,
+    uiConnected,
     vfoSupported,
     host, setHost,
     port, setPort,
@@ -641,7 +642,7 @@ export default function App() {
         {/* Header / Connection */}
         <header className="bg-[#151619] rounded-xl border border-[#2a2b2e] shadow-2xl py-1.5 px-3 sm:p-4 flex items-center justify-between gap-2">
           <div className="flex sm:hidden items-center gap-2 flex-shrink-0">
-            <div className={cn("w-2 h-2 rounded-full flex-shrink-0", connected ? "bg-emerald-500" : "bg-red-500/70")} />
+            <div className={cn("w-2 h-2 rounded-full flex-shrink-0", uiConnected ? "bg-emerald-500" : "bg-red-500/70")} />
             <span className="text-sm font-bold tracking-tight uppercase text-center">RigControl Web</span>
           </div>
           <div className="hidden sm:flex items-center gap-3 min-w-0">
@@ -670,13 +671,13 @@ export default function App() {
               onClick={handleConnect}
               className={cn(
                 "p-1.5 sm:px-6 sm:py-2 rounded-lg font-bold uppercase text-sm transition-all flex items-center gap-2",
-                connected
+                uiConnected
                   ? "bg-red-500/20 text-red-500 border border-red-500/50 hover:bg-red-500 hover:text-white"
                   : "bg-emerald-500/20 text-emerald-500 border border-emerald-500/50 hover:bg-emerald-500 hover:text-white"
               )}
             >
-              {connected ? <Unplug size={16} className="flex-shrink-0" /> : <Plug size={16} className="flex-shrink-0" />}
-              <span className="hidden sm:inline">{connected ? "Disconnect" : "Connect"}</span>
+              {uiConnected ? <Unplug size={16} className="flex-shrink-0" /> : <Plug size={16} className="flex-shrink-0" />}
+              <span className="hidden sm:inline">{uiConnected ? "Disconnect" : "Connect"}</span>
             </button>
             <button
               onClick={() => setIsSettingsOpen(true)}
@@ -712,7 +713,7 @@ export default function App() {
           </div>
         </header>
 
-        {rigConnecting && !error && (
+        {rigConnecting && !rigConnecting.auto && !error && (
           <div className="bg-blue-500/10 border border-blue-500/30 px-4 py-3 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4">
             <div className="w-3.5 h-3.5 rounded-full border-2 border-blue-400 border-t-transparent animate-spin shrink-0" />
             <span className="text-xs text-blue-300">

@@ -122,6 +122,7 @@ export interface ServerContext {
   rigSocket: net.Socket | null;
   isConnected: boolean;
   autoReconnect: boolean;
+  autoReconnectStartedAt: number | null;
   vfoSupported: boolean;
   powerSupported: boolean;
   powerState: 'on' | 'off' | 'unknown';
@@ -299,6 +300,7 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
     rigSocket: null,
     isConnected: false,
     autoReconnect: false,
+    autoReconnectStartedAt: null,
     vfoSupported: true,
     powerSupported: false,
     powerState: 'unknown',
