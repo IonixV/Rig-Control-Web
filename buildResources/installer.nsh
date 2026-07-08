@@ -37,6 +37,16 @@
 ; customInit runs before the old directory is removed.
 
 !macro customInit
+  ; $APPDATA follows SetShellVarContext: "all" (per-machine installs, e.g. via
+  ; the /allusers silent switch) resolves it to the all-users ProgramData
+  ; folder, but Electron's userData directory is always the per-current-user
+  ; roaming AppData folder. Force the current-user context for this lookup so
+  ; it matches where the app actually reads/writes, then restore whatever
+  ; context initMultiUser set.
+  ${If} $installMode == "all"
+    SetShellVarContext current
+  ${EndIf}
+
   ${If} ${FileExists} "$INSTDIR\ftd2xx.dll"
   ${OrIf} ${FileExists} "$INSTDIR\LibFT4222-64.dll"
     CreateDirectory "$APPDATA\RigControl Web"
@@ -48,6 +58,10 @@
     ${AndIfNot} ${FileExists} "$APPDATA\RigControl Web\LibFT4222-64.dll"
       CopyFiles /SILENT "$INSTDIR\LibFT4222-64.dll" "$APPDATA\RigControl Web\"
     ${EndIf}
+  ${EndIf}
+
+  ${If} $installMode == "all"
+    SetShellVarContext all
   ${EndIf}
 !macroend
 
@@ -102,8 +116,12 @@
 ; ── Optional firewall cleanup on uninstall ───────────────────────────────────
 ; Offers to remove the inbound firewall rules added at install time (TCP 3000
 ; and UDP 4531).  Defaults to "Yes" since the rules are only useful while the
-; app is installed.  Skipped during a silent uninstall (left in place).  If the
-; uninstaller is not elevated, a UAC prompt is shown to perform the deletion.
+; app is installed.  The confirmation dialog is skipped during a silent
+; uninstall, but the rules are still removed automatically when already
+; elevated (matching the interactive default) -- only skipped outright if that
+; would require popping a UAC prompt into an unattended run.  If the
+; uninstaller is not elevated during an interactive run, a UAC prompt is shown
+; to perform the deletion.
 
 !macro customUnInstall
   ${IfNot} ${Silent}
@@ -121,6 +139,12 @@
     skipFirewall:
   ${EndIf}
 
+  ${If} ${Silent}
+  ${AndIf} ${UAC_IsAdmin}
+    nsExec::Exec `"$SYSDIR\netsh.exe" advfirewall firewall delete rule name="RigControl Web - TCP 3000"`
+    nsExec::Exec `"$SYSDIR\netsh.exe" advfirewall firewall delete rule name="RigControl Web - UDP 4531"`
+  ${EndIf}
+
   ; ── Optional user-data removal ─────────────────────────────────────────────
   ; The app stores its settings and login accounts (settings.json, users.json,
   ; auth.json, audit.json) under $APPDATA\RigControl Web — Electron's userData
@@ -133,7 +157,20 @@
       "Also delete RigControl Web user data (saved settings and login accounts)?$\n$\nChoose No to keep them for a future reinstall." \
       IDYES uninstallUserData IDNO skipUserData
     uninstallUserData:
+      ; Electron's userData directory is always the per-current-user roaming
+      ; AppData folder, even for a per-machine ("all users") install.  By this
+      ; point initMultiUser has already set SetShellVarContext to "all" for a
+      ; per-machine uninstall, which would silently resolve $APPDATA to the
+      ; all-users ProgramData folder instead -- deleting nothing and leaving
+      ; the real data behind.  Force the current-user context for the RMDir,
+      ; then restore whatever context initMultiUser set.
+      ${If} $installMode == "all"
+        SetShellVarContext current
+      ${EndIf}
       RMDir /r "$APPDATA\RigControl Web"
+      ${If} $installMode == "all"
+        SetShellVarContext all
+      ${EndIf}
     skipUserData:
   ${EndIf}
 !macroend
