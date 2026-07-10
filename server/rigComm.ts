@@ -3,6 +3,18 @@ import { Socket } from "socket.io";
 import { ServerContext } from "./context.ts";
 import { vlogRig as vlog, vlogWsjtx, ts } from "./vlog.ts";
 
+// Hamlib's Yaesu newcat backend (dual-receiver rigs like the FTDX3000/5000/101/10) and some
+// Icom dual-receiver rigs (IC-9700, IC-905, IC-7610, IC-7850/7851) report the current VFO as
+// "Main"/"Sub" rather than "VFOA"/"VFOB". The rest of this app (and the frontend) only ever
+// compares against the literal "VFOA"/"VFOB" strings, so normalize here at the point rigctld
+// responses are ingested.
+function normalizeVfoName(raw: string): string {
+  const trimmed = raw.trim();
+  if (trimmed === "Main") return "VFOA";
+  if (trimmed === "Sub") return "VFOB";
+  return trimmed;
+}
+
 export function formatExtendedCommand(cmd: string): string {
   const trimmed = cmd.trim();
   const parts = trimmed.split(/\s+/);
@@ -414,11 +426,11 @@ export async function pollRig(ctx: ServerContext): Promise<void> {
       rflevel = parseFloat(await sendToRig(ctx, "l RF", true).catch(() => "0"));
       agc = parseInt(await sendToRig(ctx, "l AGC", true).catch(() => "6"));
       if (ctx.vfoSupported) {
-        vfo = await sendToRig(ctx, "v", true);
+        vfo = normalizeVfoName(await sendToRig(ctx, "v", true));
         const splitInfo = await sendToRig(ctx, "s", true);
         const [isSplitStr, txVFOStr] = splitInfo.split("\n");
         isSplit = isSplitStr === "1";
-        txVFO = txVFOStr || "VFOB";
+        txVFO = txVFOStr ? normalizeVfoName(txVFOStr) : "VFOB";
       }
       att = parseInt(await sendToRig(ctx, "l ATT", true)) || 0;
       preamp = parseInt(await sendToRig(ctx, "l PREAMP", true)) || 0;
@@ -855,7 +867,7 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
     if (!ctx.vfoSupported) return;
     try {
       await sendToRig(ctx, `V ${vfo}`, true, true);
-      const confirmedVfo = await sendToRig(ctx, "v", true, true);
+      const confirmedVfo = normalizeVfoName(await sendToRig(ctx, "v", true, true));
       ctx.lastStatus = { ...ctx.lastStatus, vfo: confirmedVfo };
       ctx.io.emit("rig-status", ctx.lastStatus);
     } catch (err) {
@@ -869,7 +881,7 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
       await sendToRig(ctx, `S ${split} ${txVFO}`, true, true);
       const splitInfo = await sendToRig(ctx, "s", true, true);
       const [isSplitStr, confirmedTxVFO] = splitInfo.split("\n");
-      ctx.lastStatus = { ...ctx.lastStatus, isSplit: isSplitStr === "1", txVFO: confirmedTxVFO || "VFOB" };
+      ctx.lastStatus = { ...ctx.lastStatus, isSplit: isSplitStr === "1", txVFO: confirmedTxVFO ? normalizeVfoName(confirmedTxVFO) : "VFOB" };
       ctx.io.emit("rig-status", ctx.lastStatus);
     } catch (err) {
       socket.emit("rig-error", "Failed to set split VFO");
@@ -883,7 +895,7 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
       const modeBw = await sendToRig(ctx, "m", true, true);
       const [mode, bandwidth] = modeBw.split("\n");
       if (ctx.vfoSupported) {
-        const vfo = await sendToRig(ctx, "v", true, true);
+        const vfo = normalizeVfoName(await sendToRig(ctx, "v", true, true));
         ctx.lastStatus = { ...ctx.lastStatus, frequency, mode, bandwidth, vfo };
       } else {
         ctx.lastStatus = { ...ctx.lastStatus, frequency, mode, bandwidth };
