@@ -9,5 +9,8 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.on('outbound-audio-data', (_event, data: Buffer) => {
       callback(new Uint8Array(data));
     });
+  },
+  saveTextFile: (content: string, defaultFilename: string) => {
+    return ipcRenderer.invoke('save-text-file', { content, defaultFilename });
   }
 });

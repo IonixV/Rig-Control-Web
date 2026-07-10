@@ -28,23 +28,8 @@ Debug options:
 
 const debugAll = argv.includes('--debug-all') || process.env.DEBUG_ALL === '1';
 
-export const DEBUG_RIG      = debugAll || argv.includes('--debug-rig')      || process.env.DEBUG_RIG      === '1';
-export const DEBUG_AUDIO    = debugAll || argv.includes('--debug-audio')    || process.env.DEBUG_AUDIO    === '1';
-export const DEBUG_VIDEO    = debugAll || argv.includes('--debug-video')    || process.env.DEBUG_VIDEO    === '1';
-export const DEBUG_CW       = debugAll || argv.includes('--debug-cw')       || process.env.DEBUG_CW       === '1';
-export const DEBUG_INFRA    = debugAll || argv.includes('--debug-infra')    || process.env.DEBUG_INFRA    === '1';
-export const DEBUG_SPECTRUM = debugAll || argv.includes('--debug-spectrum') || process.env.DEBUG_SPECTRUM === '1';
-export const DEBUG_SPOTS    = debugAll || argv.includes('--debug-spots')    || process.env.DEBUG_SPOTS    === '1';
-export const DEBUG_WSJTX    = debugAll || argv.includes('--debug-wsjtx')   || process.env.DEBUG_WSJTX    === '1';
-
-export const vlogRig      = (...args: any[]) => { if (DEBUG_RIG)      console.log(`[${ts()}]`, ...args); };
-export const vlogAudio    = (...args: any[]) => { if (DEBUG_AUDIO)    console.log(`[${ts()}]`, ...args); };
-export const vlogVideo    = (...args: any[]) => { if (DEBUG_VIDEO)    console.log(`[${ts()}]`, ...args); };
-export const vlogCw       = (...args: any[]) => { if (DEBUG_CW)       console.log(`[${ts()}]`, ...args); };
-export const vlogInfra    = (...args: any[]) => { if (DEBUG_INFRA)    console.log(`[${ts()}]`, ...args); };
-export const vlogSpectrum = (...args: any[]) => { if (DEBUG_SPECTRUM) console.log(`[${ts()}]`, ...args); };
-export const vlogSpots    = (...args: any[]) => { if (DEBUG_SPOTS)    console.log(`[${ts()}]`, ...args); };
-export const vlogWsjtx   = (...args: any[]) => { if (DEBUG_WSJTX)    console.log(`[${ts()}]`, ...args); };
+const flag = (name: string, env: string) =>
+  debugAll || argv.includes(`--debug-${name}`) || process.env[env] === '1';
 
 export type DebugFlags = {
   rig: boolean;
@@ -57,13 +42,29 @@ export type DebugFlags = {
   wsjtx: boolean;
 };
 
+// Mutable, live source of truth for every vlog* wrapper below — seeded from
+// CLI/env at startup, but toggled at runtime by the Diagnostics tab
+// (server/diagnostics.ts) without requiring a restart.
 export const debugFlags: DebugFlags = {
-  rig: DEBUG_RIG,
-  audio: DEBUG_AUDIO,
-  video: DEBUG_VIDEO,
-  cw: DEBUG_CW,
-  infra: DEBUG_INFRA,
-  spectrum: DEBUG_SPECTRUM,
-  spots: DEBUG_SPOTS,
-  wsjtx: DEBUG_WSJTX,
+  rig: flag('rig', 'DEBUG_RIG'),
+  audio: flag('audio', 'DEBUG_AUDIO'),
+  video: flag('video', 'DEBUG_VIDEO'),
+  cw: flag('cw', 'DEBUG_CW'),
+  infra: flag('infra', 'DEBUG_INFRA'),
+  spectrum: flag('spectrum', 'DEBUG_SPECTRUM'),
+  spots: flag('spots', 'DEBUG_SPOTS'),
+  wsjtx: flag('wsjtx', 'DEBUG_WSJTX'),
 };
+
+export function setDebugFlag(key: keyof DebugFlags, value: boolean): void {
+  debugFlags[key] = value;
+}
+
+export const vlogRig      = (...args: any[]) => { if (debugFlags.rig)      console.log(`[${ts()}]`, ...args); };
+export const vlogAudio    = (...args: any[]) => { if (debugFlags.audio)    console.log(`[${ts()}]`, ...args); };
+export const vlogVideo    = (...args: any[]) => { if (debugFlags.video)    console.log(`[${ts()}]`, ...args); };
+export const vlogCw       = (...args: any[]) => { if (debugFlags.cw)       console.log(`[${ts()}]`, ...args); };
+export const vlogInfra    = (...args: any[]) => { if (debugFlags.infra)    console.log(`[${ts()}]`, ...args); };
+export const vlogSpectrum = (...args: any[]) => { if (debugFlags.spectrum) console.log(`[${ts()}]`, ...args); };
+export const vlogSpots    = (...args: any[]) => { if (debugFlags.spots)    console.log(`[${ts()}]`, ...args); };
+export const vlogWsjtx   = (...args: any[]) => { if (debugFlags.wsjtx)    console.log(`[${ts()}]`, ...args); };

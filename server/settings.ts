@@ -1,7 +1,7 @@
 import fs from "fs";
 import { Socket } from "socket.io";
 import { ServerContext } from "./context.ts";
-import { vlogInfra as vlog } from "./vlog.ts";
+import { vlogInfra as vlog, debugFlags, setDebugFlag, type DebugFlags } from "./vlog.ts";
 
 export function loadSettings(ctx: ServerContext, settingsFile: string): void {
   if (!fs.existsSync(settingsFile)) return;
@@ -41,6 +41,14 @@ export function loadSettings(ctx: ServerContext, settingsFile: string): void {
     if (data.spectrumSettings) {
       ctx.spectrumSettings = { ...ctx.spectrumSettings, ...data.spectrumSettings };
     }
+    if (data.debugFlags) {
+      // OR semantics: a persisted "off" must never silently defeat an
+      // explicit --debug-x CLI/env flag for this session, but a persisted
+      // "on" still restores the user's last Diagnostics-tab choice.
+      for (const key of Object.keys(debugFlags) as (keyof DebugFlags)[]) {
+        setDebugFlag(key, debugFlags[key] || !!data.debugFlags[key]);
+      }
+    }
   } catch (e) {
     console.error("Failed to load settings:", e);
   }
@@ -64,6 +72,7 @@ export function saveSettings(ctx: ServerContext, settingsFile: string): void {
       wwffSettings: ctx.wwffSettings,
       cwSettings: ctx.cwSettings,
       spectrumSettings: ctx.spectrumSettings,
+      debugFlags,
     }, null, 2));
   } catch (e) {
     console.error("[SETTINGS] Failed to save settings:", e);

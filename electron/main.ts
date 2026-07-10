@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, dialog } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
@@ -182,6 +182,22 @@ async function createWindow() {
   // Pass the window reference to the server for device enumeration
   setElectronWindow(win);
 
+  ipcMain.handle('save-text-file', async (event, { content, defaultFilename }: { content: string; defaultFilename: string }) => {
+    const senderWin = BrowserWindow.fromWebContents(event.sender);
+    const result = await dialog.showSaveDialog(senderWin ?? win, {
+      defaultPath: defaultFilename,
+      filters: [{ name: 'Text Files', extensions: ['txt'] }],
+    });
+    if (result.canceled || !result.filePath) return { ok: false };
+    try {
+      fs.writeFileSync(result.filePath, content, 'utf-8');
+      return { ok: true, path: result.filePath };
+    } catch (e) {
+      console.error('Failed to save diagnostics log:', e);
+      return { ok: false };
+    }
+  });
+
   ipcMain.on('resize-window', (event, { width, height }) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win) {
@@ -221,18 +237,15 @@ async function createWindow() {
   await win.webContents.session.clearCache();
   console.log("Electron cache cleared.");
 
-  // Handle media permissions for video devices
+  // Handle media permissions for video devices, and clipboard access for
+  // the Diagnostics tab's Copy Log button (navigator.clipboard.writeText).
+  const allowedPermissions = ['media', 'clipboard-sanitized-write', 'clipboard-read'];
   win.webContents.session.setPermissionCheckHandler((webContents, permission, requestingOrigin) => {
-    if (permission === 'media') return true;
-    return false;
+    return allowedPermissions.includes(permission);
   });
 
   win.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
-    if (permission === 'media') {
-      callback(true);
-    } else {
-      callback(false);
-    }
+    callback(allowedPermissions.includes(permission));
   });
 
   // Trust the locally-generated self-signed certificate for localhost only

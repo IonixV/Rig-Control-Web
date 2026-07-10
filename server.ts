@@ -6,6 +6,7 @@ import fs from "fs";
 
 import { loadOrGenerateCert } from "./server/tls.ts";
 import { vlogInfra, vlogRig, vlogVideo, vlogAudio, debugFlags } from "./server/vlog.ts";
+import { initDiagnosticsLog, registerDiagnosticsHandlers } from "./server/diagnostics.ts";
 import { createInitialContext } from "./server/context.ts";
 import { loadSettings, saveSettings, registerSettingsHandlers } from "./server/settings.ts";
 import { getRigctldVersion, checkVersionSupported, emitRigctldStatus, startRigctld, stopRigctld, registerRigctldHandlers } from "./server/rigctld.ts";
@@ -62,6 +63,10 @@ export async function startServer(appPath?: string, userDataPath?: string) {
   });
 
   const ctx = createInitialContext(io, baseDir, dataDir);
+
+  // Capture all console output (vlog* subsystem lines + plain console.*)
+  // into ctx.diagnosticsLog as early as possible, for the Diagnostics tab.
+  initDiagnosticsLog(ctx);
 
   // Wire cross-module callbacks
   ctx.saveSettings = () => saveSettings(ctx, SETTINGS_FILE);
@@ -205,6 +210,7 @@ export async function startServer(appPath?: string, userDataPath?: string) {
     registerSolarHandlers(socket, ctx);
     pushSolarData(socket, ctx);
     registerAdminHandlers(socket, ctx);
+    registerDiagnosticsHandlers(socket, ctx);
     registerSettingsHandlers(
       socket,
       ctx,

@@ -35,6 +35,7 @@ import { usePanelState } from "./hooks/usePanelState";
 import { useLayoutConfig } from "./hooks/useLayoutConfig";
 import { useSpectrum } from "./hooks/useSpectrum";
 import { useWsjtxBridge } from "./hooks/useWsjtxBridge";
+import { useConsoleCapture } from "./hooks/useConsoleCapture";
 import type { PanelType, PanelAddConfig } from "./types/layout";
 
 export default function App() {
@@ -78,6 +79,8 @@ export default function App() {
     return () => { newSocket.disconnect(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useConsoleCapture(socket, clientId);
 
   const {
     authState,

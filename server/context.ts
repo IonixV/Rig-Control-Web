@@ -170,6 +170,14 @@ export interface ServerContext {
   isRigctldVersionSupported: boolean;
   rigctldLogs: string[];
 
+  // Diagnostics log (Diagnostics settings tab): merged server console output
+  // plus forwarded browser/Electron-renderer console output. Rolling window
+  // — see MAX_AGE_MS in server/diagnostics.ts. diagnosticsLogTimestamps is a
+  // parallel array (push epoch ms, one per diagnosticsLog entry, same index)
+  // used to prune by age.
+  diagnosticsLog: string[];
+  diagnosticsLogTimestamps: number[];
+
   // Audio engine state
   portAudio: any;
   libopus: any;
@@ -345,6 +353,8 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
     rigctldVersion: null,
     isRigctldVersionSupported: true,
     rigctldLogs: [],
+    diagnosticsLog: [],
+    diagnosticsLogTimestamps: [],
 
     portAudio: null,
     libopus: null,

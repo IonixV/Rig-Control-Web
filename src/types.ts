@@ -164,3 +164,14 @@ export interface SpectrumSettings {
   multicastPort: number;
   ft4222SpanIndex: number;
 }
+
+export interface DebugFlags {
+  rig: boolean;
+  audio: boolean;
+  video: boolean;
+  cw: boolean;
+  infra: boolean;
+  spectrum: boolean;
+  spots: boolean;
+  wsjtx: boolean;
+}

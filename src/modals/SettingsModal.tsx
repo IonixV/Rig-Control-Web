@@ -11,6 +11,7 @@ import { cn } from "../utils";
 import type { CwSettings, RigctldSettings } from "../types";
 
 const AdminTab = lazy(() => import("./AdminTab"));
+const DiagnosticsTab = lazy(() => import("./DiagnosticsTab"));
 
 export interface SettingsModalProps {
   isOpen: boolean;
@@ -20,9 +21,9 @@ export interface SettingsModalProps {
   role?: "admin" | "regular";
 
   // Tab state
-  activeSettingsTab: "rigctld" | "cw" | "admin";
+  activeSettingsTab: "rigctld" | "cw" | "admin" | "diagnostics";
   setActiveSettingsTab: React.Dispatch<
-    React.SetStateAction<"rigctld" | "cw" | "admin">
+    React.SetStateAction<"rigctld" | "cw" | "admin" | "diagnostics">
   >;
 
   // Rigctld tab
@@ -107,10 +108,10 @@ function SettingsModal({
 
     {/* Tab Bar */}
     <div className="flex border-b border-[#2a2b2e] bg-[#1a1b1e]">
-      {(role === "admin"
-        ? (["rigctld", "cw", "admin"] as const)
-        : (["rigctld", "cw"] as const)
-      ).map((tab) => (
+      {([
+        ...(["rigctld", "cw", "diagnostics"] as const),
+        ...(role === "admin" ? (["admin"] as const) : []),
+      ] as const).map((tab) => (
         <button
           key={tab}
           onClick={() => setActiveSettingsTab(tab)}
@@ -627,6 +628,12 @@ function SettingsModal({
       </div>
 
     </div>
+    )}
+
+    {activeSettingsTab === 'diagnostics' && (
+      <Suspense fallback={<div className="p-6 text-xs text-[#8e9299]">Loading…</div>}>
+        <DiagnosticsTab socket={socket} />
+      </Suspense>
     )}
 
     {activeSettingsTab === 'admin' && role === 'admin' && (
