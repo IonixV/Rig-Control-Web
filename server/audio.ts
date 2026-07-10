@@ -44,6 +44,14 @@ export async function listAudioDevices(ctx: ServerContext): Promise<{ inputs: an
   }
   try {
     const devices = ctx.portAudio.getDevices();
+    vlog("[AUDIO] Full device table:", JSON.stringify(devices.map((d: any) => ({
+      id: d.id,
+      name: d.name,
+      hostAPIName: d.hostAPIName || "",
+      maxInputChannels: d.maxInputChannels,
+      maxOutputChannels: d.maxOutputChannels,
+      defaultSampleRate: d.defaultSampleRate || 0,
+    })), null, 2));
     const inputs = devices.filter((d: any) => d.maxInputChannels > 0).map((d: any) => ({ name: d.name, altName: d.id.toString(), hostAPIName: d.hostAPIName || "", defaultSampleRate: d.defaultSampleRate || 0 }));
     const outputs = devices.filter((d: any) => d.maxOutputChannels > 0).map((d: any) => ({ name: d.name, altName: d.id.toString(), hostAPIName: d.hostAPIName || "", defaultSampleRate: d.defaultSampleRate || 0 }));
     return { inputs, outputs };
@@ -65,15 +73,39 @@ export async function listAudioDevices(ctx: ServerContext): Promise<{ inputs: an
 // per host API. Older saved formats are supported as fallbacks: a bare
 // device name (settings saved between the name-only fix and this one) and a
 // raw ordinal id (settings saved before either fix).
-function resolveDeviceId(ctx: ServerContext, saved: string): number {
+// Logged unconditionally (not gated behind --debug-audio): this is a
+// one-shot, low-frequency diagnostic that fires once per startAudio() call,
+// and it's the only reliable way to see which raw settings.json format and
+// resolution branch produced a given device id — capturing it after the
+// fact by asking a non-technical user for settings.json isn't practical, and
+// gating it would risk missing the one time it matters if the debug flag
+// wasn't already armed before the failure occurred.
+function logDeviceResolution(label: "input" | "output", saved: string, branch: string, device: any | undefined): void {
+  if (device) {
+    console.log(
+      `[AUDIO-RESOLVE] ${label} device: saved=${JSON.stringify(saved)} branch=${branch} -> ` +
+      `id=${device.id} name=${JSON.stringify(device.name)} hostAPIName=${JSON.stringify(device.hostAPIName || "")} ` +
+      `maxInputChannels=${device.maxInputChannels} maxOutputChannels=${device.maxOutputChannels} ` +
+      `defaultSampleRate=${device.defaultSampleRate || 0}`
+    );
+  } else {
+    console.log(`[AUDIO-RESOLVE] ${label} device: saved=${JSON.stringify(saved)} branch=${branch} -> NOT FOUND`);
+  }
+}
+
+function resolveDeviceId(ctx: ServerContext, saved: string, label: "input" | "output"): number {
   const devices = ctx.portAudio.getDevices();
 
   try {
     const parsed = JSON.parse(saved);
     if (parsed && typeof parsed.name === "string" && typeof parsed.hostAPIName === "string") {
       const exact = devices.find((d: any) => d.name === parsed.name && d.hostAPIName === parsed.hostAPIName);
-      if (exact) return exact.id;
+      if (exact) {
+        logDeviceResolution(label, saved, "exact-json-match", exact);
+        return exact.id;
+      }
       const byNameOnly = devices.find((d: any) => d.name === parsed.name);
+      logDeviceResolution(label, saved, "json-fallback-byNameOnly (host API mismatch)", byNameOnly);
       return byNameOnly ? byNameOnly.id : -1;
     }
   } catch {
@@ -81,9 +113,18 @@ function resolveDeviceId(ctx: ServerContext, saved: string): number {
   }
 
   const byName = devices.find((d: any) => d.name === saved);
-  if (byName) return byName.id;
+  if (byName) {
+    logDeviceResolution(label, saved, "legacy-byName", byName);
+    return byName.id;
+  }
   const numeric = parseInt(saved, 10);
-  return isNaN(numeric) ? -1 : numeric;
+  if (isNaN(numeric)) {
+    logDeviceResolution(label, saved, "unresolvable", undefined);
+    return -1;
+  }
+  const byOrdinal = devices.find((d: any) => d.id === numeric);
+  logDeviceResolution(label, saved, "legacy-ordinal", byOrdinal);
+  return numeric;
 }
 
 export async function stopAudio(ctx: ServerContext): Promise<void> {
@@ -129,7 +170,7 @@ export async function startAudio(ctx: ServerContext): Promise<void> {
 
   if (ctx.audioSettings.inputDevice) {
     try {
-      const deviceId = resolveDeviceId(ctx, ctx.audioSettings.inputDevice);
+      const deviceId = resolveDeviceId(ctx, ctx.audioSettings.inputDevice, "input");
       ctx.audioInputProcess = new ctx.portAudio.AudioIO({
         inOptions: {
           channelCount: 1,
@@ -178,7 +219,7 @@ export async function startAudio(ctx: ServerContext): Promise<void> {
 
   if (ctx.audioSettings.outputDevice) {
     try {
-      const deviceId = resolveDeviceId(ctx, ctx.audioSettings.outputDevice);
+      const deviceId = resolveDeviceId(ctx, ctx.audioSettings.outputDevice, "output");
       ctx.audioOutputProcess = new ctx.portAudio.AudioIO({
         outOptions: {
           channelCount: 1,
