@@ -95,16 +95,25 @@ function logDeviceResolution(label: "input" | "output", saved: string, branch: s
 
 function resolveDeviceId(ctx: ServerContext, saved: string, label: "input" | "output"): number {
   const devices = ctx.portAudio.getDevices();
+  // PortAudio enumerates many physical devices as two separate rows under
+  // the same host API — one input-capable, one output-capable — sharing an
+  // identical `name` (e.g. "FT-710 (USB Audio Device)" on Windows
+  // DirectSound: id 18 is input-only, id 22 is output-only). Matching by
+  // name/hostAPIName alone is ambiguous between those rows, so every
+  // name-based lookup below must also filter by the channel count relevant
+  // to `label`, or it can silently resolve the output stream to an
+  // input-only row (and vice versa).
+  const matchesDirection = (d: any) => (label === "input" ? d.maxInputChannels > 0 : d.maxOutputChannels > 0);
 
   try {
     const parsed = JSON.parse(saved);
     if (parsed && typeof parsed.name === "string" && typeof parsed.hostAPIName === "string") {
-      const exact = devices.find((d: any) => d.name === parsed.name && d.hostAPIName === parsed.hostAPIName);
+      const exact = devices.find((d: any) => d.name === parsed.name && d.hostAPIName === parsed.hostAPIName && matchesDirection(d));
       if (exact) {
         logDeviceResolution(label, saved, "exact-json-match", exact);
         return exact.id;
       }
-      const byNameOnly = devices.find((d: any) => d.name === parsed.name);
+      const byNameOnly = devices.find((d: any) => d.name === parsed.name && matchesDirection(d));
       logDeviceResolution(label, saved, "json-fallback-byNameOnly (host API mismatch)", byNameOnly);
       return byNameOnly ? byNameOnly.id : -1;
     }
@@ -112,7 +121,7 @@ function resolveDeviceId(ctx: ServerContext, saved: string, label: "input" | "ou
     // Not JSON — fall through to legacy formats below.
   }
 
-  const byName = devices.find((d: any) => d.name === saved);
+  const byName = devices.find((d: any) => d.name === saved && matchesDirection(d));
   if (byName) {
     logDeviceResolution(label, saved, "legacy-byName", byName);
     return byName.id;
