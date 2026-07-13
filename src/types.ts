@@ -62,6 +62,7 @@ export interface RigStatus {
   powerMeter: number;
   vdd: number;
   powerState: 'on' | 'off' | 'unknown';
+  powerPending: boolean;
   timestamp: number;
 }
 

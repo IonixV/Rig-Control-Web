@@ -285,7 +285,7 @@ function SettingsModal({
       <div className="pt-4 space-y-3">
         <div className="flex items-center justify-between text-[0.5rem] text-[#8e9299] opacity-50 uppercase font-bold tracking-widest border-t border-[#2a2b2e] pt-4">
           <span>App Version</span>
-          <span>v1.1.6</span>
+          <span>v1.1.7</span>
         </div>
 
         {rigctldProcessStatus === "already_running" && (

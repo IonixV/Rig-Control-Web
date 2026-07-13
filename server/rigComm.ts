@@ -326,7 +326,7 @@ async function triggerPowerOff(ctx: ServerContext): Promise<void> {
   }
   ctx.powerState = 'off';
   ctx.lastPowerCheck = Date.now();
-  ctx.lastStatus = { ...ctx.lastStatus, ptt: false, powerState: 'off' };
+  ctx.lastStatus = { ...ctx.lastStatus, ptt: false, powerState: 'off', powerPending: false };
   ctx.io.emit("rig-status", ctx.lastStatus);
   ctx.io.emit("spectrum-data", { id: 0, name: "", amplitudes: [], timestamp: Date.now() });
   vlog("[RIG][POWER] Local state set to off — polling suspended");
@@ -492,6 +492,7 @@ export async function pollRig(ctx: ServerContext): Promise<void> {
       anf,
       tuner,
       powerState: ctx.powerState,
+      powerPending: ctx.lastStatus.powerPending,
       timestamp: now,
     };
 
@@ -522,6 +523,7 @@ export function resetRigState(ctx: ServerContext): void {
   ctx.vfoSupported = true;
   ctx.powerSupported = false;
   ctx.powerState = 'unknown';
+  ctx.powerOpInProgress = false;
   ctx.lastPowerCheck = 0;
   ctx.lastStatus = {
     frequency: "14074000",
@@ -548,6 +550,7 @@ export function resetRigState(ctx: ServerContext): void {
     anf: false,
     tuner: false,
     powerState: 'unknown',
+    powerPending: false,
   };
 }
 
@@ -556,6 +559,11 @@ const CONNECT_RETRY_DELAY_MS = 1000;
 const AUTO_RECONNECT_RETRY_DELAY_MS = 5000;
 const AUTO_RECONNECT_TIMEOUT_MS = 30000;
 const SOCKET_CONNECT_TIMEOUT_MS = 10000;
+// Real hardware (e.g. FT-710 USB re-enumeration, CI-V waking up after a cold boot) can take
+// several seconds per command right after a power-on — observed 2.7-9.4s per get_powerstat
+// round-trip in the field. A short deadline burns through its whole budget in 1-2 attempts and
+// reports a spurious timeout even when the radio would have confirmed a few seconds later.
+const POWER_ON_CONFIRM_TIMEOUT_MS = 25000;
 
 export function connectToRig(ctx: ServerContext, host: string, port: number, socket?: Socket, attempt = 1, auto = false): void {
   if (ctx.isConnected && ctx.rigConfig.host === host && ctx.rigConfig.port === port) {
@@ -809,6 +817,18 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
       socket.emit("rig-op-error", "Power control not supported by this rig");
       return;
     }
+    // Guard against overlapping power operations — without this, a second set-power event
+    // (an impatient repeat click, or a second connected client/tab) fired a fully independent
+    // execution of this handler while a previous one's confirmation loop was still running,
+    // which could send set_powerstat 1 and set_powerstat 0 back-to-back while the radio was
+    // still mid-boot. Only one power operation is allowed in flight at a time, server-wide,
+    // regardless of which client requests it.
+    if (ctx.powerOpInProgress) {
+      vlog("[RIG][POWER] Rejected — a power operation is already in progress");
+      socket.emit("rig-op-error", "Power operation already in progress — please wait");
+      return;
+    }
+    ctx.powerOpInProgress = true;
     try {
       if (!state) {
         vlog("[RIG][POWER] Initiating power-off sequence");
@@ -818,13 +838,19 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
         vlog("[RIG][POWER] Power-off command acknowledged by rigctld");
       } else {
         vlog("[RIG][POWER] Sending set_powerstat 1 to rig");
+        // Broadcast the pending state to every connected client (not just the one that clicked)
+        // before the — potentially slow — command even completes, so all UIs show the same
+        // "waiting for radio" state instead of each client tracking its own local guess.
+        ctx.lastStatus = { ...ctx.lastStatus, powerPending: true };
+        ctx.io.emit("rig-status", ctx.lastStatus);
         await sendToRig(ctx, "set_powerstat 1", true, true);
-        vlog("[RIG][POWER] Power-on command acknowledged — polling get_powerstat every 500 ms (10 s window)");
+        vlog(`[RIG][POWER] Power-on command acknowledged — polling get_powerstat every 500 ms (${POWER_ON_CONFIRM_TIMEOUT_MS / 1000}s window)`);
         const t0 = Date.now();
-        const deadline = t0 + 10000;
+        const deadline = t0 + POWER_ON_CONFIRM_TIMEOUT_MS;
         let confirmed = false;
         let polls = 0;
         while (Date.now() < deadline) {
+          if (!ctx.isConnected) break;
           await new Promise<void>(r => setTimeout(r, 500));
           if (ctx.powerState === 'on') {
             vlog(`[RIG][POWER] Power-on confirmed by poll loop after ${Date.now() - t0} ms`);
@@ -840,26 +866,38 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
             vlog(`[RIG][POWER] Poll ${polls}: get_powerstat error — ${pollErr} (${Date.now() - t0} ms elapsed)`);
           }
         }
-        if (confirmed && ctx.powerState !== 'on') {
+        if (!ctx.isConnected) {
+          vlog("[RIG][POWER] Rig disconnected during power-on wait — leaving state to reconnect logic");
+        } else if (confirmed && ctx.powerState !== 'on') {
           vlog(`[RIG][POWER] Radio confirmed on after ${Date.now() - t0} ms — resuming normal operations`);
           ctx.powerState = 'on';
-          ctx.lastStatus = { ...ctx.lastStatus, powerState: 'on' };
+          ctx.lastStatus = { ...ctx.lastStatus, powerState: 'on', powerPending: false };
           ctx.io.emit("rig-status", ctx.lastStatus);
           onPowerOn(ctx);
         } else if (confirmed) {
           vlog(`[RIG][POWER] Radio confirmed on (by poll loop) after ${Date.now() - t0} ms`);
+          ctx.lastStatus = { ...ctx.lastStatus, powerPending: false };
+          ctx.io.emit("rig-status", ctx.lastStatus);
         } else {
-          vlog("[RIG][POWER] Timed out — radio did not confirm power-on within 10 seconds");
-          socket.emit("rig-op-error", "Radio did not respond within 10 seconds");
+          vlog(`[RIG][POWER] Timed out — radio did not confirm power-on within ${POWER_ON_CONFIRM_TIMEOUT_MS / 1000}s`);
+          ctx.lastStatus = { ...ctx.lastStatus, powerPending: false };
+          ctx.io.emit("rig-status", ctx.lastStatus);
+          socket.emit("rig-op-error", `Radio did not respond within ${POWER_ON_CONFIRM_TIMEOUT_MS / 1000} seconds`);
         }
       }
     } catch (err) {
       vlog(`[RIG][POWER] set-power failed: ${err}`);
+      if (state) {
+        ctx.lastStatus = { ...ctx.lastStatus, powerPending: false };
+        ctx.io.emit("rig-status", ctx.lastStatus);
+      }
       if (state && String(err).includes('timeout')) {
         vlog("[RIG][POWER] Power-on timeout is expected during radio boot — auto-reconnect will resume when ready");
       } else {
         socket.emit("rig-op-error", `Failed to set power: ${err}`);
       }
+    } finally {
+      ctx.powerOpInProgress = false;
     }
   });
 

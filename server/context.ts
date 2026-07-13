@@ -126,6 +126,7 @@ export interface ServerContext {
   vfoSupported: boolean;
   powerSupported: boolean;
   powerState: 'on' | 'off' | 'unknown';
+  powerOpInProgress: boolean;
   lastPowerCheck: number;
   audioWasPlaying: boolean;
   rigConfig: { host: string; port: number };
@@ -154,6 +155,7 @@ export interface ServerContext {
     anf: boolean;
     tuner: boolean;
     powerState: 'on' | 'off' | 'unknown';
+    powerPending: boolean;
     timestamp?: number;
   };
   visibleMeters: string[];
@@ -312,6 +314,7 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
     vfoSupported: true,
     powerSupported: false,
     powerState: 'unknown',
+    powerOpInProgress: false,
     lastPowerCheck: 0,
     audioWasPlaying: false,
     rigConfig: { host: "", port: 0 },
@@ -340,6 +343,7 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
       anf: false,
       tuner: false,
       powerState: 'unknown',
+      powerPending: false,
     },
     visibleMeters: ["swr", "alc"],
     pollCycleCount: 0,

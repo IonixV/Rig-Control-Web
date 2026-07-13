@@ -54,6 +54,7 @@ export const DEFAULT_STATUS: RigStatus = {
   powerMeter: 0,
   vdd: 13.8,
   powerState: 'unknown',
+  powerPending: false,
   timestamp: Date.now()
 };
 

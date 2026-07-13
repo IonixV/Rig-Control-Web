@@ -51,8 +51,6 @@ export function useRigControl({
   const [rigConnecting, setRigConnecting] = useState<{ attempt: number; maxAttempts: number; auto?: boolean } | null>(null);
   const [opError, setOpError] = useState<string | null>(null);
   const opErrorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [poweringOn, setPoweringOn] = useState(false);
-  const poweringOnTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [rawCommand, setRawCommand] = useState("");
   const [consoleLogs, setConsoleLogs] = useState<{ cmd: string; resp: string; time: string }[]>([]);
   const [availableModes, setAvailableModes] = useState<string[]>(MODES_FALLBACK);
@@ -364,13 +362,16 @@ export function useRigControl({
   }, [socket]);
 
   const handleSetPower = useCallback((state: boolean) => {
-    setStatus(prev => ({ ...prev, powerState: state ? 'on' : 'off' }));
-    socket?.emit("set-power", { state });
-    if (state) {
-      setPoweringOn(true);
-      if (poweringOnTimer.current) clearTimeout(poweringOnTimer.current);
-      poweringOnTimer.current = setTimeout(() => setPoweringOn(false), 12000);
+    // Only the off-click is safe to reflect optimistically — the server sets its own state
+    // synchronously in that path too, so there's no window where the two disagree. The on-click
+    // must NOT flip powerState locally: the radio hasn't confirmed anything yet, and doing so
+    // would make effectivelyConnected go true (un-dimming VFO/Controls/Scope) before the radio
+    // is actually back. The server broadcasts powerPending / powerState via rig-status once it
+    // actually knows something.
+    if (!state) {
+      setStatus(prev => ({ ...prev, powerState: 'off' }));
     }
+    socket?.emit("set-power", { state });
   }, [socket]);
 
   // ── Socket events ─────────────────────────────────────────────────────────
@@ -444,8 +445,6 @@ export function useRigControl({
       setOpError(msg);
       if (opErrorTimer.current) clearTimeout(opErrorTimer.current);
       opErrorTimer.current = setTimeout(() => setOpError(null), 4000);
-      if (poweringOnTimer.current) clearTimeout(poweringOnTimer.current);
-      setPoweringOn(false);
     };
 
     const onRawResponse = (data: { cmd: string; resp: string }) => {
@@ -454,11 +453,6 @@ export function useRigControl({
 
     const onRigStatus = (newStatus: RigStatus) => {
       if (!newStatus) return;
-      if (newStatus.powerState === 'on' && poweringOnTimer.current) {
-        clearTimeout(poweringOnTimer.current);
-        poweringOnTimer.current = null;
-        setPoweringOn(false);
-      }
       setPendingVfoOp(null);
       const wasJustFinished = tuneJustFinishedRef.current;
       if (tuningTimeoutRef.current !== null) {
@@ -554,7 +548,6 @@ export function useRigControl({
       socket.off("rig-status", onRigStatus);
       socket.off("debug-flags", onDebugFlags);
       if (opErrorTimer.current) clearTimeout(opErrorTimer.current);
-      if (poweringOnTimer.current) clearTimeout(poweringOnTimer.current);
     };
   }, [socket]);
 
@@ -568,7 +561,10 @@ export function useRigControl({
     uiConnected,
     vfoSupported,
     powerSupported,
-    poweringOn,
+    // Server-authoritative: true only while the server is actually waiting on the radio to
+    // confirm power-on, and shared identically across every connected client (see rigComm.ts's
+    // set-power handler). Not a locally-optimistic guess.
+    poweringOn: status?.powerPending ?? false,
     handleSetPower,
     host, setHost,
     port, setPort,
