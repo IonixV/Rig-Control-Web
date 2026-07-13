@@ -716,7 +716,7 @@ export default function App() {
           </div>
         </header>
 
-        {rigConnecting && !rigConnecting.auto && !error && (
+        {rigConnecting && !rigConnecting.auto && !error && !rigConnecting.knownPoweredOff && (
           <div className="bg-blue-500/10 border border-blue-500/30 px-4 py-3 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4">
             <div className="w-3.5 h-3.5 rounded-full border-2 border-blue-400 border-t-transparent animate-spin shrink-0" />
             <span className="text-xs text-blue-300">
@@ -750,6 +750,7 @@ export default function App() {
             connected={effectivelyConnected}
             powerSupported={powerSupported}
             poweringOn={poweringOn}
+            knownPoweredOff={rigConnecting?.knownPoweredOff === true}
             handleSetPower={handleSetPower}
             availableModes={availableModes}
             socket={socket}
@@ -911,6 +912,7 @@ export default function App() {
             vfoSupported={vfoSupported}
             powerSupported={powerSupported}
             poweringOn={poweringOn}
+            knownPoweredOff={rigConnecting?.knownPoweredOff === true}
             handleSetPower={handleSetPower}
             isPhoneVFOCollapsed={isCompactVFOCollapsed}
             setIsPhoneVFOCollapsed={setIsCompactVFOCollapsed}

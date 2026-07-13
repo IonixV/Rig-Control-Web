@@ -132,6 +132,16 @@ export interface ServerContext {
   powerOpInProgress: boolean;
   lastPowerCheck: number;
   audioWasPlaying: boolean;
+  /** One-shot flag: set when a connect restores a persisted "radio was off at last
+   *  exit" state and skips the initial capability probes (which would otherwise
+   *  hang against an unresponsive radio). Consumed by onPowerOn() to run the
+   *  deferred probeVfoCapability/probeCapabilities once the radio actually answers. */
+  pendingCapabilityProbe: boolean;
+  /** Computed once per fresh (non-auto) connect request: does the persisted power-off
+   *  file match the currently configured rig? Threaded into every "rig-connecting" event
+   *  for the duration of that connection attempt sequence so the frontend can suppress the
+   *  generic reconnect spinner when the radio is already known to be powered off. */
+  knownPoweredOff: boolean;
   rigConfig: { host: string; port: number };
   lastStatus: {
     frequency: string;
@@ -320,6 +330,8 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
     powerOpInProgress: false,
     lastPowerCheck: 0,
     audioWasPlaying: false,
+    pendingCapabilityProbe: false,
+    knownPoweredOff: false,
     rigConfig: { host: "", port: 0 },
     lastStatus: {
       frequency: "14074000",

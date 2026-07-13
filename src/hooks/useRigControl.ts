@@ -48,7 +48,7 @@ export function useRigControl({
   const [vfoA, setVfoA] = useState(() => localStorage.getItem("last-vfoA") || "14074000");
   const [vfoB, setVfoB] = useState(() => localStorage.getItem("last-vfoB") || "7074000");
   const [error, setError] = useState<string | null>(null);
-  const [rigConnecting, setRigConnecting] = useState<{ attempt: number; maxAttempts: number; auto?: boolean } | null>(null);
+  const [rigConnecting, setRigConnecting] = useState<{ attempt: number; maxAttempts: number; auto?: boolean; knownPoweredOff?: boolean } | null>(null);
   const [opError, setOpError] = useState<string | null>(null);
   const opErrorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [rawCommand, setRawCommand] = useState("");
@@ -399,9 +399,26 @@ export function useRigControl({
       }
     };
 
-    const onRigConnecting = (data: { attempt: number; maxAttempts: number }) => {
+    const onRigConnecting = (data: { attempt: number; maxAttempts: number; auto?: boolean; knownPoweredOff?: boolean; vfo?: string; frequency?: string }) => {
       setRigConnecting(data);
       setError(null);
+      if (data.knownPoweredOff) {
+        // The server already knows (from a persisted record) that the radio was left off —
+        // show the "powered down" state immediately instead of a generic reconnect spinner.
+        // `connected` is still false here so effectivelyConnected is unaffected either way;
+        // this self-corrects within moments if the radio actually got turned on in between.
+        //
+        // The server also hands us the VFO/frequency it last confirmed before power-off — this
+        // is authoritative (captured server-side at the moment of power-off) and arrives near-
+        // instantly on reconnect, well before the ~10s+ power-on handshake would otherwise leave
+        // the UI showing a possibly-stale value from this browser's own localStorage cache. If
+        // the server has no persisted snapshot (e.g. first run, or an older data file), fall
+        // back to a neutral "unknown" VFO rather than asserting a specific — possibly wrong —
+        // letter; VfoPanel renders that as "-".
+        setStatus(prev => ({ ...prev, powerState: 'off', vfo: data.vfo || "" }));
+        if (data.vfo === "VFOA" && data.frequency) setVfoA(data.frequency);
+        else if (data.vfo === "VFOB" && data.frequency) setVfoB(data.frequency);
+      }
     };
 
     const onRigConnected = ({ vfoSupported: vfoSup, powerSupported: powerSup }: { vfoSupported?: boolean; powerSupported?: boolean } = {}) => {
@@ -413,7 +430,6 @@ export function useRigControl({
       setError(null);
       socket.emit("set-autoconnect-eligible", true);
       isAutoconnectAttempt.current = false;
-      socket.emit("get-modes");
     };
 
     const onAvailableModes = (modes: string[]) => setAvailableModes(modes);
@@ -552,8 +568,18 @@ export function useRigControl({
   }, [socket]);
 
   const effectivelyConnected = connected && status?.powerState !== 'off';
-  const uiConnected = connected || rigConnecting?.auto === true;
+  const uiConnected = connected || rigConnecting?.auto === true || rigConnecting?.knownPoweredOff === true;
   useEffect(() => { uiConnectedRef.current = uiConnected; }, [uiConnected]);
+
+  // Populate the mode list once the rig is truly live — not merely once the socket reports
+  // "connected", since a restart-restored persisted-off connection reports connected=true
+  // immediately while the radio itself is still off and won't answer a live "M ?" query.
+  // Also naturally re-fires on every later power-on within the session (harmless).
+  useEffect(() => {
+    if (effectivelyConnected) {
+      socket?.emit("get-modes");
+    }
+  }, [effectivelyConnected, socket]);
 
   return {
     connected, setConnected,

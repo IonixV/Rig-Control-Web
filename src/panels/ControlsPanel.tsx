@@ -242,11 +242,26 @@ interface ControlsPanelHeaderActionProps {
   powerSupported: boolean;
   powerState: 'on' | 'off' | 'unknown';
   poweringOn: boolean;
+  /** True while the server has told us (from a persisted record) that the radio was left
+   *  powered off, but we haven't yet actually reconnected to confirm it — powerSupported is
+   *  still false at this point since that only gets set once the connection succeeds. Shows a
+   *  red spinner in place of the power button instead of nothing, so the user isn't left
+   *  wondering where the button went while rigctld finishes starting up. */
+  knownPoweredOff: boolean;
   handleSetPower: (state: boolean) => void;
 }
 
-export function ControlsPanelHeaderAction({ powerSupported, powerState, poweringOn, handleSetPower }: ControlsPanelHeaderActionProps) {
-  if (!powerSupported) return null;
+export function ControlsPanelHeaderAction({ powerSupported, powerState, poweringOn, knownPoweredOff, handleSetPower }: ControlsPanelHeaderActionProps) {
+  if (!powerSupported) {
+    if (knownPoweredOff) {
+      return (
+        <span className="p-1 text-red-500" title="Radio was powered off last session — reconnecting…">
+          <Loader2 size={14} className="animate-spin" />
+        </span>
+      );
+    }
+    return null;
+  }
 
   if (poweringOn) {
     return (

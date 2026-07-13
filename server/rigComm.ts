@@ -1,4 +1,6 @@
 import net from "net";
+import fs from "fs";
+import path from "path";
 import { Socket } from "socket.io";
 import { ServerContext } from "./context.ts";
 import { vlogRig as vlog, vlogWsjtx, ts } from "./vlog.ts";
@@ -149,38 +151,54 @@ export function sendToRig(ctx: ServerContext, cmd: string, useExtended = false, 
 }
 
 async function probeDumpCaps(ctx: ServerContext): Promise<string> {
-  return new Promise((resolve, reject) => {
-    if (!ctx.rigSocket || ctx.rigSocket.destroyed) {
-      return reject("Not connected");
-    }
+  // dump_caps needs the full raw multi-KB response (not a single parsed value), so it bypasses
+  // ctx.rigCommandQueue/executeRigCommand and attaches its own "data" listener directly. But it
+  // still shares the one physical rigctld socket with everything sent via sendToRig() — without
+  // this isRigBusy guard, a command dispatched concurrently (e.g. a client's "get-modes" request
+  // racing in right as this starts) would attach its own listener on the same socket at the same
+  // time, and each listener could resolve on bytes meant for the other — silently shifting every
+  // subsequent command/response pairing by one for the rest of that poll cycle (observed in the
+  // field as e.g. a "t" (get_ptt) command resolving with another command's response text).
+  while (ctx.isRigBusy) {
+    await new Promise(r => setTimeout(r, 10));
+  }
+  ctx.isRigBusy = true;
+  try {
+    return await new Promise((resolve, reject) => {
+      if (!ctx.rigSocket || ctx.rigSocket.destroyed) {
+        return reject("Not connected");
+      }
 
-    let buffer = "";
-    const timeout = setTimeout(() => {
-      ctx.rigSocket?.removeListener("data", onData);
-      ctx.rigSocket?.removeListener("error", onError);
-      reject("dump_caps timed out");
-    }, 10000);
-
-    const onData = (data: Buffer) => {
-      buffer += data.toString();
-      if (/RPRT -?\d+/.test(buffer)) {
-        clearTimeout(timeout);
+      let buffer = "";
+      const timeout = setTimeout(() => {
         ctx.rigSocket?.removeListener("data", onData);
         ctx.rigSocket?.removeListener("error", onError);
-        resolve(buffer);
-      }
-    };
+        reject("dump_caps timed out");
+      }, 10000);
 
-    const onError = (err: Error) => {
-      clearTimeout(timeout);
-      ctx.rigSocket?.removeListener("data", onData);
-      reject(`dump_caps error: ${err.message}`);
-    };
+      const onData = (data: Buffer) => {
+        buffer += data.toString();
+        if (/RPRT -?\d+/.test(buffer)) {
+          clearTimeout(timeout);
+          ctx.rigSocket?.removeListener("data", onData);
+          ctx.rigSocket?.removeListener("error", onError);
+          resolve(buffer);
+        }
+      };
 
-    ctx.rigSocket.on("data", onData);
-    ctx.rigSocket.once("error", onError);
-    ctx.rigSocket.write("+\\dump_caps\n");
-  });
+      const onError = (err: Error) => {
+        clearTimeout(timeout);
+        ctx.rigSocket?.removeListener("data", onData);
+        reject(`dump_caps error: ${err.message}`);
+      };
+
+      ctx.rigSocket.on("data", onData);
+      ctx.rigSocket.once("error", onError);
+      ctx.rigSocket.write("+\\dump_caps\n");
+    });
+  } finally {
+    ctx.isRigBusy = false;
+  }
 }
 
 function parseDumpCapsIntoContext(dump: string, ctx: ServerContext): void {
@@ -287,6 +305,77 @@ export async function probeVfoCapability(ctx: ServerContext): Promise<void> {
   }
 }
 
+function powerStateFilePath(ctx: ServerContext): string {
+  return path.join(ctx.dataDir, "rig-power-state.json");
+}
+
+interface PersistedPowerOffState {
+  off: boolean;
+  serialPort: string;
+  rigNumber: string;
+  audioWasPlaying: boolean;
+  vfo: string;
+  frequency: string;
+  savedAt: number;
+}
+
+function loadPersistedPowerOffState(ctx: ServerContext): PersistedPowerOffState | null {
+  try {
+    return JSON.parse(fs.readFileSync(powerStateFilePath(ctx), "utf-8"));
+  } catch {
+    return null;
+  }
+}
+
+function savePersistedPowerOffState(ctx: ServerContext): void {
+  try {
+    const state: PersistedPowerOffState = {
+      off: true,
+      serialPort: ctx.rigctldSettings.serialPort,
+      rigNumber: ctx.rigctldSettings.rigNumber,
+      audioWasPlaying: ctx.audioWasPlaying,
+      vfo: ctx.lastStatus.vfo,
+      frequency: ctx.lastStatus.frequency,
+      savedAt: Date.now(),
+    };
+    fs.writeFileSync(powerStateFilePath(ctx), JSON.stringify(state, null, 2));
+  } catch (e) {
+    console.error("[RIG][POWER] Failed to persist power-off state:", e);
+  }
+}
+
+function clearPersistedPowerOffState(ctx: ServerContext): void {
+  try {
+    fs.unlinkSync(powerStateFilePath(ctx));
+  } catch {
+    // already absent — fine
+  }
+}
+
+function isPersistedOffMatchingCurrentRig(ctx: ServerContext): boolean {
+  const persisted = loadPersistedPowerOffState(ctx);
+  return !!persisted?.off
+    && persisted.serialPort === ctx.rigctldSettings.serialPort
+    && persisted.rigNumber === ctx.rigctldSettings.rigNumber;
+}
+
+// Used to enrich every "rig-connecting" emit made while ctx.knownPoweredOff is true (the initial
+// connect attempt and each subsequent auto-reconnect retry ping) with the same last-known VFO/
+// frequency snapshot. Must be called fresh each time rather than cached once, and every call site
+// that emits knownPoweredOff:true must include this — otherwise a later emit lacking these fields
+// (e.g. a retry ping) would overwrite the frontend's already-correct display with the neutral
+// "unknown" placeholder.
+function getKnownPoweredOffSnapshot(ctx: ServerContext): { vfo?: string; frequency?: string } {
+  if (!ctx.knownPoweredOff) return {};
+  const persisted = loadPersistedPowerOffState(ctx);
+  if (persisted?.vfo && persisted?.frequency) {
+    vlog(`[RIG][POWER] Sending last-known snapshot with rig-connecting: vfo=${persisted.vfo} frequency=${persisted.frequency}`);
+    return { vfo: persisted.vfo, frequency: persisted.frequency };
+  }
+  vlog(`[RIG][POWER] No usable last-known snapshot to send (persisted file present=${!!persisted}, vfo=${persisted?.vfo}, frequency=${persisted?.frequency})`);
+  return {};
+}
+
 async function probePowerCapability(ctx: ServerContext): Promise<void> {
   try {
     const result = await sendToRig(ctx, "get_powerstat", true);
@@ -295,7 +384,7 @@ async function probePowerCapability(ctx: ServerContext): Promise<void> {
     ctx.powerState = result.trim() === "1" ? 'on' : 'off';
     vlog(`[RIG] Power control supported; state: ${ctx.powerState}`);
     if (ctx.powerState === 'on' && previousState !== 'on') {
-      onPowerOn(ctx);
+      await onPowerOn(ctx);
     }
   } catch {
     // A failed/timed-out probe here doesn't necessarily mean the rig lacks power control — it
@@ -329,10 +418,34 @@ async function triggerPowerOff(ctx: ServerContext): Promise<void> {
   ctx.lastStatus = { ...ctx.lastStatus, ptt: false, powerState: 'off', powerPending: false };
   ctx.io.emit("rig-status", ctx.lastStatus);
   ctx.io.emit("spectrum-data", { id: 0, name: "", amplitudes: [], timestamp: Date.now() });
+  savePersistedPowerOffState(ctx);
   vlog("[RIG][POWER] Local state set to off — polling suspended");
 }
 
-function onPowerOn(ctx: ServerContext): void {
+async function onPowerOn(ctx: ServerContext): Promise<void> {
+  clearPersistedPowerOffState(ctx);
+
+  if (ctx.pendingCapabilityProbe) {
+    ctx.pendingCapabilityProbe = false;
+    vlog("[RIG] Running deferred capability probes after restart-restored power-on");
+    await probeVfoCapability(ctx);
+    await probeCapabilities(ctx);
+    if (ctx.spectrumSettings.enabled && ctx.spectrumSupported) {
+      try {
+        await sendToRig(ctx, "U SPECTRUM 1", true);
+        vlog("[SPECTRUM] Enabled spectrum output on rig");
+      } catch (err) {
+        console.warn("[SPECTRUM] Failed to enable spectrum output:", err);
+      }
+    }
+    ctx.io.emit("rig-connected", {
+      host: ctx.rigConfig.host,
+      port: ctx.rigConfig.port,
+      vfoSupported: ctx.vfoSupported,
+      powerSupported: ctx.powerSupported,
+    });
+  }
+
   if (ctx.spectrumSettings.enabled && ctx.spectrumSettings.source === "ft4222") {
     import("./yaesuScope.ts").then(({ startYaesuScope }) => startYaesuScope(ctx));
   }
@@ -361,7 +474,7 @@ export async function pollRig(ctx: ServerContext): Promise<void> {
         ctx.lastStatus = { ...ctx.lastStatus, powerState: 'on' };
         ctx.io.emit("rig-status", ctx.lastStatus);
         vlog("[RIG] Radio powered on — resuming polling");
-        onPowerOn(ctx);
+        await onPowerOn(ctx);
         // fall through to normal poll this cycle
       }
     } catch { /* still off or not responding */ }
@@ -525,6 +638,8 @@ export function resetRigState(ctx: ServerContext): void {
   ctx.powerState = 'unknown';
   ctx.powerOpInProgress = false;
   ctx.lastPowerCheck = 0;
+  ctx.pendingCapabilityProbe = false;
+  ctx.knownPoweredOff = false;
   ctx.lastStatus = {
     frequency: "14074000",
     mode: "USB",
@@ -582,9 +697,34 @@ export function connectToRig(ctx: ServerContext, host: string, port: number, soc
       ctx.rigSocket = null;
     }
     ctx.rigConfig = { host, port };
+    // Arm the slower 5s-retry/30s-give-up safety net (below, in the socket "close" handler)
+    // from the moment a connection is requested, not only once one has actually succeeded.
+    // Without this, if rigctld hasn't finished starting its TCP listener yet — e.g. right
+    // after an app restart, where startRigctld() marks status "running" the instant the
+    // process is spawned, well before rigctld has actually bound its port — the quick
+    // ECONNREFUSED retry burst below (~4s total) can exhaust itself with autoReconnect still
+    // false, silently abandoning the connection with no further attempts at all.
+    ctx.autoReconnect = true;
+    // Only reset the give-up clock for a genuinely new request (auto=false: an explicit
+    // connect-rig, whether user- or autoconnect-triggered). The close handler's own scheduled
+    // retry re-enters here with (attempt=1, auto=true) — resetting the clock on every one of
+    // those cycles would make the 30s give-up budget unreachable (infinite silent retries).
+    if (!auto) {
+      ctx.autoReconnectStartedAt = null;
+      // Computed once per genuinely new request and left alone across the quick ECONNREFUSED
+      // retry burst and the close handler's own scheduled re-entries (which pass auto=true) —
+      // lets the frontend suppress the generic "reconnecting" spinner for the whole attempt
+      // sequence whenever the radio is already known (from disk) to have been left off.
+      ctx.knownPoweredOff = isPersistedOffMatchingCurrentRig(ctx);
+    }
   }
 
-  ctx.io.emit("rig-connecting", { attempt, maxAttempts: CONNECT_MAX_ATTEMPTS, auto });
+  // When the radio is known (from disk) to have been left off, hand the frontend the exact
+  // VFO/frequency it was last confirmed on — captured at the moment power-off was triggered, so
+  // it's still accurate (an off radio can't retune itself). This lets the UI show a trustworthy
+  // last-known VFO immediately on reconnect instead of waiting out the ~10s+ power-on handshake,
+  // and instead of trusting the browser's own (per-client, potentially stale) localStorage cache.
+  ctx.io.emit("rig-connecting", { attempt, maxAttempts: CONNECT_MAX_ATTEMPTS, auto, knownPoweredOff: ctx.knownPoweredOff, ...getKnownPoweredOffSnapshot(ctx) });
 
   const sock = new net.Socket();
   ctx.rigSocket = sock;
@@ -608,6 +748,31 @@ export function connectToRig(ctx: ServerContext, host: string, port: number, soc
     // the capability probes below succeed against a socket that's still alive.
     ctx.isConnected = true;
     ctx.autoReconnect = true;
+
+    const persistedOff = loadPersistedPowerOffState(ctx);
+    const restoringOff = isPersistedOffMatchingCurrentRig(ctx);
+
+    if (restoringOff) {
+      vlog(`[RIG] Restoring persisted power-off state from last session — deferring capability probes (persisted vfo=${persistedOff!.vfo}, frequency=${persistedOff!.frequency})`);
+      ctx.powerSupported = true;
+      ctx.powerState = 'off';
+      ctx.lastPowerCheck = Date.now();
+      ctx.autoReconnectStartedAt = null;
+      ctx.audioWasPlaying = persistedOff!.audioWasPlaying;
+      ctx.pendingCapabilityProbe = true;
+      ctx.lastStatus = {
+        ...ctx.lastStatus,
+        powerState: 'off',
+        ...(persistedOff!.vfo && persistedOff!.frequency
+          ? { vfo: persistedOff!.vfo, frequency: persistedOff!.frequency }
+          : {}),
+      };
+      ctx.io.emit("rig-connected", { host, port, vfoSupported: ctx.vfoSupported, powerSupported: true });
+      ctx.io.emit("rig-status", ctx.lastStatus);
+      startPolling(ctx);
+      return;
+    }
+
     await probeVfoCapability(ctx);
     await probeCapabilities(ctx);
     await probePowerCapability(ctx);
@@ -639,17 +804,19 @@ export function connectToRig(ctx: ServerContext, host: string, port: number, soc
       setTimeout(() => connectToRig(ctx, host, port, socket, attempt + 1, auto), CONNECT_RETRY_DELAY_MS);
     } else {
       ctx.isConnected = false;
-      if (auto) {
-        // Silent auto-reconnect: don't surface a scary error for a single failed attempt —
-        // the close handler below decides whether to keep quietly retrying or, once the
-        // AUTO_RECONNECT_TIMEOUT_MS budget is exhausted, emit the one user-facing message.
-        vlog(`[RIG] Auto-reconnect attempt failed (${err.message}); close handler will retry or give up`);
+      if (auto || err.code === "ECONNREFUSED") {
+        // Silent (auto-)reconnect: don't surface a scary error for a single failed attempt —
+        // ctx.autoReconnect is already armed (set at the top of this function, before the
+        // quick ECONNREFUSED-retry burst even starts), so the close handler below will keep
+        // quietly retrying regardless of whether this particular attempt was flagged "auto".
+        // Exhausting the quick burst on ECONNREFUSED is exactly the case where rigctld may
+        // simply still be starting up (see the attempt===1 comment above) — showing an error
+        // here would be premature since a background retry is about to succeed or, once the
+        // AUTO_RECONNECT_TIMEOUT_MS budget is exhausted, emit the one real user-facing message.
+        vlog(`[RIG] Connect attempt failed (${err.message}); close handler will retry or give up`);
       } else {
         console.error("Rig socket error:", err);
-        const msg = err.code === "ECONNREFUSED"
-          ? `Could not connect to rigctld at ${host}:${port} — connection refused after ${CONNECT_MAX_ATTEMPTS} attempts`
-          : `Could not connect to rigctld at ${host}:${port} — ${err.message}`;
-        ctx.io.emit("rig-error", msg);
+        ctx.io.emit("rig-error", `Could not connect to rigctld at ${host}:${port} — ${err.message}`);
       }
     }
   });
@@ -672,7 +839,7 @@ export function connectToRig(ctx: ServerContext, host: string, port: number, soc
         ctx.io.emit("rig-error", "Automatic reconnect failed after 30s — reconnect manually when the radio is ready.");
         return;
       }
-      ctx.io.emit("rig-connecting", { attempt: 0, maxAttempts: CONNECT_MAX_ATTEMPTS, auto: true });
+      ctx.io.emit("rig-connecting", { attempt: 0, maxAttempts: CONNECT_MAX_ATTEMPTS, auto: true, knownPoweredOff: ctx.knownPoweredOff, ...getKnownPoweredOffSnapshot(ctx) });
       vlog("[RIG] Scheduling auto-reconnect in 5s...");
       ctx.pollingTimeout = setTimeout(() => {
         if (!ctx.isConnected && ctx.autoReconnect) {
@@ -882,7 +1049,7 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
           ctx.powerState = 'on';
           ctx.lastStatus = { ...ctx.lastStatus, powerState: 'on', powerPending: false };
           ctx.io.emit("rig-status", ctx.lastStatus);
-          onPowerOn(ctx);
+          await onPowerOn(ctx);
         } else if (confirmed) {
           vlog(`[RIG][POWER] Radio confirmed on (by poll loop) after ${Date.now() - t0} ms`);
           ctx.lastStatus = { ...ctx.lastStatus, powerPending: false };

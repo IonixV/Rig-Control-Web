@@ -150,6 +150,7 @@ export interface CompactLayoutProps {
   // Controls
   powerSupported: boolean;
   poweringOn: boolean;
+  knownPoweredOff: boolean;
   handleSetPower: (state: boolean) => void;
   isCompactControlsCollapsed: boolean;
   isCompactRFPowerCollapsed: boolean;
@@ -346,6 +347,7 @@ function CompactLayout({
   setLocalNBLevel,
   powerSupported,
   poweringOn,
+  knownPoweredOff,
   handleSetPower,
   handleSetPTT,
   handleSetFunc,
@@ -476,7 +478,9 @@ function CompactLayout({
                   ? "border-amber-500/30"
                   : status.vfo === "VFOA"
                   ? "border-emerald-500/30"
-                  : "border-blue-500/30"
+                  : status.vfo === "VFOB"
+                  ? "border-blue-500/30"
+                  : "border-[#2a2b2e]"
               )}
               bodyClassName="p-3 space-y-2"
               headerSize="sm"
@@ -694,6 +698,7 @@ function CompactLayout({
                 powerSupported={powerSupported}
                 powerState={status.powerState ?? 'unknown'}
                 poweringOn={poweringOn}
+                knownPoweredOff={knownPoweredOff}
                 handleSetPower={handleSetPower}
               />
             }

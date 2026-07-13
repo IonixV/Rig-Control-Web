@@ -37,7 +37,7 @@ export const DEFAULT_STATUS: RigStatus = {
   smeter: -54,
   swr: 1.0,
   rfpower: 0.5,
-  vfo: "VFOA",
+  vfo: "", // unknown until a live rig-status or persisted last-known value arrives — see VfoPanel's neutral-state handling
   isSplit: false,
   txVFO: "VFOB",
   rfLevel: 0,

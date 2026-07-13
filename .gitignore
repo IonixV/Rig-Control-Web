@@ -11,3 +11,5 @@ coverage/
 users.json
 auth.json
 audit.json
+rig-power-state.json
+settings.json

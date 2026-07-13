@@ -47,10 +47,14 @@ export function VfoCollapsedHeader({
   connected,
   adjustVfoFrequency,
 }: VfoCollapsedHeaderProps) {
+  const vfoIsA = status.vfo === "VFOA";
+  const vfoIsB = status.vfo === "VFOB";
+  const vfoKnown = vfoIsA || vfoIsB;
+
   return (
     <>
       <button
-        onClick={() => adjustVfoFrequency(status.vfo === "VFOA" ? "A" : "B", -1)}
+        onClick={() => adjustVfoFrequency(vfoIsA ? "A" : "B", -1)}
         disabled={!connected}
         className="flex items-center gap-1 px-2 py-1 bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg text-emerald-500 hover:bg-emerald-500/10 disabled:opacity-50 flex-shrink-0"
         title="Frequency Down"
@@ -64,7 +68,9 @@ export function VfoCollapsedHeader({
             "w-2 h-2 rounded-full flex-shrink-0",
             status.isSplit
               ? "bg-amber-500"
-              : status.vfo === "VFOA"
+              : !vfoKnown
+              ? "bg-[#4a4b4e]"
+              : vfoIsA
               ? "bg-emerald-500"
               : "bg-blue-500"
           )}
@@ -74,12 +80,14 @@ export function VfoCollapsedHeader({
             "text-xs font-bold uppercase flex-shrink-0",
             status.isSplit
               ? "text-amber-500"
-              : status.vfo === "VFOA"
+              : !vfoKnown
+              ? "text-[#8e9299]"
+              : vfoIsA
               ? "text-emerald-500"
               : "text-blue-500"
           )}
         >
-          {status.isSplit ? "SPLIT" : status.vfo === "VFOA" ? "A" : "B"}
+          {status.isSplit ? "SPLIT" : !vfoKnown ? "-" : vfoIsA ? "A" : "B"}
         </span>
         <span className="text-[#4a4b4e] flex-shrink-0">—</span>
         <span
@@ -89,12 +97,14 @@ export function VfoCollapsedHeader({
               ? "text-red-500"
               : status.isSplit
               ? "text-amber-500"
-              : status.vfo === "VFOA"
+              : !vfoKnown
+              ? "text-[#8e9299]"
+              : vfoIsA
               ? "text-emerald-500"
               : "text-blue-500"
           )}
         >
-          {parseFloat(status.vfo === "VFOA" ? inputVfoA : inputVfoB).toFixed(3)} MHz
+          {vfoKnown ? `${parseFloat(vfoIsA ? inputVfoA : inputVfoB).toFixed(3)} MHz` : "-"}
         </span>
         <span className="text-[#4a4b4e] flex-shrink-0">—</span>
         <span className="text-xs font-bold text-[#8e9299] flex-shrink-0">
@@ -102,7 +112,7 @@ export function VfoCollapsedHeader({
         </span>
       </div>
       <button
-        onClick={() => adjustVfoFrequency(status.vfo === "VFOA" ? "A" : "B", 1)}
+        onClick={() => adjustVfoFrequency(vfoIsA ? "A" : "B", 1)}
         disabled={!connected}
         className="flex items-center gap-1 px-2 py-1 bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg text-emerald-500 hover:bg-emerald-500/10 disabled:opacity-50 flex-shrink-0"
         title="Frequency Up"
@@ -140,13 +150,16 @@ export default function VfoPanel({
   handleSetBw,
   bandwidth,
 }: VfoPanelProps) {
+  const vfoIsA = status.vfo === "VFOA";
+  const vfoIsB = status.vfo === "VFOB";
+  const vfoKnown = vfoIsA || vfoIsB;
 
   // ─── Compact: combined VFO + Mode/BW row ─────────────────────────
   if (variant === "compact") {
     return (
       <div className={cn(
         "bg-[#151619] p-3 rounded-xl border shadow-lg space-y-2",
-        status.vfo === "VFOA" ? "border-emerald-500/30" : "border-blue-500/30"
+        !vfoKnown ? "border-[#2a2b2e]" : vfoIsA ? "border-emerald-500/30" : "border-blue-500/30"
       )}>
         <div className="grid grid-cols-3 items-center">
           <div className="flex items-center gap-2">
@@ -184,7 +197,7 @@ export default function VfoPanel({
           </div>
           <div className="flex items-center justify-center gap-2">
             <button
-              onClick={() => adjustVfoFrequency(status.vfo === 'VFOA' ? 'A' : 'B', -1)}
+              onClick={() => adjustVfoFrequency(vfoIsA ? 'A' : 'B', -1)}
               disabled={!connected}
               className="flex items-center gap-1 px-2 py-1 bg-[#0a0a0a] border border-[#2a2b2e] rounded text-emerald-500 hover:bg-emerald-500/10 disabled:opacity-50"
               title="Frequency Down"
@@ -193,7 +206,7 @@ export default function VfoPanel({
               <span className="text-[0.625rem] font-bold">{stepLabel(vfoStep)}</span>
             </button>
             <button
-              onClick={() => adjustVfoFrequency(status.vfo === 'VFOA' ? 'A' : 'B', 1)}
+              onClick={() => adjustVfoFrequency(vfoIsA ? 'A' : 'B', 1)}
               disabled={!connected}
               className="flex items-center gap-1 px-2 py-1 bg-[#0a0a0a] border border-[#2a2b2e] rounded text-emerald-500 hover:bg-emerald-500/10 disabled:opacity-50"
               title="Frequency Up"
@@ -221,11 +234,12 @@ export default function VfoPanel({
           <input
             type="number"
             step={vfoStep}
-            value={status.vfo === "VFOA" ? inputVfoA : inputVfoB}
-            onChange={(e) => status.vfo === "VFOA" ? setInputVfoA(e.target.value) : setInputVfoB(e.target.value)}
-            disabled={!connected}
+            value={!vfoKnown ? "" : vfoIsA ? inputVfoA : inputVfoB}
+            onChange={(e) => vfoIsA ? setInputVfoA(e.target.value) : setInputVfoB(e.target.value)}
+            disabled={!connected || !vfoKnown}
             onBlur={() => {
-              const val = parseFloat(status.vfo === "VFOA" ? inputVfoA : inputVfoB);
+              if (!vfoKnown) return;
+              const val = parseFloat(vfoIsA ? inputVfoA : inputVfoB);
               if (!isNaN(val)) handleSetFreq(Math.round(val * 1000000).toString());
             }}
             onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
@@ -234,14 +248,15 @@ export default function VfoPanel({
               !connected && "opacity-50 cursor-not-allowed",
               status.isSplit
                 ? (status.vfo === status.txVFO ? "text-red-500 hover:bg-red-500/10 focus:bg-red-500/10 border-red-500/30 focus:border-red-500/50" : "text-amber-500 hover:bg-amber-500/10 focus:bg-amber-500/10 border-amber-500/30 focus:border-amber-500/50")
-                : (status.vfo === "VFOA" ? "text-emerald-500 hover:bg-emerald-500/10 focus:bg-emerald-500/10 border-[#2a2b2e] focus:border-emerald-500/50" : "text-blue-500 hover:bg-blue-500/10 focus:bg-blue-500/10 border-[#2a2b2e] focus:border-blue-500/50")
+                : !vfoKnown ? "text-[#8e9299] hover:bg-white/5 focus:bg-white/5 border-[#2a2b2e] focus:border-[#4a4b4e]"
+                : (vfoIsA ? "text-emerald-500 hover:bg-emerald-500/10 focus:bg-emerald-500/10 border-[#2a2b2e] focus:border-emerald-500/50" : "text-blue-500 hover:bg-blue-500/10 focus:bg-blue-500/10 border-[#2a2b2e] focus:border-blue-500/50")
             )}
             title="Click to edit frequency"
           />
-          <span className={cn("text-sm font-bold", status.vfo === "VFOA" ? "text-emerald-500/50" : "text-blue-500/50")}>MHz</span>
+          <span className={cn("text-sm font-bold", !vfoKnown ? "text-[#8e9299]/50" : vfoIsA ? "text-emerald-500/50" : "text-blue-500/50")}>MHz</span>
           <Pencil size={12} className={cn(
             "absolute right-12 top-1/2 -translate-y-1/2 transition-opacity pointer-events-none",
-            status.vfo === "VFOA" ? "text-emerald-500/30" : "text-blue-500/30"
+            !vfoKnown ? "text-[#8e9299]/30" : vfoIsA ? "text-emerald-500/30" : "text-blue-500/30"
           )} />
         </div>
 
@@ -301,7 +316,7 @@ export default function VfoPanel({
         </div>
         <div className="flex items-center gap-1">
           <button
-            onClick={() => adjustVfoFrequency(status.vfo === "VFOA" ? "A" : "B", -1)}
+            onClick={() => adjustVfoFrequency(vfoIsA ? "A" : "B", -1)}
             disabled={!connected}
             className="flex items-center gap-1 px-2 py-1 bg-[#1a1b1e] border border-[#2a2b2e] rounded-lg text-emerald-500 hover:bg-emerald-500/10 disabled:opacity-50"
             title="Frequency Down"
@@ -310,7 +325,7 @@ export default function VfoPanel({
             <span className="text-[0.625rem] font-bold">{stepLabel(vfoStep)}</span>
           </button>
           <button
-            onClick={() => adjustVfoFrequency(status.vfo === "VFOA" ? "A" : "B", 1)}
+            onClick={() => adjustVfoFrequency(vfoIsA ? "A" : "B", 1)}
             disabled={!connected}
             className="flex items-center gap-1 px-2 py-1 bg-[#1a1b1e] border border-[#2a2b2e] rounded-lg text-emerald-500 hover:bg-emerald-500/10 disabled:opacity-50"
             title="Frequency Up"
@@ -325,16 +340,17 @@ export default function VfoPanel({
         <input
           type="number"
           step={vfoStep}
-          value={status.vfo === "VFOA" ? inputVfoA : inputVfoB}
+          value={!vfoKnown ? "" : vfoIsA ? inputVfoA : inputVfoB}
           onChange={(e) =>
-            status.vfo === "VFOA"
+            vfoIsA
               ? setInputVfoA(e.target.value)
               : setInputVfoB(e.target.value)
           }
-          disabled={!connected}
+          disabled={!connected || !vfoKnown}
           onBlur={() => {
+            if (!vfoKnown) return;
             const val = parseFloat(
-              status.vfo === "VFOA" ? inputVfoA : inputVfoB
+              vfoIsA ? inputVfoA : inputVfoB
             );
             if (!isNaN(val))
               handleSetFreq(Math.round(val * 1000000).toString());
@@ -347,7 +363,9 @@ export default function VfoPanel({
               ? status.vfo === status.txVFO
                 ? "text-red-500 hover:bg-red-500/10 focus:bg-red-500/10 border-red-500/30 focus:border-red-500/50"
                 : "text-amber-500 hover:bg-amber-500/10 focus:bg-amber-500/10 border-amber-500/30 focus:border-amber-500/50"
-              : status.vfo === "VFOA"
+              : !vfoKnown
+              ? "text-[#8e9299] hover:bg-white/5 focus:bg-white/5 border-[#2a2b2e] focus:border-[#4a4b4e]"
+              : vfoIsA
               ? "text-emerald-500 hover:bg-emerald-500/10 focus:bg-emerald-500/10 border-[#2a2b2e] focus:border-emerald-500/50"
               : "text-blue-500 hover:bg-blue-500/10 focus:bg-blue-500/10 border-[#2a2b2e] focus:border-blue-500/50"
           )}
@@ -355,7 +373,7 @@ export default function VfoPanel({
         <span
           className={cn(
             "text-sm font-bold flex-shrink-0",
-            status.vfo === "VFOA" ? "text-emerald-500/50" : "text-blue-500/50"
+            !vfoKnown ? "text-[#8e9299]/50" : vfoIsA ? "text-emerald-500/50" : "text-blue-500/50"
           )}
         >
           MHz
