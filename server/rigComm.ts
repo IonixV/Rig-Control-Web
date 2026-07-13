@@ -46,7 +46,7 @@ export function parseExtendedResponse(resp: string): string {
   return values.join("\n");
 }
 
-export function executeRigCommand(ctx: ServerContext, cmd: string, useExtended = false): Promise<string> {
+export function executeRigCommand(ctx: ServerContext, cmd: string, useExtended = false, timeoutMs = 10000): Promise<string> {
   const finalCmd = useExtended ? formatExtendedCommand(cmd) : cmd;
   const startMs = Date.now();
 
@@ -60,13 +60,13 @@ export function executeRigCommand(ctx: ServerContext, cmd: string, useExtended =
     const timeout = setTimeout(() => {
       ctx.rigSocket?.removeListener("data", onData);
       ctx.rigSocket?.removeListener("error", onError);
-      console.warn(`[${ts()}] [RIG] Command timed out: "${cmd}" (extended=${useExtended}) — destroying socket to reset state`);
+      console.warn(`[${ts()}] [RIG] Command timed out: "${cmd}" (extended=${useExtended}, timeoutMs=${timeoutMs}) — destroying socket to reset state`);
       if (ctx.rigSocket) {
         ctx.rigSocket.destroy();
         ctx.isConnected = false;
       }
       reject(`Rig command timeout: "${cmd}"`);
-    }, 10000);
+    }, timeoutMs);
 
     const finishWithTiming = () => {
       const elapsed = Date.now() - startMs;
@@ -125,9 +125,9 @@ export function executeRigCommand(ctx: ServerContext, cmd: string, useExtended =
 const processRigQueue = async (ctx: ServerContext) => {
   if (ctx.isRigBusy || ctx.rigCommandQueue.length === 0) return;
   ctx.isRigBusy = true;
-  const { cmd, useExtended, resolve, reject } = ctx.rigCommandQueue.shift()!;
+  const { cmd, useExtended, resolve, reject, timeoutMs } = ctx.rigCommandQueue.shift()!;
   try {
-    const resp = await executeRigCommand(ctx, cmd, useExtended);
+    const resp = await executeRigCommand(ctx, cmd, useExtended, timeoutMs);
     resolve(resp);
   } catch (err) {
     reject(err);
@@ -137,12 +137,12 @@ const processRigQueue = async (ctx: ServerContext) => {
   }
 };
 
-export function sendToRig(ctx: ServerContext, cmd: string, useExtended = false, priority = false): Promise<string> {
+export function sendToRig(ctx: ServerContext, cmd: string, useExtended = false, priority = false, timeoutMs?: number): Promise<string> {
   return new Promise((resolve, reject) => {
     if (priority) {
-      ctx.rigCommandQueue.unshift({ cmd, useExtended, resolve, reject });
+      ctx.rigCommandQueue.unshift({ cmd, useExtended, resolve, reject, timeoutMs });
     } else {
-      ctx.rigCommandQueue.push({ cmd, useExtended, resolve, reject });
+      ctx.rigCommandQueue.push({ cmd, useExtended, resolve, reject, timeoutMs });
     }
     processRigQueue(ctx);
   });
@@ -837,16 +837,23 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
         await sendToRig(ctx, "set_powerstat 0", true, true);
         vlog("[RIG][POWER] Power-off command acknowledged by rigctld");
       } else {
-        vlog("[RIG][POWER] Sending set_powerstat 1 to rig");
+        // The whole power-on attempt — the initial ack AND the confirmation polling that
+        // follows — shares one ~25-30s wall-clock budget. Both the initial set_powerstat 1
+        // send and the get_powerstat polls below get that same generous per-command timeout
+        // override (instead of the generic 10s used for ordinary commands): a radio that's
+        // still mid-boot can take longer than 10s just to ack the power-on command itself, and
+        // the generic timeout destroying the socket at that point was cutting the attempt short
+        // (and dropping the whole rig connection) well before this budget was ever exhausted.
+        const t0 = Date.now();
+        const deadline = t0 + POWER_ON_CONFIRM_TIMEOUT_MS;
+        vlog(`[RIG][POWER] Sending set_powerstat 1 to rig (up to ${POWER_ON_CONFIRM_TIMEOUT_MS / 1000}s to ack + confirm)`);
         // Broadcast the pending state to every connected client (not just the one that clicked)
         // before the — potentially slow — command even completes, so all UIs show the same
         // "waiting for radio" state instead of each client tracking its own local guess.
         ctx.lastStatus = { ...ctx.lastStatus, powerPending: true };
         ctx.io.emit("rig-status", ctx.lastStatus);
-        await sendToRig(ctx, "set_powerstat 1", true, true);
-        vlog(`[RIG][POWER] Power-on command acknowledged — polling get_powerstat every 500 ms (${POWER_ON_CONFIRM_TIMEOUT_MS / 1000}s window)`);
-        const t0 = Date.now();
-        const deadline = t0 + POWER_ON_CONFIRM_TIMEOUT_MS;
+        await sendToRig(ctx, "set_powerstat 1", true, true, POWER_ON_CONFIRM_TIMEOUT_MS);
+        vlog(`[RIG][POWER] Power-on command acknowledged after ${Date.now() - t0}ms — polling get_powerstat every 500 ms until the window elapses`);
         let confirmed = false;
         let polls = 0;
         while (Date.now() < deadline) {
@@ -858,8 +865,10 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
             break;
           }
           polls++;
+          const remaining = deadline - Date.now();
+          if (remaining <= 0) break;
           try {
-            const ps = await sendToRig(ctx, "get_powerstat", true, true);
+            const ps = await sendToRig(ctx, "get_powerstat", true, true, Math.max(remaining, 1000));
             vlog(`[RIG][POWER] Poll ${polls}: get_powerstat=${ps.trim()} (${Date.now() - t0} ms elapsed)`);
             if (ps.trim() === "1") { confirmed = true; break; }
           } catch (pollErr) {

@@ -49,6 +49,9 @@ export interface RigCommandEntry {
   useExtended: boolean;
   resolve: (val: string) => void;
   reject: (err: any) => void;
+  /** Overrides the default 10s per-command timeout — used for power-on-transition commands,
+   *  which can legitimately take much longer to ack while the radio is mid-boot. */
+  timeoutMs?: number;
 }
 
 export interface ServerContext {
