@@ -466,6 +466,11 @@ export function stopPolling(ctx: ServerContext): void {
 
 export async function pollRig(ctx: ServerContext): Promise<void> {
   if (ctx.powerState === 'off') {
+    // A set-power(true) request runs its own dedicated get_powerstat confirmation loop against
+    // the same single serial link; don't have this routine probe compete with it for the link —
+    // doing so previously delayed the user's own set_powerstat command behind an unrelated
+    // background probe that happened to already be in flight.
+    if (ctx.powerOpInProgress) return;
     if (Date.now() - ctx.lastPowerCheck < 5000) return;
     try {
       const result = await sendToRig(ctx, "get_powerstat", true);
@@ -483,7 +488,10 @@ export async function pollRig(ctx: ServerContext): Promise<void> {
   }
 
   if (!ctx.isConnected) {
-    if (ctx.rigConfig.host && ctx.rigConfig.host !== "mock") {
+    // ctx.autoReconnect is explicitly cleared by a manual disconnect — without checking it here,
+    // a poll cycle that was already suspended awaiting a command sent before that disconnect can
+    // resume afterward and reconnect anyway, defeating the user's manual disconnect.
+    if (ctx.autoReconnect && ctx.rigConfig.host && ctx.rigConfig.host !== "mock") {
       vlog("Attempting background reconnection...");
       connectToRig(ctx, ctx.rigConfig.host, ctx.rigConfig.port);
     }
@@ -861,14 +869,20 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
     ctx.autoReconnect = false;
     ctx.autoReconnectStartedAt = null;
     resetRigState(ctx);
+    vlog("Rig manually disconnected");
+    const hadSocket = !!ctx.rigSocket;
     if (ctx.rigSocket) {
       ctx.rigSocket.destroy();
       ctx.rigSocket = null;
     }
     ctx.isConnected = false;
     stopPolling(ctx);
-    ctx.io.emit("rig-disconnected");
-    vlog("Rig manually disconnected");
+    // The socket's own "close" handler (connectToRig) already emits "rig-disconnected" once
+    // destroy() completes; only emit it here directly when there was no live socket to destroy,
+    // since in that case nothing else would notify connected clients.
+    if (!hadSocket) {
+      ctx.io.emit("rig-disconnected");
+    }
   });
 
   socket.on("set-func", async ({ func, state }) => {
