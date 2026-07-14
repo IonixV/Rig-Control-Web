@@ -43,8 +43,8 @@ export async function listAudioDevices(ctx: ServerContext): Promise<{ inputs: an
     return { inputs: [], outputs: [], error: ctx.audioEngineError || "Audio engine not ready" };
   }
   try {
-    const devices = ctx.portAudio.getDevices();
-    vlog("[AUDIO] Full device table:", JSON.stringify(devices.map((d: any) => ({
+    const allDevices = ctx.portAudio.getDevices();
+    vlog("[AUDIO] Full device table:", JSON.stringify(allDevices.map((d: any) => ({
       id: d.id,
       name: d.name,
       hostAPIName: d.hostAPIName || "",
@@ -52,6 +52,17 @@ export async function listAudioDevices(ctx: ServerContext): Promise<{ inputs: an
       maxOutputChannels: d.maxOutputChannels,
       defaultSampleRate: d.defaultSampleRate || 0,
     })), null, 2));
+    // Windows enumerates every physical device once per host API (MME,
+    // DirectSound, WASAPI, WDM-KS). DirectSound and WASAPI cover the latency
+    // range users need, so MME (needlessly high latency) and WDM-KS (an
+    // exclusive-mode driver that offers no benefit here) are hidden from the
+    // device pickers to cut down the list. This only affects the list shown
+    // to the user — resolveDeviceId() below still resolves against the full,
+    // unfiltered device table, so a device saved before this change keeps
+    // working exactly as before.
+    const devices = process.platform === "win32"
+      ? allDevices.filter((d: any) => d.hostAPIName !== "MME" && d.hostAPIName !== "Windows WDM-KS")
+      : allDevices;
     const inputs = devices.filter((d: any) => d.maxInputChannels > 0).map((d: any) => ({ name: d.name, altName: d.id.toString(), hostAPIName: d.hostAPIName || "", defaultSampleRate: d.defaultSampleRate || 0 }));
     const outputs = devices.filter((d: any) => d.maxOutputChannels > 0).map((d: any) => ({ name: d.name, altName: d.id.toString(), hostAPIName: d.hostAPIName || "", defaultSampleRate: d.defaultSampleRate || 0 }));
     return { inputs, outputs };

@@ -80,7 +80,7 @@ Think of it this way: **backend audio = the radio's end; local audio = your end*
 5. Click **Start Backend Audio** to start the audio engine. The status will change to **RUNNING**.
 6. Click **Stop Backend Audio** to stop it.
 
-> **Choosing the right device on Windows:** The device list shows the host API (MME, DirectSound, WASAPI) alongside the device name. For most radios, MME or DirectSound works reliably. If using WASAPI, the device must be configured to 48 kHz in Windows Sound settings — an incompatible WASAPI device will be shown as disabled in the list.
+> **Choosing the right device on Windows:** The device list shows the host API (DirectSound, WASAPI) alongside the device name. MME and WDM-KS entries are hidden — MME's latency is too high and WDM-KS offers no benefit here. For most radios, DirectSound works reliably. If using WASAPI, the device must be configured to 48 kHz in Windows Sound settings — an incompatible WASAPI device will be shown as disabled in the list.
 
 > **Enabling/Disabling directions:** You can run inbound-only (receive audio only) or outbound-only (transmit audio only) if your setup requires it. Use the Enabled toggles next to each device selector.
 
