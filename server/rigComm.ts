@@ -4,6 +4,7 @@ import path from "path";
 import { Socket } from "socket.io";
 import { ServerContext } from "./context.ts";
 import { vlogRig as vlog, vlogWsjtx, ts } from "./vlog.ts";
+import { startRigctld } from "./rigctld.ts";
 
 // Hamlib's Yaesu newcat backend (dual-receiver rigs like the FTDX3000/5000/101/10) and some
 // Icom dual-receiver rigs (IC-9700, IC-905, IC-7610, IC-7850/7851) report the current VFO as
@@ -415,6 +416,7 @@ async function triggerPowerOff(ctx: ServerContext): Promise<void> {
   }
   ctx.powerState = 'off';
   ctx.lastPowerCheck = Date.now();
+  ctx.powerOffProbeFailureCount = 0;
   ctx.lastStatus = { ...ctx.lastStatus, ptt: false, powerState: 'off', powerPending: false };
   ctx.io.emit("rig-status", ctx.lastStatus);
   ctx.io.emit("spectrum-data", { id: 0, name: "", amplitudes: [], timestamp: Date.now() });
@@ -474,6 +476,7 @@ export async function pollRig(ctx: ServerContext): Promise<void> {
     if (Date.now() - ctx.lastPowerCheck < 5000) return;
     try {
       const result = await sendToRig(ctx, "get_powerstat", true);
+      ctx.powerOffProbeFailureCount = 0;
       if (result.trim() === "1") {
         ctx.powerState = 'on';
         ctx.lastStatus = { ...ctx.lastStatus, powerState: 'on' };
@@ -482,7 +485,16 @@ export async function pollRig(ctx: ServerContext): Promise<void> {
         await onPowerOn(ctx);
         // fall through to normal poll this cycle
       }
-    } catch { /* still off or not responding */ }
+    } catch {
+      // still off or not responding
+      ctx.powerOffProbeFailureCount++;
+      if (ctx.powerOffProbeFailureCount >= POWER_OFF_PROBE_FAILURE_LIMIT && ctx.autoStartEnabled && !ctx.rigctldRespawnInFlight) {
+        vlog(`[RIG] get_powerstat has failed ${ctx.powerOffProbeFailureCount} times in a row while radio is off — proactively restarting rigctld before it can crash on its own`);
+        ctx.powerOffProbeFailureCount = 0;
+        ctx.rigctldRespawnInFlight = true;
+        startRigctld(ctx).finally(() => { ctx.rigctldRespawnInFlight = false; });
+      }
+    }
     ctx.lastPowerCheck = Date.now();
     if (ctx.powerState === 'off') return;
   }
@@ -646,6 +658,7 @@ export function resetRigState(ctx: ServerContext): void {
   ctx.powerState = 'unknown';
   ctx.powerOpInProgress = false;
   ctx.lastPowerCheck = 0;
+  ctx.powerOffProbeFailureCount = 0;
   ctx.pendingCapabilityProbe = false;
   ctx.knownPoweredOff = false;
   ctx.lastStatus = {
@@ -682,6 +695,12 @@ const CONNECT_RETRY_DELAY_MS = 1000;
 const AUTO_RECONNECT_RETRY_DELAY_MS = 5000;
 const AUTO_RECONNECT_TIMEOUT_MS = 30000;
 const SOCKET_CONNECT_TIMEOUT_MS = 10000;
+// A radio whose serial link never recovers while powered off has been observed (field diagnostics,
+// 2026-07) to eventually crash rigctld itself with a Windows heap-corruption exit after ~13-14
+// consecutive get_powerstat failures. This limit is set well below that observed count so the
+// proactive restart in pollRig() intervenes with a solid safety margin; it's a judgment call from a
+// single incident, not a precisely measured threshold.
+const POWER_OFF_PROBE_FAILURE_LIMIT = 6;
 // Real hardware (e.g. FT-710 USB re-enumeration, CI-V waking up after a cold boot) can take
 // several seconds per command right after a power-on — observed 2.7-9.4s per get_powerstat
 // round-trip in the field. A short deadline burns through its whole budget in 1-2 attempts and
@@ -848,6 +867,15 @@ export function connectToRig(ctx: ServerContext, host: string, port: number, soc
         return;
       }
       ctx.io.emit("rig-connecting", { attempt: 0, maxAttempts: CONNECT_MAX_ATTEMPTS, auto: true, knownPoweredOff: ctx.knownPoweredOff, ...getKnownPoweredOffSnapshot(ctx) });
+      // A dead rigctld process (crashed, not just a dropped socket) makes every reconnect attempt
+      // ECONNREFUSED forever — the retry loop above only ever re-pokes the TCP port. Respawn it
+      // here when we're the ones who own its lifecycle (autoStartEnabled), so the next scheduled
+      // attempt below actually has something to connect to.
+      if (!ctx.rigctldProcess && ctx.autoStartEnabled && !ctx.rigctldRespawnInFlight) {
+        vlog("[RIG] rigctld process is not running — restarting it before the next reconnect attempt");
+        ctx.rigctldRespawnInFlight = true;
+        startRigctld(ctx).finally(() => { ctx.rigctldRespawnInFlight = false; });
+      }
       vlog("[RIG] Scheduling auto-reconnect in 5s...");
       ctx.pollingTimeout = setTimeout(() => {
         if (!ctx.isConnected && ctx.autoReconnect) {
@@ -993,6 +1021,16 @@ export function registerRigCommHandlers(socket: Socket, ctx: ServerContext): voi
 
   socket.on("set-power", async ({ state }: { state: boolean }) => {
     vlog(`[RIG][POWER] set-power received: state=${state}`);
+    // Checked before powerSupported deliberately: resetRigState() (run at the top of every
+    // connect-rig attempt, including a doomed retry against a still-dead rigctld) clears
+    // powerSupported to false until a fresh capability probe succeeds. Without this ordering, a
+    // radio that genuinely supports power control but is simply disconnected right now would be
+    // misreported as "not supported by this rig" — a confusing, wrong lead for the user to chase.
+    if (!ctx.isConnected) {
+      vlog("[RIG][POWER] Rejected — not connected to rig");
+      socket.emit("rig-op-error", "Not connected to rig — reconnect before using power control");
+      return;
+    }
     if (!ctx.powerSupported) {
       vlog("[RIG][POWER] Rejected — power control not supported by this rig");
       socket.emit("rig-op-error", "Power control not supported by this rig");

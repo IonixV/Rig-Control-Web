@@ -131,6 +131,13 @@ export interface ServerContext {
   powerState: 'on' | 'off' | 'unknown';
   powerOpInProgress: boolean;
   lastPowerCheck: number;
+  /** Consecutive get_powerstat failures (RPRT error or command timeout) while polling a
+   *  powered-off radio. A radio whose serial link never recovers can drive rigctld itself
+   *  into a crash after enough of these (observed in the field as a Windows heap-corruption
+   *  exit); once this crosses POWER_OFF_PROBE_FAILURE_LIMIT, pollRig proactively restarts
+   *  rigctld rather than waiting for it to die on its own. Reset to 0 on any successful probe
+   *  response and whenever a fresh power-off period begins. */
+  powerOffProbeFailureCount: number;
   audioWasPlaying: boolean;
   /** One-shot flag: set when a connect restores a persisted "radio was off at last
    *  exit" state and skips the initial capability probes (which would otherwise
@@ -184,6 +191,10 @@ export interface ServerContext {
   rigctldVersion: string | null;
   isRigctldVersionSupported: boolean;
   rigctldLogs: string[];
+  /** True while an auto-recovery restart of rigctld (crash detected, or proactive restart
+   *  after repeated get_powerstat failures) is in flight. Guards against the two independent
+   *  recovery paths in rigComm.ts racing each other into a double-spawn. */
+  rigctldRespawnInFlight: boolean;
 
   // Diagnostics log (Diagnostics settings tab): merged server console output
   // plus forwarded browser/Electron-renderer console output. Rolling window
@@ -329,6 +340,7 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
     powerState: 'unknown',
     powerOpInProgress: false,
     lastPowerCheck: 0,
+    powerOffProbeFailureCount: 0,
     audioWasPlaying: false,
     pendingCapabilityProbe: false,
     knownPoweredOff: false,
@@ -372,6 +384,7 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
     rigctldVersion: null,
     isRigctldVersionSupported: true,
     rigctldLogs: [],
+    rigctldRespawnInFlight: false,
     diagnosticsLog: [],
     diagnosticsLogTimestamps: [],
 
