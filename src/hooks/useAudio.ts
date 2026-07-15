@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, type MutableRefObject } from "react";
 import { Socket } from "socket.io-client";
 import type { GGMorseDecoder } from "../ggmorseDecoder";
+import { splitLocalAudioDevices } from "../utils";
 
 let audioVerbose = false;
 let wsjtxAudioVerbose = false;
@@ -101,9 +102,7 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, waterfallAc
           console.warn("Microphone permission not yet granted or denied:", permErr);
         }
         const devices = await navigator.mediaDevices.enumerateDevices();
-        const inputs = devices.filter(d => d.kind === 'audioinput');
-        const outputs = devices.filter(d => d.kind === 'audiooutput');
-        setLocalAudioDevices({ inputs, outputs });
+        setLocalAudioDevices(splitLocalAudioDevices(devices));
       } catch (err) {
         console.error("Error enumerating local audio devices:", err);
       }

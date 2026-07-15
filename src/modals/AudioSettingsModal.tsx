@@ -11,7 +11,7 @@ import {
   Radio,
   X,
 } from "lucide-react";
-import { cn } from "../utils";
+import { cn, splitLocalAudioDevices } from "../utils";
 
 export interface AudioSettingsModalProps {
   isOpen: boolean;
@@ -153,9 +153,7 @@ function AudioSettingsModal({
                           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                           stream.getTracks().forEach(t => t.stop());
                           const devices = await navigator.mediaDevices.enumerateDevices();
-                          const inputs = devices.filter(d => d.kind === 'audioinput');
-                          const outputs = devices.filter(d => d.kind === 'audiooutput');
-                          setLocalAudioDevices({ inputs, outputs });
+                          setLocalAudioDevices(splitLocalAudioDevices(devices));
                         } catch (err) {
                           console.error("Failed to get mic permission:", err);
                         }
@@ -169,7 +167,7 @@ function AudioSettingsModal({
                 <select
                   value={localAudioSettings.inputDevice}
                   onFocus={() => navigator.mediaDevices.enumerateDevices().then(devices => {
-                    setLocalAudioDevices({ inputs: devices.filter(d => d.kind === 'audioinput'), outputs: devices.filter(d => d.kind === 'audiooutput') });
+                    setLocalAudioDevices(splitLocalAudioDevices(devices));
                   }).catch(console.error)}
                   onChange={(e) => {
                     const newSettings = { ...localAudioSettings, inputDevice: e.target.value };
@@ -194,7 +192,7 @@ function AudioSettingsModal({
                 <select
                   value={localAudioSettings.outputDevice}
                   onFocus={() => navigator.mediaDevices.enumerateDevices().then(devices => {
-                    setLocalAudioDevices({ inputs: devices.filter(d => d.kind === 'audioinput'), outputs: devices.filter(d => d.kind === 'audiooutput') });
+                    setLocalAudioDevices(splitLocalAudioDevices(devices));
                   }).catch(console.error)}
                   onChange={(e) => {
                     const newSettings = { ...localAudioSettings, outputDevice: e.target.value };
@@ -292,7 +290,7 @@ function AudioSettingsModal({
                     <select
                       value={localAudioSettings.wsjtxOutputDevice}
                       onFocus={() => navigator.mediaDevices.enumerateDevices().then(devices => {
-                        setLocalAudioDevices({ inputs: devices.filter(d => d.kind === 'audioinput'), outputs: devices.filter(d => d.kind === 'audiooutput') });
+                        setLocalAudioDevices(splitLocalAudioDevices(devices));
                       }).catch(console.error)}
                       onChange={(e) => {
                         const newSettings = { ...localAudioSettings, wsjtxOutputDevice: e.target.value };
