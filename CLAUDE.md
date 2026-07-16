@@ -19,7 +19,12 @@ RigControl Web (`v1.0.0`) is a full-stack web + Electron desktop application for
 npm run dev              # Start Express + Socket.io backend (tsx server.ts)
 npm run build            # Build Vite frontend to dist/
 npm run lint             # TypeScript type-check (tsc --noEmit)
-npm run test             # Run Vitest tests
+npm run test             # Run Vitest unit tests (jsdom, hardware-independent)
+npm run test:watch       # Vitest in watch mode
+npm run test:ui          # Vitest interactive UI
+npm run test:e2e         # Run Playwright e2e tests against a Dummy rigctld + synthetic UDP (hardware-independent)
+npm run test:e2e:ui      # Playwright interactive UI, for debugging e2e tests
+npm run test:hardware    # Run Playwright e2e tests requiring a real, USB-connected FT-710 (manual/local only, never CI)
 npm run clean            # Remove dist/, dist-electron/, build/
 npm run build:cw-helper      # Compile cw-key-helper.c for the current platform (scripts/build-cw-helper.mjs)
 npm run build:ft4222-reader  # Compile ft4222-scope-reader.c for the current platform (scripts/build-ft4222-reader.mjs)
@@ -32,16 +37,50 @@ npm run electron:build   # Full Electron production build (frontend + electron +
 
 There is no hot-reload for `server.ts` or any module under `server/` — restart manually after backend changes.
 
-### Pre-release: Linux Package Smoke Test
+## Testing
 
-Before tagging a release, run the Linux DEB/RPM smoke test to verify packages install cleanly and all shared libraries resolve on the minimum supported distros (Ubuntu 24.04, Fedora 39):
+Three layers, split by what they need and whether real hardware is required:
 
-```bash
-bash scripts/test-linux-packages.sh                          # build + test (slow, ~3 min)
-bash scripts/test-linux-packages.sh path/*.deb path/*.rpm    # test pre-built packages (fast)
-```
+- **Vitest unit tests** (`npm test`, jsdom environment) — pure logic only: hook reducers against a stub Socket.io client (`src/hooks/useSpectrum.test.ts`), server-side parsers (`server/rigComm.test.ts`). No real DOM canvas rendering, no real sockets — see `vitest.config.ts`. Server-only test files that don't need jsdom add a `// @vitest-environment node` docblock at the top.
+- **Playwright e2e, hardware-independent** (`npm run test:e2e`) — drives the real app in a real browser against a real, isolated server instance, using two techniques to avoid needing physical hardware:
+  - **Rig-status panels**: a real `rigctld` bound to Hamlib's built-in **Dummy** rig backend (model 1), not a hand-rolled fake — see `tests/fixtures/rigctld-dummy.ts`. This exercises the actual Hamlib protocol/parsing path end-to-end. Pilot: `tests/e2e/vfo-panel.spec.ts`.
+  - **Hamlib UDP spectrum**: `server/spectrum.ts`'s multicast listener trusts any correctly-shaped sender, so `tests/fixtures/synthetic-udp.ts` sends synthetic Hamlib-5.x-shaped JSON packets directly — zero production code changes needed. Pilot: `tests/e2e/spectrum-hamlib-panel.spec.ts`.
+- **Playwright e2e, hardware-dependent** (`npm run test:hardware`, separate `playwright.hardware.config.ts` + `tests/e2e-hardware/`) — requires a real, USB-connected FT-710 with `libft4222` installed. The FT4222 USB-SPI chain can't be meaningfully faked, so this drives the real hardware. Fails fast with a clear message (not a hang) if the reader can't open the device. **Deliberately excluded from CI** — no GitHub-hosted (or typical self-hosted) runner has a physical FT-710 attached.
 
-Requires `podman`. The script installs the DEB in an Ubuntu 24.04 container and the RPM in a Fedora 39 container, then checks: package install succeeds, `.desktop` file and icon are placed correctly, and `ldd` finds all shared libraries for every bundled binary (rigctld, cw-key-helper, ft4222-scope-reader, naudiodon/libportaudio, libopus-node, Electron).
+**Isolation from a real/running instance:** all e2e config is built around never touching a developer's real deployment — this matters because a real, currently-in-use instance (with a real radio attached) may already be running on this machine. `server.ts` accepts `RCW_DATA_DIR` and `RCW_PORT` env var overrides (both purely additive — production behavior is unchanged when unset) so the test webServer always runs on its own port (3177 for `test:e2e`, 3178 for `test:hardware`) against its own scratch `settings.json`/`users.json`/TLS certs, and `reuseExistingServer` is always `false` so Playwright never attaches to whatever's already listening. The synthetic-UDP spectrum test similarly uses a private multicast group/port (`239.255.42.99:24531`), not the app's default `224.0.0.1:4531`, since multicast traffic isn't scoped to one process and could otherwise leak into (or receive crosstalk from) a real deployment's real spectrum feed. All e2e specs share one server process for the run and that server owns exactly one rig connection, so `playwright.config.ts` pins `workers: 1` — running spec files in parallel lets two tests fight over the same connection.
+
+**Login/auth:** a fresh scratch `RCW_DATA_DIR` has no `users.json`, so the server seeds a default `ADMIN`/`admin` account with a forced password change on first login (see `server/auth.ts`). `tests/e2e/global-setup.ts` performs that login + forced change once and saves the resulting session as Playwright `storageState`, so individual spec files start already authenticated.
+
+**Backlog — remaining panels/subsystems, not yet covered, to be added incrementally as each is touched:**
+
+| Subsystem | Panel(s) | What its test would need |
+|---|---|---|
+| Remaining rig-status panels | `ControlsPanel`, `TabbedMeterPanel`, `RfLevelsPanel`, `ModeBwPanel`, `CommandConsolePanel` | Same Dummy-rigctld fixture as `VfoPanel`, extended to more `rig-status`/`*-capabilities` fields. `CommandConsolePanel` also needs raw extended-command passthrough coverage. |
+| Browser mic audio | `AudioFeedPanel` | Playwright's `--use-fake-device-for-media-stream` flag, plus asserting the Opus encode/decode round trip via `server/audio.ts`. |
+| Browser video | `VideoFeedPanel` | Playwright fake video device flags (`--use-file-for-fake-video-capture=<file>`), plus WebCodecs H.264 decode assertions. |
+| CW keyer | `useCWKeyer.ts` / `server/cw.ts` | Synthetic paddle timing against the iambic A/B state machine; likely needs fake timers. |
+| CW decoder | `CwDecodePanel` | Feed synthetic PCM Morse tone bursts into the GGMorse WASM pipeline via a fake audio buffer, assert decoded text. |
+| Web Audio spectrum | `SpectrumAudioPanel` | Fake `AnalyserNode` returning synthetic FFT bins — independent of rig hardware, one of the simpler remaining panels. |
+| Solar data | `SolarPanel` | Mock the server-cached hamqsl.com fetch in `server/solar.ts` with a canned response. |
+| Spots | `SpotsPanel`, `SpotComboPanel` | Playwright `page.route()` interception for the browser-side POTA/SOTA/WWFF fetches. |
+| MUF map | `MufMapPanel` | Mock the `prop.kc2g.com` fetch; likely needs canvas pixel assertions like `SpectrumHamlibPanel`. |
+| Auth/admin flows | login, admin panel | Dedicated spec covering password change, user CRUD, `auth:kicked`, token refresh — currently only exercised implicitly via `global-setup.ts`. |
+| WSJTX bridge | `useWsjtxBridge.ts`, `wsjtx-bridge.c` | Hardware-adjacent category like FT4222 — needs either a real WSJT-X instance or a synthetic bridge-protocol fixture. |
+
+### Pre-release Checklist
+
+Run all of these before tagging a release:
+
+1. **Automated test suite**: `npm run lint && npm run test && npm run test:e2e` — also runs automatically on every push/PR via `.github/workflows/test.yml` (signal only, not a hard gate — see that file's header comment for why).
+2. **FT4222 hardware test** (if an FT-710 is available): `npm run test:hardware`, radio connected via USB, nothing else using the device concurrently.
+3. **Linux Package Smoke Test**: verifies DEB/RPM packages install cleanly and all shared libraries resolve on the minimum supported distros (Ubuntu 24.04, Fedora 39):
+
+   ```bash
+   bash scripts/test-linux-packages.sh                          # build + test (slow, ~3 min)
+   bash scripts/test-linux-packages.sh path/*.deb path/*.rpm    # test pre-built packages (fast)
+   ```
+
+   Requires `podman`. The script installs the DEB in an Ubuntu 24.04 container and the RPM in a Fedora 39 container, then checks: package install succeeds, `.desktop` file and icon are placed correctly, and `ldd` finds all shared libraries for every bundled binary (rigctld, cw-key-helper, ft4222-scope-reader, naudiodon/libportaudio, libopus-node, Electron).
 
 ## Architecture
 

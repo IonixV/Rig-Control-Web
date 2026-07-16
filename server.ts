@@ -37,10 +37,10 @@ export async function shutdown(): Promise<void> {
 
 export async function startServer(appPath?: string, userDataPath?: string) {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.RCW_PORT) || 3000;
 
   const baseDir = appPath || process.cwd();
-  const dataDir = userDataPath || (process.env.NODE_ENV === "production" ? "/tmp" : process.cwd());
+  const dataDir = userDataPath || process.env.RCW_DATA_DIR || (process.env.NODE_ENV === "production" ? "/tmp" : process.cwd());
 
   const SETTINGS_FILE = path.join(dataDir, "settings.json");
   const RADIOS_FILE = path.join(baseDir, "radios.json");

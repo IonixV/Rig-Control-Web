@@ -13,3 +13,9 @@ auth.json
 audit.json
 rig-power-state.json
 settings.json
+tests/.rcw-test-data/
+tests/.auth/
+tests/.rcw-test-data-hardware/
+tests/.auth-hardware/
+playwright-report/
+test-results/

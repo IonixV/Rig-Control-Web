@@ -1,0 +1,99 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# This workflow is a signal only — it does not gate anything automatically.
+# Commits go straight to main (no required-PR-review flow), so GitHub
+# branch-protection "required status checks" wouldn't block a direct push
+# anyway. The real release gate is the manual pre-release checklist in
+# CLAUDE.md (this suite + the FT4222 hardware suite + the Linux packaging
+# smoke test), run by hand before tagging a release.
+#
+# Hardware-dependent tests (FT4222/FT-710) are intentionally NOT run here —
+# no CI runner has a physical FT-710 attached. See `npm run test:hardware`,
+# run manually/locally with the radio connected.
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install Linux system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libopus-dev
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npm run lint
+
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install Linux system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libopus-dev
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm test
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install Linux system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libopus-dev
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The e2e suite's rigctld-dummy fixture resolves the same bundled
+      # binary path production uses (bin/linux/rigctld) — build it from
+      # source here rather than an apt package, so it's guaranteed to
+      # include the Dummy backend the fixture depends on.
+      - name: Build rigctld
+        run: node scripts/build-rigctld.mjs
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run e2e tests
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
