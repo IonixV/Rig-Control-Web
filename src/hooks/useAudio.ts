@@ -31,6 +31,7 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, waterfallAc
     inputDevice: localStorage.getItem("local-audio-input") || "default",
     outputDevice: localStorage.getItem("local-audio-output") || "default",
     wsjtxOutputDevice: localStorage.getItem("local-audio-wsjtx-output") || "",
+    enhancementsEnabled: localStorage.getItem("local-audio-enhancements") !== "false",
   });
   const [inboundMuted, setInboundMuted] = useState(false);
   const [inboundVolume, setInboundVolume] = useState<number>(() => {
@@ -147,7 +148,7 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, waterfallAc
       stopMicCapture();
     }
     return () => stopMicCapture();
-  }, [audioStatus, audioSettings.outboundEnabled, localAudioSettings.inputDevice, localAudioReady]);
+  }, [audioStatus, audioSettings.outboundEnabled, localAudioSettings.inputDevice, localAudioSettings.enhancementsEnabled, localAudioReady]);
 
   // Socket event handlers
   useEffect(() => {
@@ -459,11 +460,13 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, waterfallAc
 
       const inputDevice = localAudioSettingsRef.current.inputDevice;
       const isPhoneDefault = !inputDevice || inputDevice === 'default';
+      const enhancementsEnabled = localAudioSettingsRef.current.enhancementsEnabled;
+      const enhancementFlags = { echoCancellation: enhancementsEnabled, noiseSuppression: enhancementsEnabled, autoGainControl: enhancementsEnabled };
       const specificConstraints = {
-        audio: { deviceId: { exact: inputDevice }, echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+        audio: { deviceId: { exact: inputDevice }, ...enhancementFlags }
       };
       const defaultConstraints = {
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+        audio: { ...enhancementFlags }
       };
 
       let stream: MediaStream;

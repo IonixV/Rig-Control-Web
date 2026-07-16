@@ -37,9 +37,9 @@ export interface AudioSettingsModalProps {
   setLocalAudioDevices: React.Dispatch<
     React.SetStateAction<{ inputs: MediaDeviceInfo[]; outputs: MediaDeviceInfo[] }>
   >;
-  localAudioSettings: { inputDevice: string; outputDevice: string; wsjtxOutputDevice: string };
+  localAudioSettings: { inputDevice: string; outputDevice: string; wsjtxOutputDevice: string; enhancementsEnabled: boolean };
   setLocalAudioSettings: React.Dispatch<
-    React.SetStateAction<{ inputDevice: string; outputDevice: string; wsjtxOutputDevice: string }>
+    React.SetStateAction<{ inputDevice: string; outputDevice: string; wsjtxOutputDevice: string; enhancementsEnabled: boolean }>
   >;
   inboundVolume: number;
   setInboundVolume: React.Dispatch<React.SetStateAction<number>>;
@@ -232,9 +232,25 @@ function AudioSettingsModal({
                 </div>
               </div>
 
-              <p className="text-[0.5rem] uppercase text-[#4a4b4e] font-bold">
-                Device changes apply immediately — no restart needed
-              </p>
+              <div className="flex items-center justify-between pt-1">
+                <label className="text-[0.625rem] uppercase text-[#4a4b4e] font-bold">Audio Enhancements (AGC / Noise Suppression / Echo Cancellation)</label>
+                <button
+                  onClick={() => {
+                    const enabled = !localAudioSettings.enhancementsEnabled;
+                    setLocalAudioSettings(prev => ({ ...prev, enhancementsEnabled: enabled }));
+                    localStorage.setItem("local-audio-enhancements", String(enabled));
+                  }}
+                  className={cn(
+                    "relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0",
+                    localAudioSettings.enhancementsEnabled ? "bg-blue-500" : "bg-[#2a2b2e]"
+                  )}
+                >
+                  <span className={cn(
+                    "inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform",
+                    localAudioSettings.enhancementsEnabled ? "translate-x-[18px]" : "translate-x-[3px]"
+                  )} />
+                </button>
+              </div>
             </div>
 
             {/* WSJTX Bridge Section */}

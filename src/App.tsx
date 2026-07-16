@@ -478,6 +478,22 @@ export default function App() {
     outboundMuted: boolean;
   } | null>(null);
   const wsjtxPendingUnmuteRef = useRef(false);
+  const preBridgeEnhancementsRef = useRef<boolean | null>(null);
+
+  // Digital-mode audio (FT8/PSK/etc tones) is corrupted by voice-oriented DSP —
+  // force Audio Enhancements off for the duration of the bridge session, restore after.
+  useEffect(() => {
+    if (bridgeEnabled) {
+      preBridgeEnhancementsRef.current = localAudioSettings.enhancementsEnabled;
+      setLocalAudioSettings(prev => ({ ...prev, enhancementsEnabled: false }));
+      localStorage.setItem("local-audio-enhancements", "false");
+    } else if (preBridgeEnhancementsRef.current !== null) {
+      const restored = preBridgeEnhancementsRef.current;
+      setLocalAudioSettings(prev => ({ ...prev, enhancementsEnabled: restored }));
+      localStorage.setItem("local-audio-enhancements", String(restored));
+      preBridgeEnhancementsRef.current = null;
+    }
+  }, [bridgeEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!bridgeConnected) {
