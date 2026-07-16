@@ -1,6 +1,6 @@
-# Tier 1 Unit Test Plan — Pure Functions
+# Unit Test Plan — Tiers 1–2
 
-**Status:** Draft for review. No code changes made yet.
+**Status:** Tier 1 (pure functions) implemented and committed. Tier 2 (hook-level tests) below is a draft for review — no code changes made yet for Tier 2.
 
 ## Context
 
@@ -155,8 +155,111 @@ Test files are co-located with source, matching the existing pattern (`server/ri
 - `npm run lint` passes (the refactors must not change any call-site behavior)
 - Spot-check that extracted/exported functions are actually called from their original call sites unchanged (no accidental behavior drift), by re-running `npm run test:e2e` (the existing VfoPanel/SpectrumHamlibPanel specs exercise several of the modules being touched — `rigComm.ts`, `App.tsx` indirectly — as a regression check)
 
-## Deferred (Tiers 2–4, not in this pass)
+---
 
-- **Tier 2** — hook-level tests via stub socket (same pattern as `useSpectrum.test.ts`): `useAuth`'s state machine, `useWsjtxBridge`'s `handleCommand`, `useDiagnostics`'s log-window pruning, `usePotaSpots`'s filter/dedupe/sort pipeline
+# Tier 2 Plan — Hook-Level Tests via Stub Socket
+
+## Scope
+
+Four hooks with real, non-trivial logic driven by Socket.io events (and in one case a raw `WebSocket`), tested the same way `src/hooks/useSpectrum.test.ts` already does: a minimal `StubSocket` class (`on`/`off`/`emit` only — no real network), `renderHook`/`act` from `@testing-library/react`, drive events in, assert on the hook's returned state. Zero new test infrastructure.
+
+`useAuth.ts` and `useDiagnostics.ts` need no source changes — every code path is already exercised through the hook's public return value. `useWsjtxBridge.ts` needs one small export (`handleCommand`, currently module-private). `usePotaSpots.tsx` is a different shape of problem — see its own section below, which ends in a decision the plan needs from you before scoping test cases.
+
+## `useAuth.ts` — new `src/hooks/useAuth.test.ts` (extends the existing pure-helper test file)
+
+The state machine (`authState`: `unknown`/`authenticated`/`unauthenticated`/`must-change-password`) is fully driven by five socket events plus a `connect` handler, and three callbacks (`login`, `logout`, `onPasswordChanged`). Verified against the current source (`src/hooks/useAuth.ts:27-174`):
+
+| Behavior | Test case |
+|---|---|
+| Initial state | `authState: 'unknown'`, `currentUser: null`, `mustChangePassword: false`, `loginError: ''`, `retryAfter: 0` |
+| `auth:required` | → `authState: 'unauthenticated'`, `currentUser: null` |
+| `auth:token-refreshed`, `mustChangePassword: true` | → stores `auth-token` in localStorage, sets `currentUser` (when `callsign`/`role` present), `mustChangePassword: true`, `authState: 'must-change-password'` |
+| `auth:token-refreshed`, `mustChangePassword` false/absent | → `authState: 'authenticated'` |
+| `auth:token-refreshed` without `callsign`/`role` | → `currentUser` stays `null`, but `authState` still transitions |
+| `auth:result` `{ok:true, ...}` with `mustChangePassword` | → same transitions as above, plus clears `loginError`/`retryAfter` to `''`/`0` |
+| `auth:result` `{ok:false, error, retryAfter}` | → `loginError` set to `error` (or `'Login failed'` if `error` omitted), `retryAfter` set |
+| `auth:kicked` | → removes `auth-token` from localStorage, `authState: 'unauthenticated'`, `currentUser: null`, `mustChangePassword: false` |
+| `connect` (first time) | → no state change (guarded by an internal `firstConnect` flag — this is the initial mount's own connect, not a reconnect) |
+| `connect` (subsequent — i.e. a reconnect) | → resets `authState: 'unknown'`, `currentUser: null`, *regardless* of what state preceded it. Test: drive to `'authenticated'` via `auth:token-refreshed` first, then emit `connect` again |
+| `login(callsign, password)` | → emits `auth:login` with `{callsign, password}`; clears `loginError` first |
+| `logout()` | → emits `auth:logout`, removes `auth-token`, resets to `unauthenticated`/`null`/`false` |
+| `onPasswordChanged()` | → `mustChangePassword: false`, `authState: 'authenticated'` |
+
+**Not in scope for this pass:** `auth:preferences-cleared` — its handler calls `window.location.reload()`, which jsdom doesn't implement by default (throws unless stubbed). Testable with `Object.defineProperty(window, 'location', { value: { reload: vi.fn() }, writable: true })`, but it's a real navigation side effect rather than state-machine logic — worth a follow-up if this handler's behavior needs to change, not essential to prove the state machine works.
+
+## `useDiagnostics.ts` — new `src/hooks/useDiagnostics.test.ts`
+
+Client-side mirror of `server/diagnostics.ts` (already covered in Tier 1) — same rolling-window prune logic, this time triggered by a `setInterval(pruneOld, 30_000)` rather than on every push. Verified against `src/hooks/useDiagnostics.ts:25-103`.
+
+| Behavior | Test case |
+|---|---|
+| Initial state | `logs: []`, `flags`: all 8 keys `false` |
+| `diagnostics-log` event | → appends lines to `logs`, capped at `MAX_LOGS = 5000` |
+| `diagnostics-log-snapshot` event | → *replaces* `logs` entirely (not appended), also capped at 5000 |
+| `debug-flags` event | → `flags` set exactly to the received object |
+| `requestSnapshot()` | → emits `get-diagnostics-log` |
+| `toggleFlag(key)` | → emits `set-debug-flag` with `{ key, value: !flags[key] }` |
+| `enableAll()` | → emits `set-debug-flag` with `value: true` for every currently-`false` flag; does **not** re-emit for flags already `true` |
+| `clearView()` | → resets `logs` to `[]` |
+| 30s-interval pruning | → push a log line, advance fake time past `MAX_AGE_MS` (10 min) *and* at least one 30s interval tick, assert the line is gone. Needs `vi.useFakeTimers()` + `act(() => vi.advanceTimersByTime(...))` since the prune fires inside a `setInterval` callback that calls `setLogs` |
+
+**Gotcha:** `logEndRef.current` stays `null` under `renderHook` (no real DOM attachment), so the `scrollIntoView` effect's null-guard skips harmlessly — no mocking needed there, same as the existing pattern already relies on implicitly.
+
+## `useWsjtxBridge.ts` — new `src/hooks/useWsjtxBridge.test.ts`
+
+**One small export needed:** `handleCommand(ws, socket, msg)` (`src/hooks/useWsjtxBridge.ts:177`) is currently module-private. Add `export` — no behavior change, same class of refactor as Tier 1's `readCollapsed`/`ts()`.
+
+This function is the WSJTX→app command translator; the rest of the hook (WebSocket connect/reconnect lifecycle, `localStorage` persistence) is integration-shaped and not a good unit-test target — `handleCommand` alone is where the real per-command logic lives. Verified against `src/hooks/useWsjtxBridge.ts:177-259`:
+
+| `cmd` | Test case |
+|---|---|
+| `set-frequency` | emits `set-frequency` with `String(args)`; `sendResult(true)` |
+| `set-mode`, valid `{mode, bandwidth}` | emits `set-mode` with `{mode, bandwidth}`; bandwidth defaults to `"-1"` when falsy/omitted |
+| `set-mode`, invalid (not an object, or no `mode`) | `sendResult(false, "invalid args")`; no `set-mode` emit |
+| `set-ptt` | `args` coerced via `Number(args) > 0` — test `1`→true, `0`→false, `"1"` (string)→true; emits `set-ptt` with the coerced boolean; `sendResult(true)` fires immediately regardless (documented fire-and-forget behavior, see CLAUDE.md's WSJTX known-issues note) |
+| `set-vfo` | emits `set-vfo` with `String(args)` |
+| `set-split-vfo`, valid `{split, vfo}` | emits `set-split-vfo` with `{split: args.split ? 1 : 0, txVFO: args.vfo \|\| "VFOB"}` — test `vfo` omitted → defaults to `"VFOB"`, `split` truthy/falsy → `1`/`0` |
+| `set-split-vfo`, invalid (not an object) | `sendResult(false, "invalid args")` |
+| `send-raw` | emits `send-raw` with `String(args)` |
+| unknown command | `sendResult(false, "unknown command")`; no socket emit |
+| `sendResult`'s own gating | when the fake `ws.readyState !== WebSocket.OPEN`, `ws.send` is **not** called even though `sendResult` still runs |
+
+Fake `ws` is a plain object (`{ readyState: WebSocket.OPEN, send: vi.fn() }`) — confirmed jsdom exposes a real global `WebSocket.OPEN === 1`, so this needs no additional stubbing.
+
+## `usePotaSpots.tsx` — extract and test `inferTuneMode` only
+
+The dedupe/filter/sort/pin pipelines (repeated three times nearly verbatim for POTA/SOTA/WWFF) are **not reachable from the hook's public API** — `potaSpots`/`sotaSpots`/`wwffSpots` are only ever populated by a real `fetch()` inside a `useEffect`, with no exposed setter, and the three copies differ enough in timestamp handling and field names (POTA/WWFF need a `+'Z'`-suffix or `*1000` scaling hack SOTA doesn't) that unifying them would be a real production-code refactor, not a mechanical extraction. **Decision: leave the three filter pipelines untested this pass**, revisited only when one of the three spot panels is touched for other reasons — consistent with adding coverage incrementally rather than force-fitting a bigger refactor into a test-coverage pass.
+
+The one piece that **is** identical across all three and cheap to extract: the tune-to-spot mode inference inside `handleTuneToSpot`/`handleTuneToSotaSpot`/`handleTuneToWwffSpot` (`src/hooks/usePotaSpots.tsx:424-487`) — each does the exact same SSB→USB/LSB, CW→CW/CWR, FT8/FT4→PKTUSB/USB mapping, differing only in how each spot type's frequency field gets converted to MHz beforehand. Extract into:
+
+```ts
+export function inferTuneMode(mode: string, freqMhz: number, availableModes: string[]): string {
+  if (mode === 'SSB') return freqMhz >= 10 ? 'USB' : 'LSB';
+  if (mode === 'CW') return freqMhz >= 10 ? 'CW' : 'CWR';
+  if (mode === 'FT8' || mode === 'FT4') return availableModes.includes('PKTUSB') ? 'PKTUSB' : 'USB';
+  return mode;
+}
+```
+
+Each of the three handlers keeps computing its own `freqMhz` (already-correct per-spot-type logic) and calls `inferTuneMode(spot.mode, freqMhz, availableModes)` in place of its inlined `if` chain — no behavior change.
+
+New `src/hooks/usePotaSpots.test.ts`:
+
+| Test case |
+|---|
+| `SSB` at/above 10 MHz → `USB`; below 10 MHz → `LSB` (boundary: exactly 10 MHz → `USB`) |
+| `CW` at/above 10 MHz → `CW`; below 10 MHz → `CWR` |
+| `FT8`/`FT4` with `PKTUSB` in `availableModes` → `PKTUSB` |
+| `FT8`/`FT4` without `PKTUSB` in `availableModes` → `USB` |
+| Any other mode (e.g. already-native `USB`, or `RTTY`) → passed through unchanged |
+
+## Verification (Tier 2)
+
+- `npm run test` passes with all new files
+- `npm run lint` passes (the `handleCommand` export is the only source change)
+- `npm run test:e2e` re-run as a regression check (none of the touched files are on the VfoPanel/SpectrumHamlibPanel e2e paths, but cheap to confirm)
+
+## Deferred (Tiers 3–4, not in this pass)
+
 - **Tier 3** — e2e panel tests extending the existing Dummy-rigctld fixture: `ControlsPanel`, `TabbedMeterPanel`, `RfLevelsPanel`, `ModeBwPanel`, `CommandConsolePanel`
 - **Tier 4** — e2e tests needing new fixtures: `SolarPanel`/`SpotsPanel`/`MufMapPanel` (fetch interception), `AudioFeedPanel`/`VideoFeedPanel` (Playwright fake-device flags), auth/admin flows, CW keyer/decoder, WSJTX bridge

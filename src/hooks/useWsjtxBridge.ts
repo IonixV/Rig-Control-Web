@@ -174,7 +174,7 @@ export function useWsjtxBridge({ socket, rigStatus }: UseWsjtxBridgeOptions) {
   };
 }
 
-function handleCommand(ws: WebSocket, socket: Socket, msg: { cmd: string; args: any; id: number }) {
+export function handleCommand(ws: WebSocket, socket: Socket, msg: { cmd: string; args: any; id: number }) {
   const { cmd, args, id } = msg;
   const t0 = performance.now();
 

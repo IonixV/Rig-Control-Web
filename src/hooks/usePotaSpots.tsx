@@ -22,6 +22,17 @@ interface UsePotaSpotsOptions {
 
 const ALL_SPOT_MODES = ['SSB', 'CW', 'FT8', 'FT4'];
 
+// Shared by handleTuneToSpot/handleTuneToSotaSpot/handleTuneToWwffSpot — the
+// three differ only in how each spot type's frequency field is converted to
+// MHz beforehand; the mode-mapping rule itself is identical across POTA,
+// SOTA, and WWFF.
+export function inferTuneMode(mode: string, freqMhz: number, availableModes: string[]): string {
+  if (mode === 'SSB') return freqMhz >= 10 ? 'USB' : 'LSB';
+  if (mode === 'CW') return freqMhz >= 10 ? 'CW' : 'CWR';
+  if (mode === 'FT8' || mode === 'FT4') return availableModes.includes('PKTUSB') ? 'PKTUSB' : 'USB';
+  return mode;
+}
+
 export function usePotaSpots({
   socket,
   connected,
@@ -424,10 +435,7 @@ export function usePotaSpots({
   const handleTuneToSpot = (spot: PotaSpot) => {
     if (!connected) return;
     const freqHz = String(Math.round(spot.frequency * 1000));
-    let mode = spot.mode;
-    if (mode === 'SSB') mode = (spot.frequency / 1000) >= 10 ? 'USB' : 'LSB';
-    if (mode === 'CW')  mode = (spot.frequency / 1000) >= 10 ? 'CW'  : 'CWR';
-    if (mode === 'FT8' || mode === 'FT4') mode = availableModes.includes('PKTUSB') ? 'PKTUSB' : 'USB';
+    const mode = inferTuneMode(spot.mode, spot.frequency / 1000, availableModes);
     const modeChanged = mode !== status.mode;
     skipPollsCount.current = 1;
     setStatus(prev => ({ ...prev, frequency: freqHz, mode }));
@@ -450,10 +458,7 @@ export function usePotaSpots({
     if (!connected) return;
     const freqMhz = parseFloat(spot.frequency);
     const freqHz = String(Math.round(freqMhz * 1_000_000));
-    let mode = spot.mode;
-    if (mode === 'SSB') mode = freqMhz >= 10 ? 'USB' : 'LSB';
-    if (mode === 'CW')  mode = freqMhz >= 10 ? 'CW'  : 'CWR';
-    if (mode === 'FT8' || mode === 'FT4') mode = availableModes.includes('PKTUSB') ? 'PKTUSB' : 'USB';
+    const mode = inferTuneMode(spot.mode, freqMhz, availableModes);
     const modeChanged = mode !== status.mode;
     skipPollsCount.current = 1;
     setStatus(prev => ({ ...prev, frequency: freqHz, mode }));
@@ -476,10 +481,7 @@ export function usePotaSpots({
     if (!connected) return;
     const freqMhz = spot.frequency_khz / 1000;
     const freqHz = String(Math.round(spot.frequency_khz * 1000));
-    let mode = spot.mode;
-    if (mode === 'SSB') mode = freqMhz >= 10 ? 'USB' : 'LSB';
-    if (mode === 'CW')  mode = freqMhz >= 10 ? 'CW'  : 'CWR';
-    if (mode === 'FT8' || mode === 'FT4') mode = availableModes.includes('PKTUSB') ? 'PKTUSB' : 'USB';
+    const mode = inferTuneMode(spot.mode, freqMhz, availableModes);
     const modeChanged = mode !== status.mode;
     skipPollsCount.current = 1;
     setStatus(prev => ({ ...prev, frequency: freqHz, mode }));
