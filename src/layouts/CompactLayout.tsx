@@ -52,7 +52,7 @@ const COMPACT_PANEL_TYPES: PanelType[] = [
   'spectrum_hamlib', 'spectrum_audio',
 ];
 
-type CompactSegment =
+export type CompactSegment =
   | { type: 'full'; item: GridItem }
   | { type: 'cols'; items: GridItem[] };
 
@@ -60,7 +60,7 @@ type CompactSegment =
 // the relative row order of items within each cols segment. Used to let
 // full-width panels swap places with the cols block (or another full-width
 // panel) so multiple full-width panels can stack at the top or bottom.
-function renumberSegments(segments: CompactSegment[]): Array<{ i: string; x: number; y: number; w: number; h: number }> {
+export function renumberSegments(segments: CompactSegment[]): Array<{ i: string; x: number; y: number; w: number; h: number }> {
   const updates: Array<{ i: string; x: number; y: number; w: number; h: number }> = [];
   let row = 0;
   for (const seg of segments) {

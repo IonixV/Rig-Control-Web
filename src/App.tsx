@@ -38,25 +38,63 @@ import { useWsjtxBridge } from "./hooks/useWsjtxBridge";
 import { useConsoleCapture } from "./hooks/useConsoleCapture";
 import type { PanelType, PanelAddConfig } from "./types/layout";
 
+// Reconciles a stored backend-url against the page's current origin.
+// "protocol-mismatch" self-corrects a stale http<->https value for the same
+// host/port (e.g. after the app switched to HTTPS); "invalid" covers a
+// stored value that isn't parseable as a URL at all. Pure decision logic —
+// the caller is responsible for the localStorage write and the console
+// log/warn that accompany each correction.
+export function resolveBackendUrl(
+  stored: string | null,
+  currentOrigin: string,
+): { url: string; reason: "none" | "protocol-mismatch" | "invalid" } {
+  if (!stored) return { url: currentOrigin, reason: "none" };
+  try {
+    const storedUrl = new URL(stored);
+    const currentUrl = new URL(currentOrigin);
+    if (
+      storedUrl.hostname === currentUrl.hostname &&
+      storedUrl.port === currentUrl.port &&
+      storedUrl.protocol !== currentUrl.protocol
+    ) {
+      return { url: currentOrigin, reason: "protocol-mismatch" };
+    }
+  } catch {
+    return { url: currentOrigin, reason: "invalid" };
+  }
+  return { url: stored, reason: "none" };
+}
+
+export function formatPreampLabel(preamp: number, compact: boolean): string {
+  if (preamp === 0) return compact ? "P.AMP" : "OFF";
+  return `${preamp}dB`;
+}
+
+export function formatAttenuatorLabel(attenuation: number, compact: boolean): string {
+  if (attenuation === 0) return compact ? "ATT" : "OFF";
+  return `${attenuation}dB`;
+}
+
+export function formatAgcLabel(agc: number, agcLevels: string[]): string {
+  if (agcLevels.length === 0) return "OFF";
+  const parsed = agcLevels.map(l => { const p = l.split('='); return { value: parseInt(p[0]), label: p[1] }; });
+  const current = parsed.find(p => p.value === agc);
+  return current ? current.label : (agc === 0 ? "OFF" : agc.toString());
+}
+
 export default function App() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [backendUrl, setBackendUrl] = useState(() => {
     const stored = localStorage.getItem("backend-url");
-    if (!stored) return window.location.origin;
-    try {
-      const storedUrl = new URL(stored);
-      const currentUrl = new URL(window.location.origin);
-      if (storedUrl.hostname === currentUrl.hostname && storedUrl.port === currentUrl.port && storedUrl.protocol !== currentUrl.protocol) {
-        console.log(`[INIT] Correcting stale backend-url: ${stored} → ${window.location.origin}`);
-        localStorage.setItem("backend-url", window.location.origin);
-        return window.location.origin;
-      }
-    } catch (_) {
+    const { url, reason } = resolveBackendUrl(stored, window.location.origin);
+    if (reason === "protocol-mismatch") {
+      console.log(`[INIT] Correcting stale backend-url: ${stored} → ${url}`);
+      localStorage.setItem("backend-url", url);
+    } else if (reason === "invalid") {
       console.warn("[INIT] Invalid backend-url in storage, resetting to current origin.");
-      localStorage.setItem("backend-url", window.location.origin);
-      return window.location.origin;
+      localStorage.setItem("backend-url", url);
     }
-    return stored;
+    return url;
   });
 
   const clientId = useMemo(() => {
@@ -453,22 +491,20 @@ export default function App() {
   }, [socket, isCompact, activeMeter, status?.ptt]);
 
   // ── Label helpers (depend on isCompact/isPhone layout state) ─────────────
-  const getPreampLabel = useCallback(() => {
-    if (status.preamp === 0) return (isCompact || isPhone) ? "P.AMP" : "OFF";
-    return `${status.preamp}dB`;
-  }, [status.preamp, isCompact, isPhone]);
+  const getPreampLabel = useCallback(
+    () => formatPreampLabel(status.preamp, isCompact || isPhone),
+    [status.preamp, isCompact, isPhone]
+  );
 
-  const getAttenuatorLabel = useCallback(() => {
-    if (status.attenuation === 0) return (isCompact || isPhone) ? "ATT" : "OFF";
-    return `${status.attenuation}dB`;
-  }, [status.attenuation, isCompact, isPhone]);
+  const getAttenuatorLabel = useCallback(
+    () => formatAttenuatorLabel(status.attenuation, isCompact || isPhone),
+    [status.attenuation, isCompact, isPhone]
+  );
 
-  const getAgcLabel = useCallback(() => {
-    if (agcLevels.length === 0) return "OFF";
-    const parsed = agcLevels.map(l => { const p = l.split('='); return { value: parseInt(p[0]), label: p[1] }; });
-    const current = parsed.find(p => p.value === status.agc);
-    return current ? current.label : (status.agc === 0 ? "OFF" : status.agc.toString());
-  }, [status.agc, agcLevels]);
+  const getAgcLabel = useCallback(
+    () => formatAgcLabel(status.agc, agcLevels),
+    [status.agc, agcLevels]
+  );
 
   // ── WSJTX bridge auto-setup ───────────────────────────────────────────────
   const [wsjtxAutoSetupActive, setWsjtxAutoSetupActive] = useState(false);

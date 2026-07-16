@@ -44,7 +44,7 @@ interface Props {
   callsign: string;
 }
 
-function formatUptime(ms: number): string {
+export function formatUptime(ms: number): string {
   const s = Math.floor(ms / 1000);
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
@@ -54,7 +54,7 @@ function formatUptime(ms: number): string {
   return `${sec}s`;
 }
 
-function formatDuration(ms: number): string {
+export function formatDuration(ms: number): string {
   return formatUptime(ms);
 }
 

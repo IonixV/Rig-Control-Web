@@ -1,6 +1,6 @@
 import { useState, useEffect, useLayoutEffect } from "react";
 
-function readCollapsed(
+export function readCollapsed(
   ns: (key: string) => string,
   key: string,
   legacyKey: string | null,

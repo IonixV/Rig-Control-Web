@@ -20,10 +20,20 @@ const FLAG_LABELS: { key: keyof DebugFlags; label: string }[] = [
   { key: "wsjtx", label: "WSJTX" },
 ];
 
-function buildFilename(): string {
+export function buildFilename(): string {
   const d = new Date();
   const pad = (n: number) => n.toString().padStart(2, "0");
   return `rigcontrol-web-diagnostics-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.txt`;
+}
+
+export function buildLogContent(logs: string[]): string {
+  const header = [
+    "RigControl Web Diagnostics",
+    `Saved: ${new Date().toISOString()}`,
+    `Origin: ${window.electron?.isElectron ? "electron" : "browser"} (${navigator.userAgent})`,
+    "",
+  ].join("\n");
+  return header + logs.join("\n") + "\n";
 }
 
 export default function DiagnosticsTab({ socket }: Props) {
@@ -36,19 +46,9 @@ export default function DiagnosticsTab({ socket }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket]);
 
-  const buildLogContent = () => {
-    const header = [
-      "RigControl Web Diagnostics",
-      `Saved: ${new Date().toISOString()}`,
-      `Origin: ${window.electron?.isElectron ? "electron" : "browser"} (${navigator.userAgent})`,
-      "",
-    ].join("\n");
-    return header + logs.join("\n") + "\n";
-  };
-
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(buildLogContent());
+      await navigator.clipboard.writeText(buildLogContent(logs));
       setCopyStatus("copied");
     } catch {
       setCopyStatus("error");
@@ -57,7 +57,7 @@ export default function DiagnosticsTab({ socket }: Props) {
   };
 
   const handleSave = async () => {
-    const content = buildLogContent();
+    const content = buildLogContent(logs);
     const filename = buildFilename();
     try {
       if (window.electron?.isElectron && window.electron.saveTextFile) {

@@ -24,26 +24,26 @@ const VHF_LOC: Record<string, string> = {
 
 const HF_ORDER = ["80m-40m", "30m-20m", "17m-15m", "12m-10m"];
 
-function sfiColor(v: number): string {
+export function sfiColor(v: number): string {
   if (v >= 150) return "text-emerald-400";
   if (v >= 120) return "text-amber-400";
   return "text-red-400";
 }
 
-function aColor(v: number): string {
+export function aColor(v: number): string {
   if (v < 20) return "text-emerald-400";
   if (v < 30) return "text-amber-400";
   if (v < 50) return "text-red-400";
   return "text-purple-400";
 }
 
-function kColor(v: number): string {
+export function kColor(v: number): string {
   if (v < 4) return "text-emerald-400";
   if (v < 5) return "text-amber-400";
   return "text-red-400";
 }
 
-function geomagColor(s: string): string {
+export function geomagColor(s: string): string {
   const lc = s.toLowerCase();
   if (lc === "quiet" || lc === "very quiet") return "text-emerald-400";
   if (lc === "unsettled" || lc === "active") return "text-amber-400";

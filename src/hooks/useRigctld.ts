@@ -1,8 +1,21 @@
 import { useState, useEffect, useRef } from "react";
 import { Socket } from "socket.io-client";
+import type { RigctldSettings } from "../types";
 
 interface UseRigctldOptions {
   socket: Socket | null;
+}
+
+export function isRigctldSettingsValid(settings: RigctldSettings): boolean {
+  return !!(settings.rigNumber &&
+    settings.serialPort &&
+    settings.portNumber &&
+    settings.ipAddress &&
+    settings.serialPortSpeed);
+}
+
+export function dedupeRadiosById<T extends { id: string | number }>(list: T[]): T[] {
+  return Array.from(new Map(list.map((r) => [r.id, r])).values());
 }
 
 export function useRigctld({ socket }: UseRigctldOptions) {
@@ -61,8 +74,7 @@ export function useRigctld({ socket }: UseRigctldOptions) {
     };
 
     const onRadiosList = (list: any) => {
-      const unique = Array.from(new Map(list.map((r: any) => [r.id, r])).values()) as any[];
-      setRadios(unique);
+      setRadios(dedupeRadiosById(list));
     };
 
     const onRigctldStatus = (data: any) => {
@@ -157,12 +169,7 @@ export function useRigctld({ socket }: UseRigctldOptions) {
   }, [rigctldLogs]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-  const isSettingsValid = () =>
-    !!(rigctldSettings.rigNumber &&
-      rigctldSettings.serialPort &&
-      rigctldSettings.portNumber &&
-      rigctldSettings.ipAddress &&
-      rigctldSettings.serialPortSpeed);
+  const isSettingsValid = () => isRigctldSettingsValid(rigctldSettings);
 
   return {
     // Settings & process state

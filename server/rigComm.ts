@@ -11,7 +11,7 @@ import { startRigctld } from "./rigctld.ts";
 // "Main"/"Sub" rather than "VFOA"/"VFOB". The rest of this app (and the frontend) only ever
 // compares against the literal "VFOA"/"VFOB" strings, so normalize here at the point rigctld
 // responses are ingested.
-function normalizeVfoName(raw: string): string {
+export function normalizeVfoName(raw: string): string {
   const trimmed = raw.trim();
   if (trimmed === "Main") return "VFOA";
   if (trimmed === "Sub") return "VFOB";

@@ -1,6 +1,25 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { formatExtendedCommand, parseExtendedResponse } from './rigComm.ts';
+import { formatExtendedCommand, normalizeVfoName, parseExtendedResponse, resetRigState } from './rigComm.ts';
+import { createInitialContext } from './context.ts';
+
+describe('normalizeVfoName', () => {
+  it('maps Main/Sub to VFOA/VFOB', () => {
+    expect(normalizeVfoName('Main')).toBe('VFOA');
+    expect(normalizeVfoName('Sub')).toBe('VFOB');
+  });
+
+  it('passes through already-normalized or unrecognized names', () => {
+    expect(normalizeVfoName('VFOA')).toBe('VFOA');
+    expect(normalizeVfoName('VFOB')).toBe('VFOB');
+    expect(normalizeVfoName('Other')).toBe('Other');
+  });
+
+  it('trims whitespace before comparing', () => {
+    expect(normalizeVfoName('  Main  ')).toBe('VFOA');
+    expect(normalizeVfoName('  Sub\n')).toBe('VFOB');
+  });
+});
 
 describe('formatExtendedCommand', () => {
   it('prefixes single-letter short-form commands with +', () => {
@@ -48,5 +67,60 @@ describe('parseExtendedResponse', () => {
   it('passes through lines with no colon label as-is', () => {
     const resp = 'dump_state:\nplain line\nRPRT 0';
     expect(parseExtendedResponse(resp)).toBe('plain line');
+  });
+});
+
+describe('resetRigState', () => {
+  it('resets power/capability flags and lastStatus to their documented defaults', () => {
+    const ctx = createInitialContext({} as any, '/base', '/data');
+
+    // Dirty the fields resetRigState is responsible for clearing.
+    ctx.vfoSupported = false;
+    ctx.powerSupported = true;
+    ctx.powerState = 'off';
+    ctx.powerOpInProgress = true;
+    ctx.lastPowerCheck = 123456;
+    ctx.powerOffProbeFailureCount = 3;
+    ctx.pendingCapabilityProbe = true;
+    ctx.knownPoweredOff = true;
+    ctx.lastStatus = { ...ctx.lastStatus, frequency: '7074000', ptt: true, mode: 'CW' };
+
+    resetRigState(ctx);
+
+    expect(ctx.vfoSupported).toBe(true);
+    expect(ctx.powerSupported).toBe(false);
+    expect(ctx.powerState).toBe('unknown');
+    expect(ctx.powerOpInProgress).toBe(false);
+    expect(ctx.lastPowerCheck).toBe(0);
+    expect(ctx.powerOffProbeFailureCount).toBe(0);
+    expect(ctx.pendingCapabilityProbe).toBe(false);
+    expect(ctx.knownPoweredOff).toBe(false);
+    expect(ctx.lastStatus).toEqual({
+      frequency: '14074000',
+      mode: 'USB',
+      bandwidth: '2400',
+      ptt: false,
+      smeter: -54,
+      swr: 1.0,
+      alc: 0,
+      powerMeter: 0,
+      rfpower: 0.5,
+      vdd: 13.8,
+      vfo: 'VFOA',
+      isSplit: false,
+      txVFO: 'VFOB',
+      rfLevel: 0,
+      agc: 6,
+      attenuation: 0,
+      preamp: 0,
+      nb: false,
+      nbLevel: 0,
+      nr: false,
+      nrLevel: 8 / 15,
+      anf: false,
+      tuner: false,
+      powerState: 'unknown',
+      powerPending: false,
+    });
   });
 });

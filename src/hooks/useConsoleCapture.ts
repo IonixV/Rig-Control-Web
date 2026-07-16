@@ -1,13 +1,13 @@
 import { useEffect } from "react";
 import type { Socket } from "socket.io-client";
 
-function ts(): string {
+export function ts(): string {
   const d = new Date();
   const p = (n: number, len = 2) => n.toString().padStart(len, "0");
   return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${p(d.getMilliseconds(), 3)}`;
 }
 
-function formatArg(a: unknown): string {
+export function formatArg(a: unknown): string {
   if (typeof a === "string") return a;
   if (a instanceof Error) return `${a.name}: ${a.message}`;
   try {

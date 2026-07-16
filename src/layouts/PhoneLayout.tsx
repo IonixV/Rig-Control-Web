@@ -239,6 +239,25 @@ export interface PhoneLayoutProps {
   gridCallbacks?: GridLayoutCallbacks;
 }
 
+// Computes the two updated {i, x, y, w, h} entries produced by swapping
+// `item` with its adjacent neighbor (by sorted y) in `direction`. Returns
+// null at either boundary — first item can't move up, last can't move down.
+export function computeSwappedPositions(
+  item: GridItem,
+  direction: 'up' | 'down',
+  idx: number,
+  visibleItems: GridItem[],
+): Array<{ i: string; x: number; y: number; w: number; h: number }> | null {
+  const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+  if (targetIdx < 0 || targetIdx >= visibleItems.length) return null;
+  const a = item;
+  const b = visibleItems[targetIdx];
+  return [
+    { i: a.i, x: a.x, y: b.y, w: a.w, h: a.h },
+    { i: b.i, x: b.x, y: a.y, w: b.w, h: b.h },
+  ];
+}
+
 function PhoneLayout({
   status,
   connected,
@@ -417,14 +436,8 @@ function PhoneLayout({
   }, [phoneLayout.items]);
 
   function movePhonePanel(item: GridItem, direction: 'up' | 'down', idx: number) {
-    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
-    if (targetIdx < 0 || targetIdx >= visibleItems.length) return;
-    const a = item;
-    const b = visibleItems[targetIdx];
-    gridCallbacks?.updateItemPositions([
-      { i: a.i, x: a.x, y: b.y, w: a.w, h: a.h },
-      { i: b.i, x: b.x, y: a.y, w: b.w, h: b.h },
-    ]);
+    const updates = computeSwappedPositions(item, direction, idx, visibleItems);
+    if (updates) gridCallbacks?.updateItemPositions(updates);
   }
 
   function renderPhonePanel(item: GridItem): React.ReactNode {

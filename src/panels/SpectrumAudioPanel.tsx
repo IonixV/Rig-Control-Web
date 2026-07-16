@@ -39,7 +39,7 @@ interface Props {
   mode?: string;
 }
 
-function computeDisplayBandwidth(bandwidth: number, mode: string, maxHz: number): number {
+export function computeDisplayBandwidth(bandwidth: number, mode: string, maxHz: number): number {
   const isCw = mode === "CW" || mode === "CWR" || mode === "CW-R";
   if (isCw) return Math.min(1400, maxHz);
   const bw = bandwidth === 0 ? 3000 : bandwidth;
