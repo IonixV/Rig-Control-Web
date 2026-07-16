@@ -86,21 +86,36 @@ export default function ComboSpotSettingsModal(props: ComboSpotSettingsModalProp
   const { pollRate, setPollRate, maxAge, setMaxAge, modeFilter, setModeFilter, bandFilter, setBandFilter } = config[activeTab];
 
   const allModesChecked = SPOT_MODES.every(m => modeFilter.includes(m));
+  const noModesChecked = modeFilter.length === 0;
+  const modesIndeterminate = !allModesChecked && !noModesChecked;
   const allBandsChecked = ALL_BAND_LABELS.every(b => bandFilter.includes(b));
+  const noBandsChecked = bandFilter.length === 0;
+  const bandsIndeterminate = !allBandsChecked && !noBandsChecked;
 
   const toggleMode = (m: string) => {
-    const next = modeFilter.includes(m) ? modeFilter.filter(x => x !== m) : [...modeFilter, m];
-    setModeFilter(next.length === 0 ? [...SPOT_MODES] : next);
+    setModeFilter(modeFilter.includes(m) ? modeFilter.filter(x => x !== m) : [...modeFilter, m]);
   };
 
   const toggleBand = (label: string) => {
-    const next = bandFilter.includes(label) ? bandFilter.filter(b => b !== label) : [...bandFilter, label];
-    setBandFilter(next.length === 0 ? ALL_BAND_LABELS : next);
+    setBandFilter(bandFilter.includes(label) ? bandFilter.filter(b => b !== label) : [...bandFilter, label]);
+  };
+
+  const toggleAllModes = () => {
+    setModeFilter(noModesChecked ? [...SPOT_MODES] : []);
+  };
+
+  const toggleAllBands = () => {
+    setBandFilter(noBandsChecked ? ALL_BAND_LABELS : []);
   };
 
   const pillClass = (active: boolean) => cn(
     "flex items-center gap-1.5 px-2 py-1.5 rounded border cursor-pointer transition-all select-none",
     active ? ac.pill : "bg-[#0a0a0a] border-[#2a2b2e] text-[#8e9299] hover:border-[#4a4b4e] hover:text-white"
+  );
+
+  const allPillClass = (checked: boolean, indeterminate: boolean) => cn(
+    "flex items-center gap-1.5 px-2 py-1.5 rounded border cursor-pointer transition-all select-none",
+    checked ? ac.pill : indeterminate ? cn(ac.pill, "opacity-60") : "bg-[#0a0a0a] border-[#2a2b2e] text-[#8e9299] hover:border-[#4a4b4e] hover:text-white"
   );
 
   return (
@@ -167,11 +182,12 @@ export default function ComboSpotSettingsModal(props: ComboSpotSettingsModalProp
           <div className="space-y-2">
             <label className="text-[0.625rem] uppercase text-[#8e9299]">Mode Filter</label>
             <div className="flex gap-2 flex-wrap">
-              <label className={pillClass(allModesChecked)}>
+              <label className={allPillClass(allModesChecked, modesIndeterminate)}>
                 <input
                   type="checkbox"
                   checked={allModesChecked}
-                  onChange={() => setModeFilter([...SPOT_MODES])}
+                  ref={el => { if (el) el.indeterminate = modesIndeterminate; }}
+                  onChange={toggleAllModes}
                   className={cn("w-3 h-3 cursor-pointer flex-shrink-0", ac.check)}
                 />
                 <span className="text-[0.5625rem] font-bold uppercase">All</span>
@@ -193,11 +209,12 @@ export default function ComboSpotSettingsModal(props: ComboSpotSettingsModalProp
           <div className="space-y-2">
             <label className="text-[0.625rem] uppercase text-[#8e9299]">Band Filter</label>
             <div className="grid grid-cols-4 gap-1.5">
-              <label className={cn(pillClass(allBandsChecked), "col-span-1")}>
+              <label className={cn(allPillClass(allBandsChecked, bandsIndeterminate), "col-span-1")}>
                 <input
                   type="checkbox"
                   checked={allBandsChecked}
-                  onChange={() => setBandFilter(ALL_BAND_LABELS)}
+                  ref={el => { if (el) el.indeterminate = bandsIndeterminate; }}
+                  onChange={toggleAllBands}
                   className={cn("w-3 h-3 cursor-pointer flex-shrink-0", ac.check)}
                 />
                 <span className="text-[0.5625rem] font-bold uppercase">All</span>

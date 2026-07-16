@@ -93,31 +93,19 @@ export function usePotaSpots({
         if (data.potaSettings.pollRate !== undefined) setPotaPollRate(data.potaSettings.pollRate);
         if (data.potaSettings.maxAge !== undefined) setPotaMaxAge(data.potaSettings.maxAge);
         if (data.potaSettings.modeFilter !== undefined) setPotaModeFilter(parseModeFilter(data.potaSettings.modeFilter));
-        if (Array.isArray(data.potaSettings.bandFilter)) {
-          setPotaBandFilter(data.potaSettings.bandFilter.length === 0
-            ? POTA_BANDS.map(b => b.label)
-            : data.potaSettings.bandFilter);
-        }
+        if (Array.isArray(data.potaSettings.bandFilter)) setPotaBandFilter(data.potaSettings.bandFilter);
       }
       if (data.sotaSettings) {
         if (data.sotaSettings.pollRate !== undefined) setSotaPollRate(data.sotaSettings.pollRate);
         if (data.sotaSettings.maxAge !== undefined) setSotaMaxAge(data.sotaSettings.maxAge);
         if (data.sotaSettings.modeFilter !== undefined) setSotaModeFilter(parseModeFilter(data.sotaSettings.modeFilter));
-        if (Array.isArray(data.sotaSettings.bandFilter)) {
-          setSotaBandFilter(data.sotaSettings.bandFilter.length === 0
-            ? POTA_BANDS.map(b => b.label)
-            : data.sotaSettings.bandFilter);
-        }
+        if (Array.isArray(data.sotaSettings.bandFilter)) setSotaBandFilter(data.sotaSettings.bandFilter);
       }
       if (data.wwffSettings) {
         if (data.wwffSettings.pollRate !== undefined) setWwffPollRate(data.wwffSettings.pollRate);
         if (data.wwffSettings.maxAge !== undefined) setWwffMaxAge(data.wwffSettings.maxAge);
         if (data.wwffSettings.modeFilter !== undefined) setWwffModeFilter(parseModeFilter(data.wwffSettings.modeFilter));
-        if (Array.isArray(data.wwffSettings.bandFilter)) {
-          setWwffBandFilter(data.wwffSettings.bandFilter.length === 0
-            ? POTA_BANDS.map(b => b.label)
-            : data.wwffSettings.bandFilter);
-        }
+        if (Array.isArray(data.wwffSettings.bandFilter)) setWwffBandFilter(data.wwffSettings.bandFilter);
       }
     };
     socket.on("settings-data", handler);
