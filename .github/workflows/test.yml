@@ -15,10 +15,18 @@ on:
 # Hardware-dependent tests (FT4222/FT-710) are intentionally NOT run here —
 # no CI runner has a physical FT-710 attached. See `npm run test:hardware`,
 # run manually/locally with the radio connected.
+#
+# Pinned to ubuntu-24.04 (not ubuntu-latest) so that IF `bin/linux/rigctld`
+# (or the CW/FT4222/WSJTX-bridge helpers, which build.yml compiles fresh
+# every release rather than reusing a committed binary) is ever rebuilt in
+# CI, it's baselined against this project's documented glibc floor rather
+# than whatever Ubuntu "latest" happens to roll to. This is what caught a
+# real bug: a locally-rebuilt bin/linux/rigctld required a newer glibc than
+# Ubuntu 24.04 ships, breaking here before it could ship in a release.
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -39,7 +47,7 @@ jobs:
         run: npm run lint
 
   unit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -60,7 +68,7 @@ jobs:
         run: npm test
 
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -77,10 +85,25 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # The e2e suite's rigctld-dummy fixture resolves the same bundled
-      # binary path production uses (bin/linux/rigctld) — build it from
-      # source here rather than an apt package, so it's guaranteed to
-      # include the Dummy backend the fixture depends on.
+      # Fails fast, before anything expensive (npm ci already ran, but
+      # Playwright install/e2e tests haven't) if the committed bin/linux/
+      # rigctld was rebuilt on a machine with a newer glibc than this
+      # project's floor (Ubuntu 24.04, glibc 2.39) and re-committed without
+      # checking — this exact mistake broke CI once already.
+      - name: Verify bin/linux/rigctld's glibc floor
+        run: |
+          MAX_GLIBC=$(objdump -T bin/linux/rigctld | grep -oP 'GLIBC_\K[0-9]+\.[0-9]+' | sort -V | tail -1)
+          echo "bin/linux/rigctld requires glibc <= $MAX_GLIBC"
+          MAJOR=$(echo "$MAX_GLIBC" | cut -d. -f1)
+          MINOR=$(echo "$MAX_GLIBC" | cut -d. -f2)
+          if [ "$MAJOR" -gt 2 ] || { [ "$MAJOR" -eq 2 ] && [ "$MINOR" -gt 39 ]; }; then
+            echo "::error::bin/linux/rigctld requires glibc $MAX_GLIBC, newer than this project's floor (Ubuntu 24.04, glibc 2.39). Rebuild it in an 'ubuntu:24.04' container (see scripts/build-rigctld.mjs) before committing."
+            exit 1
+          fi
+
+      # The bundled bin/linux/rigctld is normally reused as-is (see the
+      # glibc-floor check above) — this only actually builds from source if
+      # the binary is ever missing from the checkout.
       - name: Build rigctld
         run: node scripts/build-rigctld.mjs
 

@@ -27,8 +27,14 @@ jobs:
           P="${{ github.event.inputs.platforms }}"
           if [ -z "$P" ]; then P="all"; fi
           ITEMS=()
+          # Pinned to ubuntu-24.04 (not ubuntu-latest) — this project's
+          # documented Linux floor. The CW/FT4222/WSJTX-bridge helpers below
+          # compile fresh here on every release, and if bin/linux/rigctld
+          # is ever missing and has to build fresh too, all of them need to
+          # target this floor's glibc rather than whatever Ubuntu "latest"
+          # rolls to, or they won't run on the oldest supported distro.
           if [ "$P" = "all" ] || [[ "$P" == *"linux"* ]]; then
-            ITEMS+=('{"os":"ubuntu-latest","platform":"linux","artifact":"linux"}')
+            ITEMS+=('{"os":"ubuntu-24.04","platform":"linux","artifact":"linux"}')
           fi
           if [ "$P" = "all" ] || [[ "$P" == *"win"* ]]; then
             ITEMS+=('{"os":"windows-2022","platform":"win","artifact":"*.exe"}')
@@ -67,7 +73,7 @@ jobs:
       # libopus-dev provides Opus headers if libopus-node compiles from source.
       # rpm provides rpmbuild, required by electron-builder's fpm for RPM generation.
       - name: Install Linux system dependencies
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libopus-dev rpm
 
       # npm ci uses package-lock.json for a clean, reproducible install.
@@ -78,15 +84,15 @@ jobs:
         run: npm ci
 
       - name: Compile CW key helper (Linux)
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         run: gcc -O2 -o bin/linux/cw-key-helper cw-key-helper.c
 
       - name: Compile FT4222 scope reader (Linux)
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         run: gcc -O2 -o bin/linux/ft4222-scope-reader ft4222-scope-reader.c -ldl
 
       - name: Compile WSJTX bridge helper (Linux)
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         run: gcc -O2 -o bin/linux/wsjtx-bridge wsjtx-bridge.c
 
       - name: Compile CW key helper (macOS)
@@ -123,6 +129,25 @@ jobs:
       - name: Build rigctld (Linux/macOS)
         if: matrix.os != 'windows-2022'
         run: node scripts/build-rigctld.mjs
+
+      # The committed bin/linux/rigctld is normally reused as-is by the step
+      # above (it only builds from source if the binary is missing) — this
+      # catches the case where it was rebuilt on a machine with a newer
+      # glibc than this project's floor (Ubuntu 24.04, glibc 2.39) and
+      # re-committed without checking, which would otherwise ship a rigctld
+      # that fails to run for anyone on the documented minimum-supported
+      # distro. This exact mistake happened once already.
+      - name: Verify bin/linux/rigctld's glibc floor
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          MAX_GLIBC=$(objdump -T bin/linux/rigctld | grep -oP 'GLIBC_\K[0-9]+\.[0-9]+' | sort -V | tail -1)
+          echo "bin/linux/rigctld requires glibc <= $MAX_GLIBC"
+          MAJOR=$(echo "$MAX_GLIBC" | cut -d. -f1)
+          MINOR=$(echo "$MAX_GLIBC" | cut -d. -f2)
+          if [ "$MAJOR" -gt 2 ] || { [ "$MAJOR" -eq 2 ] && [ "$MINOR" -gt 39 ]; }; then
+            echo "::error::bin/linux/rigctld requires glibc $MAX_GLIBC, newer than this project's floor (Ubuntu 24.04, glibc 2.39). Rebuild it in an 'ubuntu:24.04' container (see scripts/build-rigctld.mjs) before committing."
+            exit 1
+          fi
 
       - name: Check rigctld binary (Windows)
         if: matrix.os == 'windows-2022'
