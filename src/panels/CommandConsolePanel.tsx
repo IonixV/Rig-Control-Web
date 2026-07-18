@@ -24,18 +24,19 @@ export default function CommandConsolePanel({
   return (
     <div className="space-y-3">
       <div
+        data-testid="console-log-list"
         className={cn(
           "bg-[#0a0a0a] rounded border border-[#2a2b2e] overflow-y-auto font-mono text-[0.6875rem] space-y-1",
           isPhone ? "h-32 p-2" : "h-40 p-3"
         )}
       >
         {consoleLogs.length === 0 ? (
-          <div className="text-[#4a4b4e] italic">
+          <div className="text-[#4a4b4e] italic" data-testid="console-empty-state">
             No commands sent yet. Try "f" for frequency or "m" for mode.
           </div>
         ) : (
           consoleLogs.map((log, i) => (
-            <div key={i} className="border-b border-[#1a1b1e] pb-1 last:border-0">
+            <div key={i} data-testid="console-log-entry" className="border-b border-[#1a1b1e] pb-1 last:border-0">
               <div className="flex justify-between opacity-50 text-[0.5625rem]">
                 <span>{log.time}</span>
                 <span>CMD: {log.cmd}</span>
@@ -59,6 +60,7 @@ export default function CommandConsolePanel({
               ? "e.g. 'f', 'm', 'v', 't'..."
               : "Enter hamlib command (e.g. 'f', 'm', 'v', 't')..."
           }
+          data-testid="console-command-input"
           className={cn(
             "flex-1 bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 focus:outline-none focus:border-emerald-500 transition-colors placeholder:text-[#4a4b4e]",
             isPhone ? "py-1.5 text-xs" : "py-2 text-sm",
@@ -68,6 +70,7 @@ export default function CommandConsolePanel({
         <button
           type="submit"
           disabled={!connected || !rawCommand.trim()}
+          data-testid="console-send-button"
           className={cn(
             "bg-emerald-500/20 text-emerald-500 border border-emerald-500/50 rounded font-bold uppercase text-xs hover:bg-emerald-500 hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed",
             isPhone ? "px-4 py-1.5" : "px-5 py-2"

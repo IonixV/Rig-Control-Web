@@ -60,6 +60,7 @@ export default function RfLevelsPanel({
             value={localRFPower * 100}
             disabled={!connected}
             onChange={(e) => { isDraggingRF.current = true; setLocalRFPower(parseFloat(e.target.value) / 100); }}
+            data-testid="rflevels-rfpower-slider"
             className={cn(`w-full accent-emerald-500 ${sliderH} bg-[#0a0a0a] rounded-lg appearance-none cursor-pointer`, !connected && "opacity-50 cursor-not-allowed")}
           />
         </div>
@@ -74,6 +75,7 @@ export default function RfLevelsPanel({
             type="range" min="0" max="1" step="0.1" value={localRFLevel}
             disabled={!connected}
             onChange={(e) => { isDraggingRFLevel.current = true; setLocalRFLevel(parseFloat(e.target.value)); }}
+            data-testid="rflevels-rflevel-slider"
             className={cn(`w-full accent-emerald-500 ${sliderH} bg-[#0a0a0a] rounded-lg appearance-none cursor-pointer`, !connected && "opacity-50 cursor-not-allowed")}
           />
         </div>
@@ -95,6 +97,7 @@ export default function RfLevelsPanel({
               const stepIdx = parseInt(e.target.value);
               setLocalNRLevel(Math.min(nrCapabilities.range.max, nrCapabilities.range.min + stepIdx * nrCapabilities.range.step));
             }}
+            data-testid="rflevels-dnr-slider"
             className={cn(`w-full accent-emerald-500 ${sliderH} bg-[#0a0a0a] rounded-lg appearance-none cursor-pointer`, (!connected || !nrCapabilities.supported) && "opacity-50 cursor-not-allowed")}
           />
         </div>
@@ -112,6 +115,7 @@ export default function RfLevelsPanel({
               value={localNBLevel}
               disabled={!connected}
               onChange={(e) => { isDraggingNB.current = true; setLocalNBLevel(parseFloat(e.target.value)); }}
+              data-testid="rflevels-nb-slider"
               className={cn(`w-full accent-emerald-500 ${sliderH} bg-[#0a0a0a] rounded-lg appearance-none cursor-pointer`, !connected && "opacity-50 cursor-not-allowed")}
             />
           </div>

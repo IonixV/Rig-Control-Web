@@ -1,6 +1,6 @@
-# Unit Test Plan — Tiers 1–2
+# Unit Test Plan — Tiers 1–3
 
-**Status:** Tier 1 (pure functions) implemented and committed. Tier 2 (hook-level tests) below is a draft for review — no code changes made yet for Tier 2.
+**Status:** Tiers 1, 2, and 3 all implemented (Tier 1/2 committed as `0e08dec`/`c65a463`; Tier 3 landed 2026-07-17, not yet committed — see the "Tier 3" section below). `npm run test` is 188/188, `npm run test:e2e` is 25/25, `npm run lint` is clean. Tier 3 also fixed a real bug found while writing its tests — see that section. Tier 4 (below, under "Deferred") is still unstarted.
 
 ## Context
 
@@ -149,7 +149,7 @@ Test files are co-located with source, matching the existing pattern (`server/ri
 - **13 items require a refactor first** — most are one-line `export` additions (`normalizeVfoName`, `ts()`/`formatArg()`, `readCollapsed`, the `SolarPanel` color functions, `computeDisplayBandwidth`, `formatUptime`/`formatDuration`, `buildFilename`); a smaller set need an actual extraction-with-parameters out of a component/hook closure (`isSettingsValid`, the radios-list dedupe, `buildLogContent`, `App.tsx`'s three label helpers and its backend-URL resolution, `PhoneLayout`'s `movePhonePanel`). All are mechanical — no behavior change, just making existing logic reachable from a test.
 - Zero new test infrastructure — reuses the existing `vitest.config.ts` (jsdom default, `@vitest-environment node` override) and the co-located `*.test.ts` convention already established
 
-## Verification
+## Verification — done
 
 - `npm run test` passes with all new files included
 - `npm run lint` passes (the refactors must not change any call-site behavior)
@@ -157,13 +157,13 @@ Test files are co-located with source, matching the existing pattern (`server/ri
 
 ---
 
-# Tier 2 Plan — Hook-Level Tests via Stub Socket
+# Tier 2 — Hook-Level Tests via Stub Socket (implemented, `c65a463`)
 
 ## Scope
 
 Four hooks with real, non-trivial logic driven by Socket.io events (and in one case a raw `WebSocket`), tested the same way `src/hooks/useSpectrum.test.ts` already does: a minimal `StubSocket` class (`on`/`off`/`emit` only — no real network), `renderHook`/`act` from `@testing-library/react`, drive events in, assert on the hook's returned state. Zero new test infrastructure.
 
-`useAuth.ts` and `useDiagnostics.ts` need no source changes — every code path is already exercised through the hook's public return value. `useWsjtxBridge.ts` needs one small export (`handleCommand`, currently module-private). `usePotaSpots.tsx` is a different shape of problem — see its own section below, which ends in a decision the plan needs from you before scoping test cases.
+`useAuth.ts` and `useDiagnostics.ts` needed no source changes — every code path was already exercised through the hook's public return value. `useWsjtxBridge.ts` needed one small export (`handleCommand`, was module-private). `usePotaSpots.tsx` was a different shape of problem — see its own section below; the decision it called for was made and implemented (extract-and-test `inferTuneMode` only, leave the three filter pipelines untested).
 
 ## `useAuth.ts` — new `src/hooks/useAuth.test.ts` (extends the existing pure-helper test file)
 
@@ -253,13 +253,37 @@ New `src/hooks/usePotaSpots.test.ts`:
 | `FT8`/`FT4` without `PKTUSB` in `availableModes` → `USB` |
 | Any other mode (e.g. already-native `USB`, or `RTTY`) → passed through unchanged |
 
-## Verification (Tier 2)
+## Verification (Tier 2) — done
 
 - `npm run test` passes with all new files
-- `npm run lint` passes (the `handleCommand` export is the only source change)
+- `npm run lint` passes (source changes: the `handleCommand` export in `useWsjtxBridge.ts`, plus the `inferTuneMode` extraction in `usePotaSpots.tsx` and its three call sites)
 - `npm run test:e2e` re-run as a regression check (none of the touched files are on the VfoPanel/SpectrumHamlibPanel e2e paths, but cheap to confirm)
 
-## Deferred (Tiers 3–4, not in this pass)
+---
 
-- **Tier 3** — e2e panel tests extending the existing Dummy-rigctld fixture: `ControlsPanel`, `TabbedMeterPanel`, `RfLevelsPanel`, `ModeBwPanel`, `CommandConsolePanel`
-- **Tier 4** — e2e tests needing new fixtures: `SolarPanel`/`SpotsPanel`/`MufMapPanel` (fetch interception), `AudioFeedPanel`/`VideoFeedPanel` (Playwright fake-device flags), auth/admin flows, CW keyer/decoder, WSJTX bridge
+# Tier 3 — E2E Panel Tests via Dummy rigctld (implemented, 2026-07-17)
+
+## Scope
+
+Five new Playwright specs extending the `vfo-panel.spec.ts` pattern against a real Dummy rigctld: `mode-bw-panel.spec.ts`, `command-console-panel.spec.ts`, `controls-panel.spec.ts`, `rf-levels-panel.spec.ts`, `compact-meter.spec.ts` (25 e2e tests total, all passing). New shared helper `tests/e2e/connect-helper.ts` (`connectToDummy`/`disconnectFromDummy`) extracts the boilerplate all rig-status specs were duplicating. `data-testid` attributes were added to `ControlsPanel.tsx`, `RfLevelsPanel.tsx`, `ModeBwPanel.tsx`, `CommandConsolePanel.tsx`, and `CompactLayout.tsx`'s inline meter block — attribute-only, no behavior change, same convention as Tier 1's extractions.
+
+## A real bug was found and fixed along the way
+
+Writing `command-console-panel.spec.ts` surfaced a genuine production bug, confirmed live against Hamlib's `dummy.c` source and a running Dummy instance: `useRigControl.ts`'s `handleSendRaw` unconditionally prefixed every raw command with `+\` (the long-form marker). Sending any single-letter short-form command — **`f`, `m`, `v`, `t`, exactly the examples in the console's own placeholder text** — produced `+\f` etc., which rigctld silently fails to resolve (logs `Command '' not found!` server-side, never responds over the socket), hanging the client's 10s command timeout and then destroying the whole rig connection. Fixed by extracting `formatRawCommand()` (`src/hooks/useRigControl.ts`), mirroring the already-tested short/long-form logic in `server/rigComm.ts`'s `formatExtendedCommand()`. Covered by 5 new unit tests in `src/hooks/useRigControl.test.ts`.
+
+## Two mid-implementation discoveries that reshaped test scope
+
+- **`TabbedMeterPanel.tsx` is dead code under the default e2e viewport.** It's only mounted by `PhoneLayout`; `CompactLayout.tsx` (what every desktop-viewport e2e spec actually renders) has its own separate, hand-duplicated inline meter block (`case 'smeter':`) with a 4th tab (VDD) that `TabbedMeterPanel.tsx` lacks. `compact-meter.spec.ts` targets the real inline block instead. The duplication itself is unaddressed tech debt, not fixed here.
+- **Dummy's `level_gran` table is degenerate for NB and NR.** Hamlib's `dummy.c` only defines a real step for `CWPITCH` — confirmed live via `\dump_caps`: `NB(0.000000..0.000000/0.000000)`, `NR(0.000000..0.000000/0.000000)`. `RfLevelsPanel.tsx` binds its DNR/NB sliders' `min`/`max`/`step` directly to this capability range, so against Dummy specifically both sliders are stuck at 0 (DNR's label even renders "Lvl NaN": `Math.round((0-0)/0)`). This is a Dummy-only simulator artifact — the underlying rig level itself is genuinely settable (confirmed via raw `L NB 0.35`/`l NB` round trip) — not a production bug worth changing, since real radios report real `level_gran`. `rf-levels-panel.spec.ts` asserts presence/enabled state for these two sliders only, not a value round trip.
+
+## Verification (Tier 3) — done
+
+- `npm run lint` — clean
+- `npm run test` — 188/188 (183 existing + 5 new for `formatRawCommand`)
+- `npm run test:e2e` — 25/25, including `vfo-panel.spec.ts` and `spectrum-hamlib-panel.spec.ts` as a regression check on the `data-testid`-touched files
+
+## Deferred (Tier 4, not in this pass)
+
+- E2e tests needing new fixtures: `SolarPanel`/`SpotsPanel`/`MufMapPanel` (fetch interception), `AudioFeedPanel`/`VideoFeedPanel` (Playwright fake-device flags), auth/admin flows, CW keyer/decoder, WSJTX bridge
+- `TabbedMeterPanel.tsx`/`PhoneLayout`'s meter display — untested (see discovery above); would need a phone-width viewport project, not currently configured
+- The CompactLayout/TabbedMeterPanel inline-duplication tech debt itself — deduplicating them is a real refactor, out of scope for a test-coverage pass

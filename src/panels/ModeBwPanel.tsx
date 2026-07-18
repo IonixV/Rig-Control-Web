@@ -32,6 +32,7 @@ export default function ModeBwPanel({
         value={localMode}
         onChange={(e) => handleSetMode(e.target.value)}
         disabled={!connected}
+        data-testid={`modebw-mode-select-${variant}`}
         className={cn(selectClass, !connected && "opacity-50 cursor-not-allowed")}
       >
         {availableModes.map(m => <option key={m} value={m}>{m}</option>)}
@@ -40,6 +41,7 @@ export default function ModeBwPanel({
         value={bandwidth || "2400"}
         onChange={(e) => handleSetBw(parseInt(e.target.value))}
         disabled={!connected}
+        data-testid={`modebw-bw-select-${variant}`}
         className={cn(selectClass, !connected && "opacity-50 cursor-not-allowed")}
       >
         {BANDWIDTHS.map(bw => <option key={bw} value={bw}>{bw}Hz</option>)}

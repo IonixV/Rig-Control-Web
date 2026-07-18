@@ -501,6 +501,7 @@ function CompactLayout({
                   <button
                     key={m}
                     onClick={() => setActiveMeter(m)}
+                    data-testid={`meter-tab-${m}`}
                     className={cn(
                       "px-2 py-1 rounded text-[0.625rem] font-bold uppercase transition-all",
                       activeMeter === m
@@ -512,7 +513,7 @@ function CompactLayout({
                   </button>
                 ))}
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5" data-testid="meter-readout-summary">
                 <span className={cn("text-[0.625rem] font-mono font-bold", status.ptt ? "text-red-500" : "text-emerald-500")}>
                   {status.ptt
                     ? `${Math.round((status.powerMeter ?? 0) * 100)}W`
@@ -532,6 +533,7 @@ function CompactLayout({
                 </span>
                 <button
                   onClick={() => setIsCompactSMeterCollapsed(!isCompactSMeterCollapsed)}
+                  data-testid="meter-collapse-toggle"
                   className="p-0.5 hover:bg-white/5 rounded text-[#8e9299] ml-0.5"
                 >
                   {isCompactSMeterCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
@@ -539,7 +541,7 @@ function CompactLayout({
               </div>
             </div>
             {!isCompactSMeterCollapsed && (
-              <div className="p-2 h-[120px]">
+              <div className="p-2 h-[120px]" data-testid="meter-chart">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={history}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#2a2b2e" vertical={false} opacity={0.3} />

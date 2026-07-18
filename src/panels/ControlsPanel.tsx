@@ -67,6 +67,7 @@ export default function ControlsPanel({
     <button
       onClick={() => { if (isTuning) return; status.tuner ? handleSetFunc("TUNER", false) : handleVfoOp("TUNE"); }}
       disabled={!connected || isTuning}
+      data-testid="controls-tune-button"
       className={cn(
         isPhone ? btnBasePhone : btnBase, extraClass,
         (!connected || isTuning) && "opacity-50 cursor-not-allowed",
@@ -84,6 +85,7 @@ export default function ControlsPanel({
     <button
       onClick={cycleAttenuator}
       disabled={!connected || attenuatorLevels.length === 0}
+      data-testid="controls-attenuator-button"
       className={cn(
         isPhone ? btnBasePhone : btnBase, extraClass,
         (!connected || attenuatorLevels.length === 0) && "opacity-50 cursor-not-allowed",
@@ -99,6 +101,7 @@ export default function ControlsPanel({
     <button
       onClick={cyclePreamp}
       disabled={!connected || preampLevels.length === 0}
+      data-testid="controls-preamp-button"
       className={cn(
         isPhone ? btnBasePhone : btnBase, extraClass,
         (!connected || preampLevels.length === 0) && "opacity-50 cursor-not-allowed",
@@ -114,6 +117,7 @@ export default function ControlsPanel({
     <button
       onClick={() => handleSetFunc("NB", !status.nb)}
       disabled={!connected || !nbCapabilities.supported}
+      data-testid="controls-nb-button"
       className={cn(
         isPhone ? btnBasePhone : btnBase, extraClass,
         (!connected || !nbCapabilities.supported) && "opacity-50 cursor-not-allowed",
@@ -129,6 +133,7 @@ export default function ControlsPanel({
     <button
       onClick={() => handleSetFunc("NR", !status.nr)}
       disabled={!connected || !nrCapabilities.supported}
+      data-testid="controls-nr-button"
       className={cn(
         isPhone ? btnBasePhone : btnBase, extraClass,
         (!connected || !nrCapabilities.supported) && "opacity-50 cursor-not-allowed",
@@ -144,6 +149,7 @@ export default function ControlsPanel({
     <button
       onClick={() => handleSetFunc("ANF", !status.anf)}
       disabled={!connected || !anfCapabilities.supported}
+      data-testid="controls-anf-button"
       className={cn(
         isPhone ? btnBasePhone : btnBase, extraClass,
         (!connected || !anfCapabilities.supported) && "opacity-50 cursor-not-allowed",
@@ -159,6 +165,7 @@ export default function ControlsPanel({
     <button
       onClick={cycleAgc}
       disabled={!connected || agcLevels.length === 0}
+      data-testid="controls-agc-button"
       className={cn(
         isPhone ? btnBasePhone : btnBase, extraClass,
         (!connected || agcLevels.length === 0) && "opacity-50 cursor-not-allowed",
@@ -215,6 +222,7 @@ export default function ControlsPanel({
         <button
           onClick={() => handleSetPTT(!status.ptt)}
           disabled={!connected}
+          data-testid="controls-ptt-button"
           className={cn(
             btnBase,
             !connected && "opacity-50 cursor-not-allowed",
@@ -255,7 +263,7 @@ export function ControlsPanelHeaderAction({ powerSupported, powerState, powering
   if (!powerSupported) {
     if (knownPoweredOff) {
       return (
-        <span className="p-1 text-red-500" title="Radio was powered off last session — reconnecting…">
+        <span className="p-1 text-red-500" data-testid="controls-power-indicator" title="Radio was powered off last session — reconnecting…">
           <Loader2 size={14} className="animate-spin" />
         </span>
       );
@@ -265,7 +273,7 @@ export function ControlsPanelHeaderAction({ powerSupported, powerState, powering
 
   if (poweringOn) {
     return (
-      <span className="p-1 text-amber-400" title="Waiting for radio to power on…">
+      <span className="p-1 text-amber-400" data-testid="controls-power-indicator" title="Waiting for radio to power on…">
         <Loader2 size={14} className="animate-spin" />
       </span>
     );
@@ -274,6 +282,7 @@ export function ControlsPanelHeaderAction({ powerSupported, powerState, powering
   return (
     <button
       onClick={() => handleSetPower(powerState !== 'on')}
+      data-testid="controls-power-indicator"
       title={
         powerState === 'on' ? 'Radio ON — click to power off' :
         powerState === 'off' ? 'Radio OFF — click to power on' :

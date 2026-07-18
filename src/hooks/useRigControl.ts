@@ -6,6 +6,22 @@ import type { RigStatus } from "../types";
 let rigVerbose = false;
 const vlog = (...args: any[]) => { if (rigVerbose) console.log(...args); };
 
+/** Mirrors server/rigComm.ts's tested formatExtendedCommand(): rigctld's
+ *  extended-response protocol prefixes single-letter short-form commands
+ *  with a bare "+" (e.g. "+f"), and multi-letter long-form command names
+ *  with "+\" (e.g. "+\get_powerstat"). A stray "+\f" is parsed by rigctld
+ *  as a request for a long-form command literally named "f", which
+ *  doesn't exist — rigctld logs the failure server-side but never writes
+ *  a response to the client socket, hanging the caller until the rig
+ *  command timeout fires and tears down the connection. Commands the user
+ *  has already prefixed with "+" themselves are passed through unchanged. */
+export function formatRawCommand(raw: string): string {
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("+")) return trimmed;
+  const firstToken = trimmed.split(/\s+/)[0];
+  return firstToken.length === 1 ? `+${trimmed}` : `+\\${trimmed}`;
+}
+
 interface UseRigControlOptions {
   socket: Socket | null;
   nrCapabilities: { supported: boolean; range: { min: number; max: number; step: number } };
@@ -357,8 +373,7 @@ export function useRigControl({
   const handleSendRaw = useCallback((e: FormEvent) => {
     e.preventDefault();
     if (!connectedStateRef.current || !rawCommandRef.current.trim()) return;
-    const cmd = rawCommandRef.current.startsWith("+\\") ? rawCommandRef.current : `+\\${rawCommandRef.current}`;
-    socket?.emit("send-raw", cmd);
+    socket?.emit("send-raw", formatRawCommand(rawCommandRef.current));
   }, [socket]);
 
   const handleSetPower = useCallback((state: boolean) => {
