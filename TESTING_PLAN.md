@@ -1,6 +1,6 @@
-# Unit Test Plan — Tiers 1–3
+# Unit Test Plan — Tiers 1–4 (Batch A)
 
-**Status:** Tiers 1, 2, and 3 all implemented (Tier 1/2 committed as `0e08dec`/`c65a463`; Tier 3 landed 2026-07-17, not yet committed — see the "Tier 3" section below). `npm run test` is 188/188, `npm run test:e2e` is 25/25, `npm run lint` is clean. Tier 3 also fixed a real bug found while writing its tests — see that section. Tier 4 (below, under "Deferred") is still unstarted.
+**Status:** Tiers 1–3 and Tier 4 Batch A all implemented. Tier 1/2 committed as `0e08dec`/`c65a463`; Tier 3 committed as `16d25b0`; Tier 4 Batch A landed 2026-07-17, not yet committed — see that section below. `npm run test` is 193/193, `npm run test:fixtures` is 6/6, `npm run test:e2e` is 38/38, `npm run lint` is clean. Both Tier 3 and Tier 4 Batch A each fixed a real bug found while writing their tests — see those sections. The rest of Tier 4 (Solar, Auth/admin, CW decoder, Video/Audio) is deferred — see "Deferred (Tier 4, remaining)" for specifics on why each one.
 
 ## Context
 
@@ -282,8 +282,42 @@ Writing `command-console-panel.spec.ts` surfaced a genuine production bug, confi
 - `npm run test` — 188/188 (183 existing + 5 new for `formatRawCommand`)
 - `npm run test:e2e` — 25/25, including `vfo-panel.spec.ts` and `spectrum-hamlib-panel.spec.ts` as a regression check on the `data-testid`-touched files
 
-## Deferred (Tier 4, not in this pass)
+## Deferred at the time (now further split into Tier 4 batches — see below)
 
-- E2e tests needing new fixtures: `SolarPanel`/`SpotsPanel`/`MufMapPanel` (fetch interception), `AudioFeedPanel`/`VideoFeedPanel` (Playwright fake-device flags), auth/admin flows, CW keyer/decoder, WSJTX bridge
 - `TabbedMeterPanel.tsx`/`PhoneLayout`'s meter display — untested (see discovery above); would need a phone-width viewport project, not currently configured
 - The CompactLayout/TabbedMeterPanel inline-duplication tech debt itself — deduplicating them is a real refactor, out of scope for a test-coverage pass
+
+---
+
+# Tier 4, Batch A — Spots, MufMap, CW Keyer, WSJTX Bridge (implemented, 2026-07-17)
+
+## Scope
+
+Tier 4's full backlog (from Tier 3's deferred list) spans 8 areas with very different techniques and risk: `SolarPanel`, `SpotsPanel`/`SpotComboPanel`, `MufMapPanel`, `AudioFeedPanel`, `VideoFeedPanel`, auth/admin flows, the CW keyer, the CW decoder, and the WSJTX bridge. Research (3 parallel investigations) found 4 of these had no open technical risk and could reuse existing patterns almost entirely — this batch covers those four. The rest are deferred (see below), each for a specific, now-understood reason rather than just "not gotten to yet."
+
+New specs: `tests/e2e/spot-combo-panel.spec.ts` (5 tests), `tests/e2e/muf-map-panel.spec.ts` (4 tests), `tests/e2e/cw-keyer.spec.ts` (1 test), `tests/e2e/wsjtx-bridge.spec.ts` (3 tests) — 13 new e2e tests, all passing. New unit test `server/cw.test.ts` (5 tests, `cwTick`'s iambic FSM under fake timers). New fixtures: `tests/fixtures/wsjtx-bridge.ts` (spawns the real committed `bin/linux/wsjtx-bridge` binary, mirrors `rigctld-dummy.ts`'s shape, own `wsjtx-bridge.test.ts`) and `tests/fixtures/synthetic-wsjtx-client.ts` (a fake WSJT-X TCP client, mirrors `synthetic-udp.ts`'s role). Zero production source changes were needed for Spots/MufMap/CW-keyer; the WSJTX bridge work is entirely new test infrastructure, no production changes either.
+
+## Four things discovered empirically that don't match a surface reading of the code
+
+- **The app's default VFO A/B display frequencies (14.074/7.074 MHz) are real 20m/40m FT8 calling frequencies, not arbitrary placeholders** — a WWFF spot fixture picked at 7.074 MHz collided with `usePotaSpots.tsx`'s "spot matches current frequency" pinning logic, silently duplicating the row. Not a bug; just needed a fixture frequency that doesn't coincide with either default.
+- **`MufMapPanel` is collapsed by default** (`isCompactMufMapCollapsed` defaults to `true`, `usePanelState.ts`) — its `<img>` isn't in the DOM at all until expanded (`PanelChrome` only renders children when `!isCollapsed`), the same class of issue Tier 3 hit with `CommandConsolePanel` not being in the default layout at all.
+- **The CW keyer's real PTT state can't be observed via the normal poll while a key is held.** `server/rigComm.ts`'s poll loop checks `ctx.cwIsKeying` and, while true, skips `pollRig()` entirely (rescheduling itself every 200ms without polling) to avoid queue contention with CW's own timing-sensitive commands — `cwIsKeying` stays true for the whole duration a key is down, so `status.ptt` never updates via the normal poll during that window. `cw-keyer.spec.ts` confirms the round trip via a raw console `t` query instead (which isn't gated on `cwIsKeying`), not the `controls-ptt-button`'s CSS class the way `controls-panel.spec.ts`'s user-clicked-PTT test does.
+- **`useWsjtxBridge.ts`'s WebSocket side auto-connects on mount and pushes whatever `rigStatus` holds at that instant** — since the bridge's local WS connection completes well before a real `connectToDummy` finishes, its first `rig-status` push carries the app's default display frequency (14.074 MHz), not the real rig state. A later effect (`useWsjtxBridge.ts:137-155`) re-pushes on every `rigStatus` field change, so `wsjtx-bridge.spec.ts`'s GET-round-trip test waits for the real frequency to land in the UI before querying — exactly the sequencing a real WSJT-X session would see once the operator's rig is actually connected.
+
+Also found and fixed a real bug in the *test fixture itself* (not production code): `SyntheticWsjtxClient`'s original line-buffering silently dropped every line after the first one when a multi-line response (e.g. `dump_state`'s ~30 lines) arrived in a single TCP chunk, since there was no buffer for lines that arrive before a matching `readLine()` call claims them. Fixed by queuing unclaimed lines instead of discarding them.
+
+## Verification (Tier 4, Batch A) — done
+
+- `npm run lint` — clean
+- `npm run test` — 193/193 (188 existing + 5 new for `cwTick`)
+- `npm run test:fixtures` — 6/6 (3 existing + 3 new for `startWsjtxBridge`)
+- `npm run test:e2e` — 38/38 (25 existing + 13 new), re-run twice to confirm the WSJTX bridge spec's sequencing fix wasn't a one-off pass
+
+## Deferred (Tier 4, remaining — not in this pass, each for a specific reason)
+
+- **`SolarPanel`** — its fetches (`hamqsl.com`, `prop.kc2g.com/api/essn.json`) happen server-side inside the Node process, not the browser — `page.route()` can't see them at all. Needs a new source-level env-var injection point (`server/solar.ts` has no override today, unlike `RCW_DATA_DIR`/`RCW_PORT`) plus a new fixed-port local stub HTTP server fixture, since the single shared `webServer` process's env is fixed at config-load time (can't point it at a per-spec ephemeral port the way the Dummy-rigctld fixture does).
+- **Auth/admin flows** — feasible with no open technical risk, but a large scope of its own: research found 13 genuinely-untested candidate cases (login failure/lockout, voluntary logout, admin user CRUD, the real `auth:kicked` trigger conditions, session-resume-via-stored-token, self-protection guards). Must operate on throwaway regular users, never the shared `ADMIN` fixture every other spec's `storageState` depends on.
+- **CW decoder** — feasible (GGMorse's `_ggmorse_*` functions are callable directly via `page.evaluate()`, bypassing the real audio path entirely) but needs a new WASM test harness and has real tuning risk: getting synthesized PCM Morse tone bursts to reliably satisfy GGMorse's pitch/speed auto-detection will likely take real trial-and-error.
+- **VideoFeedPanel** — feasible (`page.addInitScript` to stub `window.electron` plus Playwright's fake-video-capture flag gets a genuine `VideoEncoder` run in stock Chromium, no hand-built H.264 needed) but not attempted this pass.
+- **AudioFeedPanel** — partial/open. The Opus encode/decode path itself is confirmed hardware-free, but the full `naudiodon`-backed loopback's behavior in a truly hardware-less environment (vs. this real-hardware dev sandbox) is unverified — needs a short spike (ALSA `null` PCM or `snd-aloop`) before committing real time to it.
+- `TabbedMeterPanel.tsx`/`PhoneLayout`'s meter display and the CompactLayout/TabbedMeterPanel dedup tech debt — carried over from Tier 3, unchanged.
