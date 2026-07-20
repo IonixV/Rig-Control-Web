@@ -1,5 +1,6 @@
 import { chromium } from '@playwright/test';
 import { AUTH_STATE_PATH, BASE_URL } from '../../playwright.config.ts';
+import { startSolarFixtureServer } from '../fixtures/solar-fixture-server.ts';
 
 /**
  * Logs in once as the freshly-seeded default ADMIN user (see server/auth.ts
@@ -8,6 +9,13 @@ import { AUTH_STATE_PATH, BASE_URL } from '../../playwright.config.ts';
  * saves the resulting authenticated storageState for every test to reuse.
  */
 export default async function globalSetup() {
+  // Must be listening before the login below — server/solar.ts fetches
+  // solar data (from RCW_SOLAR_HAMQSL_URL/RCW_SOLAR_KC2G_URL, pointed at
+  // this fixture server via playwright.config.ts's webServer.env) as soon
+  // as the first socket authenticates, and caches it for an hour — every
+  // other spec in the run reuses that same cached fetch.
+  await startSolarFixtureServer();
+
   const browser = await chromium.launch();
   const context = await browser.newContext({ ignoreHTTPSErrors: true });
   const page = await context.newPage();

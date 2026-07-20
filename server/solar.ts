@@ -9,7 +9,7 @@ function getText(xml: string, tag: string): string {
 }
 
 async function fetchHamqslData(): Promise<Omit<SolarData, "esfi" | "essn" | "fetchedAt">> {
-  const res = await fetch("https://www.hamqsl.com/solarxml.php", {
+  const res = await fetch(process.env.RCW_SOLAR_HAMQSL_URL ?? "https://www.hamqsl.com/solarxml.php", {
     signal: AbortSignal.timeout(15_000),
     headers: { "User-Agent": "RigControlWeb/1.0" },
   });
@@ -52,7 +52,7 @@ async function fetchHamqslData(): Promise<Omit<SolarData, "esfi" | "essn" | "fet
 }
 
 async function fetchEssnData(): Promise<{ esfi: number | null; essn: number | null }> {
-  const res = await fetch("https://prop.kc2g.com/api/essn.json", {
+  const res = await fetch(process.env.RCW_SOLAR_KC2G_URL ?? "https://prop.kc2g.com/api/essn.json", {
     signal: AbortSignal.timeout(15_000),
     headers: { "User-Agent": "RigControlWeb/1.0" },
   });

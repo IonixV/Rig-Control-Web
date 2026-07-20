@@ -1,8 +1,17 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { defineConfig, devices } from '@playwright/test';
+import { SOLAR_FIXTURE_HAMQSL_URL, SOLAR_FIXTURE_KC2G_URL } from './tests/fixtures/solar-fixture-server.ts';
+import { ensureFakeVideoFixture } from './tests/fixtures/fake-video.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Generated once (if missing) at config-eval time so its path is stable for
+// the video-fake-device project's launchOptions.args below. Lives next to
+// the other e2e scratch state — see RCW_TEST_DATA_DIR.
+const FAKE_VIDEO_PATH = ensureFakeVideoFixture(
+  path.resolve(__dirname, 'tests/.rcw-test-data/fake-video.y4m'),
+);
 
 // Isolated scratch data dir for the server under test (settings.json, TLS
 // certs, users.json) — see server.ts's RCW_DATA_DIR override. Keeps e2e runs
@@ -54,6 +63,26 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      testIgnore: ['**/video-feed-panel.spec.ts'],
+    },
+    // video-feed-panel.spec.ts needs a fake camera device — Chromium only
+    // applies --use-fake-device-for-media-stream etc. at browser-launch
+    // scope, not per-test, so this spec gets its own project rather than
+    // sharing launchOptions.args with every other spec in the suite.
+    {
+      name: 'video-fake-device',
+      use: {
+        ...devices['Desktop Chrome'],
+        permissions: ['camera', 'microphone'],
+        launchOptions: {
+          args: [
+            '--use-fake-device-for-media-stream',
+            '--use-fake-ui-for-media-stream',
+            `--use-file-for-fake-video-capture=${FAKE_VIDEO_PATH}`,
+          ],
+        },
+      },
+      testMatch: ['**/video-feed-panel.spec.ts'],
     },
   ],
 
@@ -70,6 +99,8 @@ export default defineConfig({
       ...process.env,
       RCW_DATA_DIR: RCW_TEST_DATA_DIR,
       RCW_PORT: String(TEST_PORT),
+      RCW_SOLAR_HAMQSL_URL: SOLAR_FIXTURE_HAMQSL_URL,
+      RCW_SOLAR_KC2G_URL: SOLAR_FIXTURE_KC2G_URL,
     },
   },
 });

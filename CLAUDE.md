@@ -51,21 +51,13 @@ Three layers, split by what they need and whether real hardware is required:
 
 **Login/auth:** a fresh scratch `RCW_DATA_DIR` has no `users.json`, so the server seeds a default `ADMIN`/`admin` account with a forced password change on first login (see `server/auth.ts`). `tests/e2e/global-setup.ts` performs that login + forced change once and saves the resulting session as Playwright `storageState`, so individual spec files start already authenticated.
 
-**Backlog — remaining panels/subsystems, not yet covered, to be added incrementally as each is touched:**
+**Backlog — remaining panels/subsystems, not yet covered:**
 
 | Subsystem | Panel(s) | What its test would need |
 |---|---|---|
-| Remaining rig-status panels | `ControlsPanel`, `TabbedMeterPanel`, `RfLevelsPanel`, `ModeBwPanel`, `CommandConsolePanel` | Same Dummy-rigctld fixture as `VfoPanel`, extended to more `rig-status`/`*-capabilities` fields. `CommandConsolePanel` also needs raw extended-command passthrough coverage. |
-| Browser mic audio | `AudioFeedPanel` | Playwright's `--use-fake-device-for-media-stream` flag, plus asserting the Opus encode/decode round trip via `server/audio.ts`. |
-| Browser video | `VideoFeedPanel` | Playwright fake video device flags (`--use-file-for-fake-video-capture=<file>`), plus WebCodecs H.264 decode assertions. |
-| CW keyer | `useCWKeyer.ts` / `server/cw.ts` | Synthetic paddle timing against the iambic A/B state machine; likely needs fake timers. |
-| CW decoder | `CwDecodePanel` | Feed synthetic PCM Morse tone bursts into the GGMorse WASM pipeline via a fake audio buffer, assert decoded text. |
-| Web Audio spectrum | `SpectrumAudioPanel` | Fake `AnalyserNode` returning synthetic FFT bins — independent of rig hardware, one of the simpler remaining panels. |
-| Solar data | `SolarPanel` | Mock the server-cached hamqsl.com fetch in `server/solar.ts` with a canned response. |
-| Spots | `SpotsPanel`, `SpotComboPanel` | Playwright `page.route()` interception for the browser-side POTA/SOTA/WWFF fetches. |
-| MUF map | `MufMapPanel` | Mock the `prop.kc2g.com` fetch; likely needs canvas pixel assertions like `SpectrumHamlibPanel`. |
-| Auth/admin flows | login, admin panel | Dedicated spec covering password change, user CRUD, `auth:kicked`, token refresh — currently only exercised implicitly via `global-setup.ts`. |
-| WSJTX bridge | `useWsjtxBridge.ts`, `wsjtx-bridge.c` | Hardware-adjacent category like FT4222 — needs either a real WSJT-X instance or a synthetic bridge-protocol fixture. |
+| Browser mic audio, CW decoder, Web Audio spectrum | `AudioFeedPanel`, `CwDecodePanel`, `SpectrumAudioPanel` | All three read from the same real inbound-radio audio graph (`useAudio.ts`'s Opus decode → AudioWorklet playback → shared `AnalyserNode`), which requires `server/audio.ts`'s `naudiodon` to actually open a real OS audio device (`ctx.isAudioEngineReady`) — a bare CI container has none. Unlocking these needs a virtual audio sink (e.g. a PulseAudio null-sink/loopback) added to CI and local dev so `naudiodon` has something to open, plus a `--use-fake-device-for-media-stream` browser flag for the mic side. Deferred: real CI infrastructure change, higher risk of flakiness than the other panels, not yet attempted. |
+
+Everything else in this table as of earlier revisions (rig-status panels, CW keyer, MUF map, WSJTX bridge, Spots — both `SpotComboPanel` and the individual `spots_pota`/`spots_sota`/`spots_wwff` panels, Solar data, Auth/admin flows including user CRUD/`auth:kicked`/token refresh, and browser video via a fake-camera round trip) is now covered — see `tests/e2e/*.spec.ts`.
 
 ### Pre-release Checklist
 
@@ -172,7 +164,7 @@ Per-message deflate compression (`perMessageDeflate: false`) is explicitly disab
 - `rigctld-status`, `rigctld-log` — Process health and buffered log (last 100 lines)
 - `audio-inbound` — PCM/Opus packets from radio to browser
 - `settings-data` — Full settings object on connect or change
-- `video-chunk` — Encoded H.264 chunks relayed to remote clients
+- `video-frame` — Encoded H.264 chunks relayed to remote clients
 - `solar-data` — HF band conditions, VHF phenomena, SFI, SSN from hamqsl.com
 - `spectrum-data` — Live spectrum frame (shared by both Hamlib UDP and FT4222 paths): `{ id, name, type, length, amplitudes, minLevel, maxLevel, centerFreq, span, lowFreq, highFreq, timestamp }`
 - `yaesu-scope-status` — FT4222 reader process state: `{ running: boolean, error: string | null }`
@@ -189,7 +181,7 @@ Per-message deflate compression (`perMessageDeflate: false`) is explicitly disab
 
 ### Video Pipeline
 
-- **Source (Electron only):** `getUserMedia` → `MediaStreamTrackProcessor` → `VideoEncoder` (avc1.42001F, AVCC) → Socket.io `video-chunk` events.
+- **Source (Electron only):** `getUserMedia` → `MediaStreamTrackProcessor` → `VideoEncoder` (avc1.42001F, AVCC) → Socket.io `video-frame` events.
 - **Relay (server):** Buffers latest keyframe + its AVCC description (`EncodedVideoChunkMetadata.decoderConfig.description`). On client connect, sends the buffered keyframe first so the decoder can configure immediately.
 - **Sink (remote browsers):** `VideoDecoder` → `<canvas>` via `VideoFrame.copyTo` or `ImageBitmap`.
 - FFmpeg is not involved in video.
