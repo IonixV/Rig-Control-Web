@@ -409,6 +409,10 @@ async function triggerPowerOff(ctx: ServerContext): Promise<void> {
   ctx.audioWasPlaying = ctx.audioStatus === 'playing';
   if (ctx.audioWasPlaying) vlog("[RIG][POWER] Audio was playing — stopping before power off");
   await stopAudio(ctx);
+  if (ctx.spectrumSettings.source === "ft4222") {
+    const { stopYaesuScope } = await import("./yaesuScope.ts");
+    stopYaesuScope(ctx);
+  }
   const queued = ctx.rigCommandQueue.length;
   if (queued > 0) vlog(`[RIG][POWER] Draining ${queued} queued command(s)`);
   while (ctx.rigCommandQueue.length > 0) {
@@ -449,7 +453,9 @@ async function onPowerOn(ctx: ServerContext): Promise<void> {
   }
 
   if (ctx.spectrumSettings.enabled && ctx.spectrumSettings.source === "ft4222") {
-    import("./yaesuScope.ts").then(({ startYaesuScope }) => startYaesuScope(ctx));
+    import("./yaesuScope.ts").then(({ startYaesuScope }) => {
+      setTimeout(() => startYaesuScope(ctx), 2000);
+    });
   }
   if (ctx.audioWasPlaying) {
     ctx.audioWasPlaying = false;

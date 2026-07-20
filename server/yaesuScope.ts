@@ -5,6 +5,7 @@ import { ServerContext } from "./context.ts";
 import { vlogSpectrum } from "./vlog.ts";
 
 const RESTART_DELAY_MS = 3000;
+const RETRY_BUDGET_MS = 30000;
 
 export function getYaesuScopeHelperPath(baseDir: string): string {
   let platformDir: string;
@@ -30,7 +31,15 @@ export function getYaesuScopeHelperPath(baseDir: string): string {
   return fullPath;
 }
 
-export function startYaesuScope(ctx: ServerContext): void {
+export function startYaesuScope(ctx: ServerContext, isRetry = false): void {
+  if (ctx.yaesuScopeRestartTimer) {
+    clearTimeout(ctx.yaesuScopeRestartTimer);
+    ctx.yaesuScopeRestartTimer = null;
+  }
+  if (!isRetry) {
+    ctx.yaesuScopeRetryStartedAt = null;
+  }
+
   if (ctx.yaesuScopeProcess && !ctx.yaesuScopeProcess.killed) {
     return;
   }
@@ -80,6 +89,7 @@ export function startYaesuScope(ctx: ServerContext): void {
           vlogSpectrum("[YAESU-SCOPE] Device opened, receiving spectrum data");
           ctx.yaesuScopeRunning = true;
           ctx.yaesuScopeError = null;
+          ctx.yaesuScopeRetryStartedAt = null;
           ctx.io.emit("yaesu-scope-status", { running: true, error: null });
           watchdogTimer = setInterval(() => {
             const silence = Date.now() - lastFrameTime;
@@ -170,12 +180,29 @@ export function startYaesuScope(ctx: ServerContext): void {
     ctx.yaesuScopeError = null;
     ctx.io.emit("yaesu-scope-status", { running: false, error: null });
 
-    /* Auto-restart if spectrum is still enabled and source is still ft4222 and radio is not powered off */
+    /* Auto-restart if spectrum is still enabled and source is still ft4222 and radio is not powered off,
+       but only within a bounded retry budget — otherwise a device that's genuinely gone (or never
+       re-enumerates after a power cycle) would crash-loop forever. Mirrors the rig TCP reconnect
+       pattern in rigComm.ts: fixed-delay retries bounded by an overall wall-clock budget, then give up
+       and require an explicit user action (re-enable spectrum) to try again. */
     if (ctx.spectrumSettings.enabled && ctx.spectrumSettings.source === "ft4222" && ctx.powerState !== 'off') {
+      if (ctx.yaesuScopeRetryStartedAt === null) {
+        ctx.yaesuScopeRetryStartedAt = Date.now();
+      }
+      const elapsed = Date.now() - ctx.yaesuScopeRetryStartedAt;
+      if (elapsed >= RETRY_BUDGET_MS) {
+        const msg = `FT4222 device not found after ${Math.round(RETRY_BUDGET_MS / 1000)}s of retries — check the USB connection, then re-enable spectrum to try again`;
+        vlogSpectrum(`[YAESU-SCOPE] Giving up — ${msg}`);
+        ctx.yaesuScopeError = msg;
+        ctx.yaesuScopeRetryStartedAt = null;
+        ctx.io.emit("yaesu-scope-status", { running: false, error: msg });
+        return;
+      }
       vlogSpectrum(`[YAESU-SCOPE] Restarting in ${RESTART_DELAY_MS}ms`);
-      setTimeout(() => {
+      ctx.yaesuScopeRestartTimer = setTimeout(() => {
+        ctx.yaesuScopeRestartTimer = null;
         if (ctx.spectrumSettings.enabled && ctx.spectrumSettings.source === "ft4222" && ctx.powerState !== 'off') {
-          startYaesuScope(ctx);
+          startYaesuScope(ctx, true);
         }
       }, RESTART_DELAY_MS);
     }
@@ -188,6 +215,11 @@ export function startYaesuScope(ctx: ServerContext): void {
 }
 
 export function stopYaesuScope(ctx: ServerContext): void {
+  if (ctx.yaesuScopeRestartTimer) {
+    clearTimeout(ctx.yaesuScopeRestartTimer);
+    ctx.yaesuScopeRestartTimer = null;
+  }
+  ctx.yaesuScopeRetryStartedAt = null;
   if (ctx.yaesuScopeProcess && !ctx.yaesuScopeProcess.killed) {
     vlogSpectrum("[YAESU-SCOPE] Stopping");
     ctx.yaesuScopeProcess.kill("SIGTERM");

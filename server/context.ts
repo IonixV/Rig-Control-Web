@@ -260,6 +260,8 @@ export interface ServerContext {
   yaesuScopeProcess: ChildProcess | null;
   yaesuScopeRunning: boolean;
   yaesuScopeError: string | null;
+  yaesuScopeRestartTimer: NodeJS.Timeout | null;
+  yaesuScopeRetryStartedAt: number | null;
 
   // Cross-module callbacks (wired in orchestrator after modules init)
   saveSettings: () => void;
@@ -439,6 +441,8 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
     yaesuScopeProcess: null,
     yaesuScopeRunning: false,
     yaesuScopeError: null,
+    yaesuScopeRestartTimer: null,
+    yaesuScopeRetryStartedAt: null,
 
     saveSettings: () => {},
     sendToRig: () => Promise.reject("sendToRig not yet initialized"),
