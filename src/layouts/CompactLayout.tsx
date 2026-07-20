@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import type { Socket } from "socket.io-client";
 import { Monitor, Radio, Settings, ChevronDown, ChevronUp, Sun, Map, MapPin } from "lucide-react";
 import {
@@ -428,6 +428,7 @@ function CompactLayout({
 }: CompactLayoutProps) {
 
   const [showPanelPicker, setShowPanelPicker] = useState(false);
+  const gridContainerRef = useRef<HTMLDivElement>(null);
   const [showPotaSettings, setShowPotaSettings] = useState(false);
   const [showSotaSettings, setShowSotaSettings] = useState(false);
   const [showWwffSettings, setShowWwffSettings] = useState(false);
@@ -992,6 +993,29 @@ function CompactLayout({
     ]);
   }
 
+  // Picks the column with the least real rendered height (not an estimate),
+  // so a newly-added panel lands somewhere likely to be on-screen. Measures
+  // each column's *children* (the individual panels) rather than the column
+  // wrapper div itself — the wrapper is a CSS grid item and gets stretched
+  // by the grid's default align-items:stretch to match the tallest column,
+  // so every wrapper reports the same height regardless of real content.
+  // Ties go to the leftmost column since indexOf(Math.min(...)) resolves to
+  // the first match.
+  function findShortestColumn(): number {
+    const container = gridContainerRef.current;
+    if (!container) return 0;
+    const heights = Array.from({ length: compactLayout.cols }, (_, c) => {
+      const els = container.querySelectorAll<HTMLElement>(`[data-column-idx="${c}"]`);
+      return Array.from(els).reduce((sum, el) => {
+        const gap = parseFloat(getComputedStyle(el).rowGap) || 0;
+        const children = Array.from(el.children) as HTMLElement[];
+        const contentHeight = children.reduce((s, child) => s + child.getBoundingClientRect().height, 0);
+        return sum + contentHeight + Math.max(0, children.length - 1) * gap;
+      }, 0);
+    });
+    return heights.indexOf(Math.min(...heights));
+  }
+
   // ── Column layout renderer ────────────────────────────────────────────────
 
   const renderPanel = useCallback((item: GridItem): React.ReactNode => {
@@ -1094,7 +1118,7 @@ function CompactLayout({
 
   return (
     <div className={cn("animate-in fade-in duration-300", isEditMode && "pb-16")}>
-      <div className="flex flex-col gap-2">
+      <div ref={gridContainerRef} className="flex flex-col gap-2">
         {columnLayout.segments.map((seg, si) => {
           if (seg.type === 'full') {
             return (
@@ -1117,7 +1141,7 @@ function CompactLayout({
               style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
             >
               {columns.map((colItems, c) => (
-                <div key={c} className="flex flex-col gap-2">
+                <div key={c} data-column-idx={c} className="flex flex-col gap-2">
                   {colItems.map((item, idx) =>
                     wrapWithEditOverlay(item, renderPanel(item), idx, colItems.length, false)
                   )}
@@ -1144,7 +1168,11 @@ function CompactLayout({
             <PanelPicker
               availableTypes={COMPACT_PANEL_TYPES}
               existingTypes={existingPanelTypes}
-              onSelect={(type, config) => { gridCallbacks.addPanel(type, config); setShowPanelPicker(false); }}
+              onSelect={(type, config) => {
+                const targetX = config?.fullWidth ? undefined : findShortestColumn();
+                gridCallbacks.addPanel(type, { ...config, targetX });
+                setShowPanelPicker(false);
+              }}
               onClose={() => setShowPanelPicker(false)}
             />
           )}

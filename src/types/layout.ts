@@ -1,6 +1,7 @@
 export interface PanelAddConfig {
   heightPx?: number;
   fullWidth?: boolean;
+  targetX?: number;
 }
 
 export interface PanelConfigOptions {

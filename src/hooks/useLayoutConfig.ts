@@ -104,10 +104,20 @@ export function useLayoutConfig(callsign = "") {
       const viewLayout = prev[view];
       const mins = PANEL_MIN_SIZES[panelType];
       const isFullWidth = config?.fullWidth ?? false;
+      // Placement in a specific column (measured from real rendered column
+      // heights by the caller) only applies to per-column compact panels;
+      // full-width panels and phone view keep the original append-at-end behavior.
+      const useColumnPlacement = view === 'compact' && !isFullWidth && config?.targetX !== undefined;
+      const x = useColumnPlacement ? config!.targetX! : 0;
+      const y = useColumnPlacement
+        ? viewLayout.items
+            .filter(item => item.x === x && item.w < viewLayout.cols)
+            .reduce((max, item) => Math.max(max, item.y + item.h), 0)
+        : viewLayout.items.reduce((max, item) => Math.max(max, item.y + item.h), 0);
       const newItem: GridItem = {
         i: `${panelType}-${Date.now()}`,
-        x: 0,
-        y: viewLayout.items.reduce((max, item) => Math.max(max, item.y + item.h), 0),
+        x,
+        y,
         w: isFullWidth ? 9999 : (mins?.minW ?? 1),
         h: mins?.minH ?? 1,
         minW: mins?.minW ?? 1,
