@@ -207,12 +207,12 @@ function SettingsModal({
         </div>
 
         <div className="space-y-1">
-          <label className="text-[0.625rem] uppercase text-[#8e9299]">Serial Port (e.g. /dev/ttyUSB0 or COM3)</label>
-          <input 
+          <label className="text-[0.625rem] uppercase text-[#8e9299]">Serial Port (e.g. /dev/serial/by-id/radio-device or COM3)</label>
+          <input
             type="text"
             value={rigctldSettings.serialPort}
             onChange={(e) => setRigctldSettings(prev => ({ ...prev, serialPort: e.target.value }))}
-            placeholder="/dev/ttyUSB0"
+            placeholder="/dev/serial/by-id/radio-device"
             className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 text-white"
           />
         </div>
