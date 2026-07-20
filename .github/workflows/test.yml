@@ -119,17 +119,33 @@ jobs:
       # (confirmed via ldd) even though the ALSA/PipeWire path is what's
       # actually used. Backgrounded manually with an explicit
       # XDG_RUNTIME_DIR rather than `systemctl --user start` — GH Actions
-      # runners aren't guaranteed a full login/D-Bus session, and this
-      # sidesteps that dependency entirely. This must run before "Run e2e
-      # tests" (which spawns the app server via playwright.config.ts's
-      # webServer) since initAudioEngine() only runs once at server boot.
+      # runners aren't guaranteed a full login/D-Bus session. This must run
+      # before "Run e2e tests" (which spawns the app server via
+      # playwright.config.ts's webServer) since initAudioEngine() only runs
+      # once at server boot.
+      #
+      # A private D-Bus session bus is still required, though: WirePlumber's
+      # module-rt (rtkit) and spa.dbus modules try to connect to one at
+      # startup regardless of how it's launched, and without one it logs
+      # "Cannot autolaunch D-Bus without X11 $DISPLAY" and disconnects from
+      # PipeWire entirely — confirmed via CI logs: the `wpctl status` below
+      # still "succeeds" in that case (wpctl can talk to bare PipeWire
+      # directly), but shows no real Sources/Sinks, only PipeWire's
+      # synthetic "Dummy Output" fallback, so any node pw-loopback creates
+      # later never appears (not a timing issue — nothing is managing/
+      # exposing it). `dbus-daemon --session --fork --print-address` starts
+      # one that outlives this step for the rest of the job, same as the
+      # daemons below.
       - name: Install and start PipeWire virtual audio stack
         run: |
-          sudo apt-get install -y pipewire pipewire-pulse pipewire-alsa wireplumber libpulse0
+          sudo apt-get install -y pipewire pipewire-pulse pipewire-alsa wireplumber dbus libpulse0
           mkdir -p /tmp/xdg-runtime
           chmod 700 /tmp/xdg-runtime
           echo "XDG_RUNTIME_DIR=/tmp/xdg-runtime" >> "$GITHUB_ENV"
           export XDG_RUNTIME_DIR=/tmp/xdg-runtime
+          DBUS_SESSION_BUS_ADDRESS=$(dbus-daemon --session --fork --print-address)
+          echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> "$GITHUB_ENV"
+          export DBUS_SESSION_BUS_ADDRESS
           pipewire &
           disown
           sleep 1
