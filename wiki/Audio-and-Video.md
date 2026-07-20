@@ -58,6 +58,14 @@ Think of it this way: **backend audio = the radio's end; local audio = your end*
 
 > **Device changes apply immediately** — you do not need to stop and restart audio when switching local devices or adjusting the speaker volume.
 
+#### Audio Enhancements
+
+Under Local Client Audio, the **Audio Enhancements (AGC / Noise Suppression / Echo Cancellation)** toggle controls whether your browser applies voice-oriented processing — automatic gain control, noise suppression, and echo cancellation — to your microphone before it's sent to the radio. It is **on by default**, which is usually what you want for SSB voice contacts.
+
+Turn it **off** if you're sending audio that isn't speech and don't want it processed — for example, an external CW sidetone or a tone source fed into your mic input — since this DSP is tuned for voice and can distort or suppress non-voice audio. The app already forces this off automatically for the duration of a WSJTX/Digital Mode Bridge session (see [WSJTX Integration](WSJTX-Integration)), since AGC/noise suppression/echo cancellation would otherwise mangle FT8/PSK/other digital-mode tones — but you can still flip it manually during that session if needed.
+
+> **Windows note:** turning enhancements on tags the browser's audio session as "communications," which can trigger Windows' Sound Settings → Communications ducking of other apps' or tabs' audio while you're transmitting. This is expected Windows behavior, not a bug.
+
 ---
 
 ### Configuring Backend Audio

@@ -4,9 +4,25 @@ When something is not working as expected — audio cutting out, the rig not con
 
 ---
 
-## How to Enable Diagnostic Logging
+## In-App Diagnostics Tab (Recommended)
 
-RigControl Web supports six diagnostic flags. Launch the app with one or more of them to enable logging for the relevant subsystem:
+The easiest way to capture a diagnostic log no longer requires relaunching the app from a terminal. Open **General Settings** (gear icon) → **DIAGNOSTICS** tab:
+
+- **Debug Flags** — check any of the subsystem flags (Rig, Audio, Video, CW, Infra, Spectrum, Spots, WSJTX) to turn on that logging immediately, with no restart needed. Click **Enable All** to turn everything on at once.
+- **Diagnostic Log** — a live, scrolling panel showing merged output from the server console, the Electron renderer console, and every connected browser tab's console, combined into a single timestamped feed. It keeps a rolling 10-minute buffer.
+- **Copy Log** / **Save Log** — grab everything currently in the buffer as text, ready to paste or attach to a bug report.
+
+Flag choices made here are saved to `settings.json` and persist across restarts. If the app was also launched with a `--debug-*` command-line flag (see below), the command-line flag always wins over a persisted "off" — you can't accidentally disable logging that was explicitly requested at launch.
+
+The Diagnostics tab is available to any logged-in user, not just admins, so a remote operator having trouble can capture their own log without shell access to the server machine.
+
+---
+
+## Command-Line Flags
+
+The Diagnostics tab covers most cases, but launching with a `--debug-*` flag is still useful if you need logging active from the very first line of server startup (before you can log in and open Settings), or you're running headless with no browser open at all.
+
+RigControl Web supports the following diagnostic flags. Launch the app with one or more of them to enable logging for the relevant subsystem:
 
 | Flag | What it captures |
 |------|-----------------|
@@ -17,6 +33,7 @@ RigControl Web supports six diagnostic flags. Launch the app with one or more of
 | `--debug-infra` | Server startup, shutdown steps, TLS certificate, settings file reads/writes |
 | `--debug-spectrum` | Spectrum scope (both sources) — Hamlib UDP socket binding, multicast interface joins, per-packet receive/parse/emit trace, 10 s throughput counter; FT4222 reader lifecycle, frame parse errors, resync events, restart timing |
 | `--debug-spots` | POTA, SOTA, and WWFF spot fetching — HTTP request/response status, spot counts, filter pipeline (dedup, age, mode, band drop counts), sample timestamps for diagnosing clock-related filtering issues |
+| `--debug-wsjtx` | WSJTX bridge — WebSocket lifecycle, rig command relay between WSJT-X and RigControl Web |
 | `--debug-all` | All of the above at once |
 
 Flags can be combined. For example, if your problem involves audio and the rig connection together, use `--debug-rig --debug-audio`.
@@ -99,8 +116,8 @@ A useful bug report includes:
 
 1. **A description of what you expected to happen and what actually happened.**
 2. **Steps to reproduce** — what you clicked, in what order, starting from a fresh launch.
-3. **Server-side log output** (the terminal output with `--debug-all`), captured from just before and during the problem.
-4. **Browser console output** (DevTools console), captured during the same window.
+3. **A diagnostic log**, captured from just before and during the problem — either the saved output from the in-app Diagnostics tab, or the terminal output with `--debug-all`.
+4. **Browser console output** (DevTools console), captured during the same window, if you didn't use the Diagnostics tab (which already merges this in).
 5. **Your setup:** operating system, RigControl Web version, radio model, and how it is connected (USB audio, Digirig, etc.).
 
 Attach the log files or paste the relevant sections as text in the bug report. Logs with timestamps are especially helpful — the server prefixes lines with step context, and the browser console timestamps each entry.
