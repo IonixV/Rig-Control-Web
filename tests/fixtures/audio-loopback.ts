@@ -25,15 +25,17 @@ const DESCRIPTION = 'RCW-Test-Loop';
 export const LOOPBACK_OUTPUT_NAME = NODE_NAME;
 
 // The paired playback side (`rcw_test_audio_loop.output`, media.class=
-// Audio/Source, what naudiodon should capture FROM) is registered by
-// PipeWire as a "Filter", not a plain Source — confirmed empirically that
-// naudiodon's AudioIO constructor hangs indefinitely (not an error, a true
-// hang, reproduced in isolation outside Playwright/naudiodon's PulseAudio
-// host API) when targeting it by that name directly. What DOES work:
-// making it the WirePlumber default source, then opening naudiodon's
-// generic ALSA "pipewire" passthrough device (present whenever PipeWire's
-// ALSA plugin is installed) instead of the named node — a different
-// PortAudio code path that doesn't hit the same hang.
+// Audio/Source, what naudiodon should capture FROM) is confirmed
+// empirically to hang naudiodon's AudioIO constructor indefinitely (not an
+// error, a true hang, reproduced in isolation outside Playwright/naudiodon's
+// PulseAudio host API) when targeting it by that name directly — how
+// WirePlumber categorizes the node under `wpctl status` (a "Filter" on
+// newer WirePlumber 0.5.x, a plain Source on Ubuntu 24.04's older 0.4.17)
+// doesn't change this. What DOES work: making it the WirePlumber default
+// source, then opening naudiodon's generic ALSA "pipewire" passthrough
+// device (present whenever PipeWire's ALSA plugin is installed) instead of
+// the named node — a different PortAudio code path that doesn't hit the
+// same hang.
 export const LOOPBACK_INPUT_NAME = 'pipewire';
 
 let child: ChildProcess | null = null;
@@ -50,11 +52,21 @@ function getDefaultAudioSourceId(): string | null {
   return match ? match[1] : null;
 }
 
+// Looks up the loopback playback node by its structured `pw-dump` (JSON)
+// props rather than scraping `wpctl status`'s human-formatted text — the
+// latter shows `node.description` for Sinks/Sources on older WirePlumber
+// (0.4.x, e.g. Ubuntu 24.04's CI package), not `node.name`, and both
+// loopback sides here share the same description, so the two are
+// indistinguishable there. Confirmed via a matching ubuntu:24.04 container:
+// wpctl status showed both nodes as "RCW-Test-Loop" with no way to tell
+// capture from playback by name; pw-dump's node.name property is reliable
+// regardless of WirePlumber version/display differences.
 function findLoopbackSourceNodeId(): string {
-  const status = execSync('wpctl status').toString();
-  const match = status.match(new RegExp(`(\\d+)\\.\\s+${NODE_NAME}\\.output`));
-  if (!match) throw new Error(`wpctl status: could not find ${NODE_NAME}.output node id`);
-  return match[1];
+  const dump = JSON.parse(execSync('pw-dump').toString()) as Array<{ id: number; info?: { props?: Record<string, unknown> } }>;
+  const targetName = `${NODE_NAME}.output`;
+  const found = dump.find((obj) => obj.info?.props?.['node.name'] === targetName);
+  if (!found) throw new Error(`pw-dump: could not find ${targetName} node id`);
+  return String(found.id);
 }
 
 // How long pw-loopback takes to register its nodes with PipeWire varies with
@@ -89,16 +101,31 @@ export function startAudioLoopback(): Promise<void> {
     const captureProps = `node.name=${NODE_NAME} node.description=${DESCRIPTION} media.class=Audio/Sink audio.rate=48000`;
     const playbackProps = `node.name=${NODE_NAME}.output node.description=${DESCRIPTION} media.class=Audio/Source audio.rate=48000`;
 
+    // -m (not the long --channel-map) — confirmed via a matching ubuntu:24.04
+    // container that the pw-loopback build CI uses (pipewire-bin 1.0.5-1ubuntu3.3)
+    // rejects the long form with "unrecognized option '--channel-map'" even
+    // though its own --help text lists it, silently preventing the loopback
+    // node from ever being created (every previous "wpctl status: could not
+    // find ... node id" failure traced back to this — nothing to poll for,
+    // pw-loopback never got past its own argument parsing).
     const proc = spawn('pw-loopback', [
       '--channels', '1',
-      '--channel-map', 'MONO',
+      '-m', 'MONO',
       '--capture-props', captureProps,
       '--playback-props', playbackProps,
     ], { stdio: ['ignore', 'pipe', 'pipe'] });
 
     let settled = false;
+    let stderr = '';
+    proc.stderr?.on('data', (chunk) => { stderr += chunk.toString(); });
     proc.once('error', (err) => {
       if (!settled) { settled = true; reject(err); }
+    });
+    proc.once('exit', (code) => {
+      if (!settled && code !== 0) {
+        settled = true;
+        reject(new Error(`pw-loopback exited early (code ${code}): ${stderr}`));
+      }
     });
     proc.once('spawn', () => {
       child = proc;
