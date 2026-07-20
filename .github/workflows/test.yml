@@ -110,6 +110,36 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
+      # AudioFeedPanel/CwDecodePanel/SpectrumAudioPanel e2e coverage needs
+      # naudiodon (server/audio.ts) to open a real audio device — see
+      # tests/fixtures/audio-loopback.ts for the PipeWire pw-loopback +
+      # wpctl (WirePlumber's own CLI) setup this relies on. No PulseAudio
+      # server/pactl involved; libpulse0 is only needed because naudiodon's
+      # bundled PortAudio dynamically links libpulse.so.0 at import time
+      # (confirmed via ldd) even though the ALSA/PipeWire path is what's
+      # actually used. Backgrounded manually with an explicit
+      # XDG_RUNTIME_DIR rather than `systemctl --user start` — GH Actions
+      # runners aren't guaranteed a full login/D-Bus session, and this
+      # sidesteps that dependency entirely. This must run before "Run e2e
+      # tests" (which spawns the app server via playwright.config.ts's
+      # webServer) since initAudioEngine() only runs once at server boot.
+      - name: Install and start PipeWire virtual audio stack
+        run: |
+          sudo apt-get install -y pipewire pipewire-pulse pipewire-alsa wireplumber libpulse0
+          mkdir -p /tmp/xdg-runtime
+          chmod 700 /tmp/xdg-runtime
+          echo "XDG_RUNTIME_DIR=/tmp/xdg-runtime" >> "$GITHUB_ENV"
+          export XDG_RUNTIME_DIR=/tmp/xdg-runtime
+          pipewire &
+          disown
+          sleep 1
+          pipewire-pulse &
+          disown
+          wireplumber &
+          disown
+          sleep 2
+          wpctl status
+
       - name: Run e2e tests
         run: npm run test:e2e
 

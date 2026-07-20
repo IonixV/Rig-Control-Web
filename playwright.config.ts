@@ -3,6 +3,7 @@ import { fileURLToPath } from 'url';
 import { defineConfig, devices } from '@playwright/test';
 import { SOLAR_FIXTURE_HAMQSL_URL, SOLAR_FIXTURE_KC2G_URL } from './tests/fixtures/solar-fixture-server.ts';
 import { ensureFakeVideoFixture } from './tests/fixtures/fake-video.ts';
+import { ensureFakeToneFixture, ensureFakeMorseFixture } from './tests/fixtures/fake-audio-wav.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -11,6 +12,21 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // the other e2e scratch state — see RCW_TEST_DATA_DIR.
 const FAKE_VIDEO_PATH = ensureFakeVideoFixture(
   path.resolve(__dirname, 'tests/.rcw-test-data/fake-video.y4m'),
+);
+
+// Chromium's default fake mic (no --use-file-for-fake-audio-capture) is
+// silent, not a tone — confirmed empirically (the spectrum canvas never
+// changed without this). A real signal is needed to prove PCM is flowing.
+const FAKE_TONE_PATH = ensureFakeToneFixture(
+  path.resolve(__dirname, 'tests/.rcw-test-data/fake-tone.wav'),
+);
+
+// PARIS-timed "VVV" at 18 WPM, 700Hz — CwDecodePanel's GGMorse decoder
+// target. Repeated 4x with word gaps so a PTT-on test window doesn't need
+// to line up perfectly with a single pass.
+const FAKE_MORSE_PATH = ensureFakeMorseFixture(
+  path.resolve(__dirname, 'tests/.rcw-test-data/fake-morse.wav'),
+  'VVV',
 );
 
 // Isolated scratch data dir for the server under test (settings.json, TLS
@@ -63,7 +79,7 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      testIgnore: ['**/video-feed-panel.spec.ts'],
+      testIgnore: ['**/video-feed-panel.spec.ts', '**/audio-panels.spec.ts', '**/cw-decode-panel.spec.ts'],
     },
     // video-feed-panel.spec.ts needs a fake camera device — Chromium only
     // applies --use-fake-device-for-media-stream etc. at browser-launch
@@ -83,6 +99,40 @@ export default defineConfig({
         },
       },
       testMatch: ['**/video-feed-panel.spec.ts'],
+    },
+    // audio-panels.spec.ts (AudioFeedPanel/SpectrumAudioPanel) needs a fake
+    // mic device — same launch-scope constraint as video above.
+    {
+      name: 'audio-fake-device',
+      use: {
+        ...devices['Desktop Chrome'],
+        permissions: ['microphone'],
+        launchOptions: {
+          args: [
+            '--use-fake-device-for-media-stream',
+            '--use-fake-ui-for-media-stream',
+            `--use-file-for-fake-audio-capture=${FAKE_TONE_PATH}`,
+          ],
+        },
+      },
+      testMatch: ['**/audio-panels.spec.ts'],
+    },
+    // cw-decode-panel.spec.ts needs a Morse-timed fake mic feed instead of
+    // the plain tone above.
+    {
+      name: 'cw-decode-fake-audio',
+      use: {
+        ...devices['Desktop Chrome'],
+        permissions: ['microphone'],
+        launchOptions: {
+          args: [
+            '--use-fake-device-for-media-stream',
+            '--use-fake-ui-for-media-stream',
+            `--use-file-for-fake-audio-capture=${FAKE_MORSE_PATH}`,
+          ],
+        },
+      },
+      testMatch: ['**/cw-decode-panel.spec.ts'],
     },
   ],
 

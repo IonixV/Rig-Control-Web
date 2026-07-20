@@ -1,6 +1,7 @@
 import { chromium } from '@playwright/test';
 import { AUTH_STATE_PATH, BASE_URL } from '../../playwright.config.ts';
 import { startSolarFixtureServer } from '../fixtures/solar-fixture-server.ts';
+import { startAudioLoopback } from '../fixtures/audio-loopback.ts';
 
 /**
  * Logs in once as the freshly-seeded default ADMIN user (see server/auth.ts
@@ -15,6 +16,13 @@ export default async function globalSetup() {
   // as the first socket authenticates, and caches it for an hour — every
   // other spec in the run reuses that same cached fetch.
   await startSolarFixtureServer();
+
+  // Gives server/audio.ts's naudiodon a real device to open — see
+  // tests/fixtures/audio-loopback.ts. Only needs to exist by the time a
+  // spec calls get-audio-devices, not before the app server itself boots
+  // (initAudioEngine()'s naudiodon import only needs libpulse.so.0
+  // resolvable, not any particular device to exist yet).
+  await startAudioLoopback();
 
   const browser = await chromium.launch();
   const context = await browser.newContext({ ignoreHTTPSErrors: true });

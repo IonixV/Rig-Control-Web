@@ -1,6 +1,7 @@
 import fs from 'fs';
 import { AUTH_STATE_PATH } from '../../playwright.config.ts';
 import { stopSolarFixtureServer } from '../fixtures/solar-fixture-server.ts';
+import { stopAudioLoopback } from '../fixtures/audio-loopback.ts';
 
 // RCW_TEST_DATA_DIR itself is wiped at the start of the *next* run (see
 // playwright.config.ts) rather than here, so a failed run's state is left
@@ -9,4 +10,5 @@ import { stopSolarFixtureServer } from '../fixtures/solar-fixture-server.ts';
 export default async function globalTeardown() {
   fs.rmSync(AUTH_STATE_PATH, { force: true });
   await stopSolarFixtureServer();
+  await stopAudioLoopback();
 }
