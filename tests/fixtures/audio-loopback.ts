@@ -57,6 +57,28 @@ function findLoopbackSourceNodeId(): string {
   return match[1];
 }
 
+// How long pw-loopback takes to register its nodes with PipeWire varies with
+// runner load (confirmed flaky on CI: a single fixed post-spawn delay was
+// sometimes too short and failed the whole e2e job before any test ran).
+// Poll instead of guessing one delay.
+function pollForLoopbackSourceNodeId(timeoutMs = 5000, intervalMs = 100): Promise<string> {
+  const deadline = Date.now() + timeoutMs;
+  return new Promise((resolve, reject) => {
+    function attempt() {
+      try {
+        resolve(findLoopbackSourceNodeId());
+      } catch (err) {
+        if (Date.now() >= deadline) {
+          reject(err);
+        } else {
+          setTimeout(attempt, intervalMs);
+        }
+      }
+    }
+    attempt();
+  });
+}
+
 export function startAudioLoopback(): Promise<void> {
   return new Promise((resolve, reject) => {
     // audio.rate=48000: without it, PipeWire defaults these nodes to 44100,
@@ -80,19 +102,19 @@ export function startAudioLoopback(): Promise<void> {
     });
     proc.once('spawn', () => {
       child = proc;
-      // Brief pause to let PipeWire register the nodes before querying
-      // wpctl status — mirrors wsjtx-bridge.c's own 200ms pause after
-      // spawning (wsjtx-bridge.c:1035).
-      setTimeout(() => {
-        try {
-          previousDefaultSourceId = getDefaultAudioSourceId();
-          const sourceId = findLoopbackSourceNodeId();
-          execSync(`wpctl set-default ${sourceId}`);
-          if (!settled) { settled = true; resolve(); }
-        } catch (err) {
+      pollForLoopbackSourceNodeId()
+        .then((sourceId) => {
+          try {
+            previousDefaultSourceId = getDefaultAudioSourceId();
+            execSync(`wpctl set-default ${sourceId}`);
+            if (!settled) { settled = true; resolve(); }
+          } catch (err) {
+            if (!settled) { settled = true; reject(err); }
+          }
+        })
+        .catch((err) => {
           if (!settled) { settled = true; reject(err); }
-        }
-      }, 500);
+        });
     });
   });
 }
