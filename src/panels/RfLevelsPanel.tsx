@@ -50,7 +50,7 @@ export default function RfLevelsPanel({
       <div className={isPhone ? "space-y-1.5" : ""}>
           <div className="flex justify-between items-center">
             <span className="text-xs uppercase text-[#8e9299]">RF Power</span>
-            <span className="text-sm text-emerald-500 font-bold">{Math.round(localRFPower * 100)}W</span>
+            <span className="text-sm text-emerald-500 font-bold">{Math.round(localRFPower * 100)}%</span>
           </div>
           <input
             type="range"
@@ -80,8 +80,9 @@ export default function RfLevelsPanel({
           />
         </div>
 
-      {/* DNR Level */}
-      <div className={isPhone ? "space-y-1.5" : "mt-3"}>
+      {/* DNR Level — hidden when range step is zero (degenerate capability data from radio) */}
+      {nrCapabilities.range.step > 0 && (
+        <div className={isPhone ? "space-y-1.5" : "mt-3"}>
           <div className="flex justify-between items-center">
             <span className="text-xs uppercase text-[#8e9299]">DNR Level</span>
             <span className="text-sm text-emerald-500 font-bold">Lvl {Math.max(1, Math.round((localNRLevel - nrCapabilities.range.min) / nrCapabilities.range.step))}</span>
@@ -101,6 +102,7 @@ export default function RfLevelsPanel({
             className={cn(`w-full accent-emerald-500 ${sliderH} bg-[#0a0a0a] rounded-lg appearance-none cursor-pointer`, (!connected || !nrCapabilities.supported) && "opacity-50 cursor-not-allowed")}
           />
         </div>
+      )}
 
       {/* NB Level */}
       {nbCapabilities.supported && (
