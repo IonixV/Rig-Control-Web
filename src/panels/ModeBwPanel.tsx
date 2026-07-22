@@ -10,6 +10,7 @@ export interface ModeBwPanelProps {
   handleSetMode: (mode: string) => void;
   bandwidth: number | string;
   handleSetBw: (bw: number) => void;
+  bwDisabled?: boolean;
 }
 
 export default function ModeBwPanel({
@@ -20,6 +21,7 @@ export default function ModeBwPanel({
   handleSetMode,
   bandwidth,
   handleSetBw,
+  bwDisabled = false,
 }: ModeBwPanelProps) {
   const isPhone = variant === "phone";
   const selectClass = isPhone
@@ -38,13 +40,17 @@ export default function ModeBwPanel({
         {availableModes.map(m => <option key={m} value={m}>{m}</option>)}
       </select>
       <select
-        value={bandwidth || "2400"}
+        value={bwDisabled ? "" : (bandwidth || "2400")}
         onChange={(e) => handleSetBw(parseInt(e.target.value))}
-        disabled={!connected}
+        disabled={!connected || bwDisabled}
         data-testid={`modebw-bw-select-${variant}`}
-        className={cn(selectClass, !connected && "opacity-50 cursor-not-allowed")}
+        title={bwDisabled ? "Bandwidth control not supported by this radio" : undefined}
+        className={cn(selectClass, (!connected || bwDisabled) && "opacity-50 cursor-not-allowed")}
       >
-        {BANDWIDTHS.map(bw => <option key={bw} value={bw}>{bw}Hz</option>)}
+        {bwDisabled
+          ? <option value="">N/A</option>
+          : BANDWIDTHS.map(bw => <option key={bw} value={bw}>{bw}Hz</option>)
+        }
       </select>
     </>
   );

@@ -26,6 +26,7 @@ export interface VfoPanelProps {
   handleSetMode?: (mode: string) => void;
   handleSetBw?: (bw: number) => void;
   bandwidth?: number | string;
+  bwDisabled?: boolean;
 }
 
 export interface VfoCollapsedHeaderProps {
@@ -149,6 +150,7 @@ export default function VfoPanel({
   handleSetMode,
   handleSetBw,
   bandwidth,
+  bwDisabled = false,
 }: VfoPanelProps) {
   const vfoIsA = status.vfo === "VFOA";
   const vfoIsB = status.vfo === "VFOB";
@@ -225,6 +227,7 @@ export default function VfoPanel({
                 handleSetMode={handleSetMode}
                 bandwidth={bandwidth ?? "2400"}
                 handleSetBw={handleSetBw}
+                bwDisabled={bwDisabled}
               />
             </div>
           )}
@@ -408,6 +411,7 @@ export default function VfoPanel({
             handleSetMode={handleSetMode}
             bandwidth={bandwidth ?? "2400"}
             handleSetBw={handleSetBw}
+            bwDisabled={bwDisabled}
           />
         </div>
       )}
