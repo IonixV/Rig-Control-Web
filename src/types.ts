@@ -105,9 +105,13 @@ export interface RigctldSettings {
   attenuatorCapabilities: string[];
   agcCapabilities: string[];
   nbSupported: boolean;
+  nbLevelSupported: boolean;
   nbLevelRange: { min: number; max: number; step: number };
   nrSupported: boolean;
+  nrLevelSupported: boolean;
   nrLevelRange: { min: number; max: number; step: number };
+  rfLevelSupported: boolean;
+  rfLevelRange: { min: number; max: number; step: number };
   rfPowerRange: { min: number; max: number; step: number };
   anfSupported: boolean;
   pttType: "rig" | "dtr" | "rts" | "none";
@@ -127,11 +131,13 @@ export interface CapabilityRange {
 
 export interface NbCapabilities {
   supported: boolean;
+  levelSupported: boolean;
   range: CapabilityRange;
 }
 
 export interface NrCapabilities {
   supported: boolean;
+  levelSupported: boolean;
   range: CapabilityRange;
 }
 
@@ -140,6 +146,11 @@ export interface AnfCapabilities {
 }
 
 export interface RfPowerCapabilities {
+  range: CapabilityRange;
+}
+
+export interface RfLevelCapabilities {
+  supported: boolean;
   range: CapabilityRange;
 }
 

@@ -10,6 +10,7 @@ import type {
   NrCapabilities,
   AnfCapabilities,
   RfPowerCapabilities,
+  RfLevelCapabilities,
   ConsoleLog,
   SpectrumData,
   SpectrumSettings,
@@ -69,6 +70,7 @@ export interface PhoneLayoutProps {
   handleSetFreq: (freq: string) => void;
   handleSetMode: (mode: string) => void;
   handleSetBw: (bw: number) => void;
+  bwDisabled: boolean;
 
   // Video feed
   videoStatus: "streaming" | "stopped";
@@ -117,6 +119,7 @@ export interface PhoneLayoutProps {
   anfCapabilities: AnfCapabilities;
   localRFPower: number;
   rfPowerCapabilities: RfPowerCapabilities;
+  rfLevelCapabilities: RfLevelCapabilities;
   localRFLevel: number;
   localNRLevel: number;
   localNBLevel: number;
@@ -279,6 +282,7 @@ function PhoneLayout({
   handleSetFreq,
   handleSetMode,
   handleSetBw,
+  bwDisabled,
   videoStatus,
   isVideoCollapsed,
   isElectronSource,
@@ -317,6 +321,7 @@ function PhoneLayout({
   anfCapabilities,
   localRFPower,
   rfPowerCapabilities,
+  rfLevelCapabilities,
   localRFLevel,
   localNRLevel,
   localNBLevel,
@@ -493,6 +498,7 @@ function PhoneLayout({
               handleSetMode={handleSetMode}
               handleSetBw={handleSetBw}
               bandwidth={status?.bandwidth || "2400"}
+              bwDisabled={bwDisabled}
             />
           </PanelChrome>
         );
@@ -640,6 +646,7 @@ function PhoneLayout({
                 isDraggingRF={isDraggingRF}
                 localRFLevel={localRFLevel}
                 setLocalRFLevel={setLocalRFLevel}
+                rfLevelCapabilities={rfLevelCapabilities}
                 isDraggingRFLevel={isDraggingRFLevel}
                 localNRLevel={localNRLevel}
                 setLocalNRLevel={setLocalNRLevel}

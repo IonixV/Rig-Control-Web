@@ -1,6 +1,6 @@
 import React from "react";
 import { cn } from "../utils";
-import type { NbCapabilities, NrCapabilities, RfPowerCapabilities } from "../types";
+import type { NbCapabilities, NrCapabilities, RfPowerCapabilities, RfLevelCapabilities } from "../types";
 
 export interface RfLevelsPanelProps {
   variant: "phone" | "compact";
@@ -11,6 +11,7 @@ export interface RfLevelsPanelProps {
   isDraggingRF: React.MutableRefObject<boolean>;
   localRFLevel: number;
   setLocalRFLevel: (v: number) => void;
+  rfLevelCapabilities: RfLevelCapabilities;
   isDraggingRFLevel: React.MutableRefObject<boolean>;
   localNRLevel: number;
   setLocalNRLevel: (v: number) => void;
@@ -31,6 +32,7 @@ export default function RfLevelsPanel({
   isDraggingRF,
   localRFLevel,
   setLocalRFLevel,
+  rfLevelCapabilities,
   isDraggingRFLevel,
   localNRLevel,
   setLocalNRLevel,
@@ -65,47 +67,60 @@ export default function RfLevelsPanel({
           />
         </div>
 
-      {/* RF Level */}
-      <div className={isPhone ? "space-y-1.5" : "mt-3"}>
-          <div className="flex justify-between items-center">
-            <span className="text-xs uppercase text-[#8e9299]">RF Level</span>
-            <span className="text-sm text-emerald-500 font-bold">{Math.round(localRFLevel * 100)}%</span>
-          </div>
-          <input
-            type="range" min="0" max="1" step="0.1" value={localRFLevel}
-            disabled={!connected}
-            onChange={(e) => { isDraggingRFLevel.current = true; setLocalRFLevel(parseFloat(e.target.value)); }}
-            data-testid="rflevels-rflevel-slider"
-            className={cn(`w-full accent-emerald-500 ${sliderH} bg-[#0a0a0a] rounded-lg appearance-none cursor-pointer`, !connected && "opacity-50 cursor-not-allowed")}
-          />
-        </div>
-
-      {/* DNR Level — hidden when range step is zero (degenerate capability data from radio) */}
-      {nrCapabilities.range.step > 0 && (
+      {/* RF Level — only shown when the rig's dump_caps actually lists RF as a level (distinct from RF as an on/off func) */}
+      {rfLevelCapabilities.supported && (
         <div className={isPhone ? "space-y-1.5" : "mt-3"}>
-          <div className="flex justify-between items-center">
-            <span className="text-xs uppercase text-[#8e9299]">DNR Level</span>
-            <span className="text-sm text-emerald-500 font-bold">Lvl {Math.max(1, Math.round((localNRLevel - nrCapabilities.range.min) / nrCapabilities.range.step))}</span>
+            <div className="flex justify-between items-center">
+              <span className="text-xs uppercase text-[#8e9299]">RF Level</span>
+              <span className="text-sm text-emerald-500 font-bold">{Math.round(localRFLevel * 100)}%</span>
+            </div>
+            <input
+              type="range"
+              min={rfLevelCapabilities.range.min} max={rfLevelCapabilities.range.max} step={rfLevelCapabilities.range.step}
+              value={localRFLevel}
+              disabled={!connected}
+              onChange={(e) => { isDraggingRFLevel.current = true; setLocalRFLevel(parseFloat(e.target.value)); }}
+              data-testid="rflevels-rflevel-slider"
+              className={cn(`w-full accent-emerald-500 ${sliderH} bg-[#0a0a0a] rounded-lg appearance-none cursor-pointer`, !connected && "opacity-50 cursor-not-allowed")}
+            />
           </div>
-          <input
-            type="range" min="1"
-            max={Math.round((nrCapabilities.range.max - nrCapabilities.range.min) / nrCapabilities.range.step)}
-            step="1"
-            value={Math.max(1, Math.round((localNRLevel - nrCapabilities.range.min) / nrCapabilities.range.step))}
-            disabled={!connected || !nrCapabilities.supported}
-            onChange={(e) => {
-              isDraggingNR.current = true;
-              const stepIdx = parseInt(e.target.value);
-              setLocalNRLevel(Math.min(nrCapabilities.range.max, nrCapabilities.range.min + stepIdx * nrCapabilities.range.step));
-            }}
-            data-testid="rflevels-dnr-slider"
-            className={cn(`w-full accent-emerald-500 ${sliderH} bg-[#0a0a0a] rounded-lg appearance-none cursor-pointer`, (!connected || !nrCapabilities.supported) && "opacity-50 cursor-not-allowed")}
-          />
-        </div>
       )}
 
-      {/* NB Level */}
-      {nbCapabilities.supported && (
+      {/* DNR Level — shown whenever the rig's dump_caps lists NR as a level (distinct from NR as an on/off func). A degenerate zero-step range (seen live on Hamlib's Dummy rig, model 1) can't drive the step-index math below, so it's treated as a fixed "Lvl 0" control instead of hidden or NaN. */}
+      {nrCapabilities.levelSupported && (() => {
+        const nrStepValid = nrCapabilities.range.step > 0;
+        const nrStepIdx = nrStepValid
+          ? Math.max(1, Math.round((localNRLevel - nrCapabilities.range.min) / nrCapabilities.range.step))
+          : 0;
+        const nrStepMax = nrStepValid
+          ? Math.round((nrCapabilities.range.max - nrCapabilities.range.min) / nrCapabilities.range.step)
+          : 0;
+        return (
+          <div className={isPhone ? "space-y-1.5" : "mt-3"}>
+            <div className="flex justify-between items-center">
+              <span className="text-xs uppercase text-[#8e9299]">DNR Level</span>
+              <span className="text-sm text-emerald-500 font-bold">Lvl {nrStepIdx}</span>
+            </div>
+            <input
+              type="range" min={nrStepValid ? 1 : 0}
+              max={nrStepValid ? nrStepMax : 0}
+              step="1"
+              value={nrStepIdx}
+              disabled={!connected}
+              onChange={(e) => {
+                isDraggingNR.current = true;
+                const stepIdx = parseInt(e.target.value);
+                setLocalNRLevel(Math.min(nrCapabilities.range.max, nrCapabilities.range.min + stepIdx * nrCapabilities.range.step));
+              }}
+              data-testid="rflevels-dnr-slider"
+              className={cn(`w-full accent-emerald-500 ${sliderH} bg-[#0a0a0a] rounded-lg appearance-none cursor-pointer`, !connected && "opacity-50 cursor-not-allowed")}
+            />
+          </div>
+        );
+      })()}
+
+      {/* NB Level — only shown when the rig's dump_caps lists NB as a level (distinct from NB as an on/off func) */}
+      {nbCapabilities.levelSupported && (
         <div className={isPhone ? "space-y-1.5" : "mt-3"}>
             <div className="flex justify-between items-center">
               <span className="text-xs uppercase text-[#8e9299]">NB Level</span>

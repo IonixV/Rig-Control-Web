@@ -30,9 +30,13 @@ export function useRigctld({ socket }: UseRigctldOptions) {
     attenuatorCapabilities: [] as string[],
     agcCapabilities: [] as string[],
     nbSupported: false,
+    nbLevelSupported: false,
     nbLevelRange: { min: 0, max: 1, step: 0.1 },
     nrSupported: false,
+    nrLevelSupported: false,
     nrLevelRange: { min: 0, max: 1, step: 0.1 },
+    rfLevelSupported: false,
+    rfLevelRange: { min: 0, max: 1, step: 0.1 },
     rfPowerRange: { min: 0, max: 1, step: 0.01 },
     anfSupported: false,
     pttType: "rig" as "rig" | "dtr" | "rts" | "none",
@@ -51,10 +55,11 @@ export function useRigctld({ socket }: UseRigctldOptions) {
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   // ── Capability state (set by rigctld socket events, used by level sliders) ─
-  const [nbCapabilities, setNbCapabilities] = useState({ supported: false, range: { min: 0, max: 1, step: 0.1 } });
-  const [nrCapabilities, setNrCapabilities] = useState({ supported: false, range: { min: 0, max: 1, step: 0.066667 } });
+  const [nbCapabilities, setNbCapabilities] = useState({ supported: false, levelSupported: false, range: { min: 0, max: 1, step: 0.1 } });
+  const [nrCapabilities, setNrCapabilities] = useState({ supported: false, levelSupported: false, range: { min: 0, max: 1, step: 0.066667 } });
   const [anfCapabilities, setAnfCapabilities] = useState({ supported: false });
   const [rfPowerCapabilities, setRfPowerCapabilities] = useState({ range: { min: 0, max: 1, step: 0.01 } });
+  const [rfLevelCapabilities, setRfLevelCapabilities] = useState({ supported: false, range: { min: 0, max: 1, step: 0.1 } });
 
   const logEndRef = useRef<HTMLDivElement>(null);
 
@@ -69,6 +74,7 @@ export function useRigctld({ socket }: UseRigctldOptions) {
         if (data.settings.attenuatorCapabilities) setAttenuatorLevels(data.settings.attenuatorCapabilities);
         if (data.settings.agcCapabilities) setAgcLevels(data.settings.agcCapabilities);
         if (data.settings.rfPowerRange) setRfPowerCapabilities({ range: data.settings.rfPowerRange });
+        if (data.settings.rfLevelRange) setRfLevelCapabilities({ supported: !!data.settings.rfLevelSupported, range: data.settings.rfLevelRange });
       }
       setSettingsLoaded(true);
     };
@@ -112,14 +118,14 @@ export function useRigctld({ socket }: UseRigctldOptions) {
       setRigctldSettings(prev => ({ ...prev, agcCapabilities: levels }));
     };
 
-    const onNbCapabilities = (data: { supported: boolean; range: { min: number; max: number; step: number } }) => {
+    const onNbCapabilities = (data: { supported: boolean; levelSupported: boolean; range: { min: number; max: number; step: number } }) => {
       setNbCapabilities(data);
-      setRigctldSettings(prev => ({ ...prev, nbSupported: data.supported, nbLevelRange: data.range }));
+      setRigctldSettings(prev => ({ ...prev, nbSupported: data.supported, nbLevelSupported: data.levelSupported, nbLevelRange: data.range }));
     };
 
-    const onNrCapabilities = (data: { supported: boolean; range: { min: number; max: number; step: number } }) => {
+    const onNrCapabilities = (data: { supported: boolean; levelSupported: boolean; range: { min: number; max: number; step: number } }) => {
       setNrCapabilities(data);
-      setRigctldSettings(prev => ({ ...prev, nrSupported: data.supported, nrLevelRange: data.range }));
+      setRigctldSettings(prev => ({ ...prev, nrSupported: data.supported, nrLevelSupported: data.levelSupported, nrLevelRange: data.range }));
     };
 
     const onAnfCapabilities = (data: { supported: boolean }) => {
@@ -130,6 +136,11 @@ export function useRigctld({ socket }: UseRigctldOptions) {
     const onRfpowerCapabilities = (data: { range: { min: number; max: number; step: number } }) => {
       setRfPowerCapabilities(data);
       setRigctldSettings(prev => ({ ...prev, rfPowerRange: data.range }));
+    };
+
+    const onRflevelCapabilities = (data: { supported: boolean; range: { min: number; max: number; step: number } }) => {
+      setRfLevelCapabilities(data);
+      setRigctldSettings(prev => ({ ...prev, rfLevelSupported: data.supported, rfLevelRange: data.range }));
     };
 
     socket.on("settings-data", onSettingsData);
@@ -144,6 +155,7 @@ export function useRigctld({ socket }: UseRigctldOptions) {
     socket.on("nr-capabilities", onNrCapabilities);
     socket.on("anf-capabilities", onAnfCapabilities);
     socket.on("rfpower-capabilities", onRfpowerCapabilities);
+    socket.on("rflevel-capabilities", onRflevelCapabilities);
 
     return () => {
       socket.off("settings-data", onSettingsData);
@@ -158,6 +170,7 @@ export function useRigctld({ socket }: UseRigctldOptions) {
       socket.off("nr-capabilities", onNrCapabilities);
       socket.off("anf-capabilities", onAnfCapabilities);
       socket.off("rfpower-capabilities", onRfpowerCapabilities);
+      socket.off("rflevel-capabilities", onRflevelCapabilities);
     };
   }, [socket]);
 
@@ -191,6 +204,7 @@ export function useRigctld({ socket }: UseRigctldOptions) {
     nrCapabilities,
     anfCapabilities,
     rfPowerCapabilities,
+    rfLevelCapabilities,
     // Refs
     logEndRef,
     // Helpers

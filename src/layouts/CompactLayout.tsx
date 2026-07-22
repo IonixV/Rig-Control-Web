@@ -19,6 +19,7 @@ import type {
   NrCapabilities,
   AnfCapabilities,
   RfPowerCapabilities,
+  RfLevelCapabilities,
   ConsoleLog,
   SpectrumData,
 } from "../types";
@@ -105,6 +106,7 @@ export interface CompactLayoutProps {
   handleSetFreq: (freq: string) => void;
   handleSetMode: (mode: string) => void;
   handleSetBw: (bw: number) => void;
+  bwDisabled: boolean;
 
   // Meters
   history: any[];
@@ -166,6 +168,7 @@ export interface CompactLayoutProps {
   anfCapabilities: AnfCapabilities;
   localRFPower: number;
   rfPowerCapabilities: RfPowerCapabilities;
+  rfLevelCapabilities: RfLevelCapabilities;
   localRFLevel: number;
   localNRLevel: number;
   localNBLevel: number;
@@ -334,6 +337,7 @@ function CompactLayout({
   anfCapabilities,
   localRFPower,
   rfPowerCapabilities,
+  rfLevelCapabilities,
   localRFLevel,
   localNRLevel,
   localNBLevel,
@@ -425,6 +429,7 @@ function CompactLayout({
   setIsSpectrumHamlibCollapsed,
   isSpectrumAudioCollapsed,
   setIsSpectrumAudioCollapsed,
+  bwDisabled,
 }: CompactLayoutProps) {
 
   const [showPanelPicker, setShowPanelPicker] = useState(false);
@@ -454,6 +459,7 @@ function CompactLayout({
           vfoSupported, adjustVfoFrequency, handleSetVFO, handleToggleSplit,
           handleSetFreq, localMode, availableModes, handleSetMode, handleSetBw,
           bandwidth: status?.bandwidth || "2400",
+          bwDisabled,
         };
         if (isColumnVfo) {
           return (
@@ -757,6 +763,7 @@ function CompactLayout({
                   isDraggingRF={isDraggingRF}
                   localRFLevel={localRFLevel}
                   setLocalRFLevel={setLocalRFLevel}
+                  rfLevelCapabilities={rfLevelCapabilities}
                   isDraggingRFLevel={isDraggingRFLevel}
                   localNRLevel={localNRLevel}
                   setLocalNRLevel={setLocalNRLevel}
@@ -1032,7 +1039,7 @@ function CompactLayout({
     isCompactControlsCollapsed, isCompactRFPowerCollapsed,
     isTuning, tuneJustFinished, attenuatorLevels, preampLevels, agcLevels,
     nbCapabilities, nrCapabilities, anfCapabilities,
-    localRFPower, rfPowerCapabilities, localRFLevel, localNRLevel, localNBLevel,
+    localRFPower, rfPowerCapabilities, rfLevelCapabilities, localRFLevel, localNRLevel, localNBLevel,
     cwSettings, cwKeyActive, cwStuckAlert,
     potaPollRate, potaMaxAge, potaModeFilter, potaBandFilter,
     sotaPollRate, sotaMaxAge, sotaModeFilter, sotaBandFilter,

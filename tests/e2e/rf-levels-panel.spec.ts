@@ -62,13 +62,22 @@ test.describe('RfLevelsPanel against a real rigctld Dummy backend', () => {
     await page.goto('/');
     await connectToDummy(page, dummy);
 
-    // Fixed 0..1 range hardcoded in RfLevelsPanel.tsx, independent of any
-    // capability probe.
+    // Dummy's dump_caps: RF(0.000000..1.000000/0.003922) -> the slider's
+    // min/max/step are bound to that real capability range (RfLevelsPanel.tsx
+    // gates visibility on rfLevelCapabilities.supported, derived from the
+    // rig's actual "Get level:" RF(...) entry, distinct from RIG_FUNC_RF).
+    // Chromium's native <input type="range"> value-sanitization snaps a
+    // programmatically-set value to the nearest step multiple, so — like the
+    // RF Power slider above — this is a tolerance check, not an exact match:
+    // 0.7 snaps to 178 * 0.003922 =~ 0.698116.
     const slider = page.getByTestId('rflevels-rflevel-slider');
     await expect(slider).toBeEnabled({ timeout: 10_000 });
     await dragRangeTo(slider, 0.7);
     await page.waitForTimeout(1500);
-    await expect(slider).toHaveValue('0.7', { timeout: 10_000 });
+    await expect.poll(async () => parseFloat(await slider.inputValue()), { timeout: 10_000 })
+      .toBeGreaterThan(0.69);
+    await expect.poll(async () => parseFloat(await slider.inputValue()))
+      .toBeLessThan(0.71);
 
     await disconnectFromDummy(page);
   });
@@ -77,10 +86,15 @@ test.describe('RfLevelsPanel against a real rigctld Dummy backend', () => {
   // round-trip test. Confirmed live and via Hamlib source: Dummy's
   // level_gran table only defines a real step for CWPITCH — NR and NB both
   // report a degenerate range from \dump_caps ("NR(0.000000..0.000000/
-  // 0.000000)", "NB(0.000000..0.000000/0.000000)"). RfLevelsPanel binds
-  // these sliders' min/max/step directly to that capability range, so
-  // against Dummy specifically they're stuck at 0 (DNR Level's label even
-  // renders "Lvl NaN" — Math.round((0-0)/0)). This is a Dummy-only
+  // 0.000000)", "NB(0.000000..0.000000/0.000000)"). Both sliders are gated
+  // on levelSupported (whether NR/NB actually appear in dump_caps's "Get
+  // level:" line, distinct from the RIG_FUNC_NR/RIG_FUNC_NB on/off funcs) —
+  // true for Dummy either way, since it lists both with this degenerate
+  // range rather than omitting them. RfLevelsPanel guards the DNR slider's
+  // step-index math against the zero step (rendering a fixed "Lvl 0"
+  // instead of "Lvl NaN"); NB Level has no such guard since its range is
+  // used directly as the native <input> min/max/step, which tolerates
+  // min===max===step===0 without dividing by anything. This is a Dummy-only
   // simulator artifact (real radios report real level_gran for NR/NB), not
   // a production bug worth changing — see the underlying rig level itself
   // *is* genuinely settable (confirmed via raw "L NB 0.35" / "l NB" round
@@ -100,8 +114,9 @@ test.describe('RfLevelsPanel against a real rigctld Dummy backend', () => {
     await page.goto('/');
     await connectToDummy(page, dummy);
 
-    // Conditionally rendered only when nbCapabilities.supported — true
-    // against Dummy (NB is in its advertised Set functions list).
+    // Conditionally rendered only when nbCapabilities.levelSupported — true
+    // against Dummy (NB appears, if with a degenerate range, in dump_caps's
+    // "Get level:" line).
     const slider = page.getByTestId('rflevels-nb-slider');
     await expect(slider).toBeEnabled({ timeout: 10_000 });
 

@@ -75,9 +75,13 @@ export interface ServerContext {
     attenuatorCapabilities: string[];
     agcCapabilities: string[];
     nbSupported: boolean;
+    nbLevelSupported: boolean;
     nbLevelRange: { min: number; max: number; step: number };
     nrSupported: boolean;
+    nrLevelSupported: boolean;
     nrLevelRange: { min: number; max: number; step: number };
+    rfLevelSupported: boolean;
+    rfLevelRange: { min: number; max: number; step: number };
     rfPowerRange: { min: number; max: number; step: number };
     anfSupported: boolean;
     pttType: "rig" | "dtr" | "rts" | "none";
@@ -288,9 +292,13 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
       attenuatorCapabilities: [],
       agcCapabilities: [],
       nbSupported: false,
+      nbLevelSupported: false,
       nbLevelRange: { min: 0, max: 1, step: 0.1 },
       nrSupported: false,
+      nrLevelSupported: false,
       nrLevelRange: { min: 0, max: 1, step: 0.1 },
+      rfLevelSupported: false,
+      rfLevelRange: { min: 0, max: 1, step: 0.1 },
       rfPowerRange: { min: 0, max: 1, step: 0.01 },
       anfSupported: false,
       pttType: "rig",

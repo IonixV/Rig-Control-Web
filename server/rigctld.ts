@@ -157,20 +157,32 @@ export function fetchRadioCapabilities(ctx: ServerContext, rigNumber: string): P
 
       const getLevelLine = lines.find(line => line.trim().startsWith('Get level:'));
       if (getLevelLine) {
-        const nbMatch = getLevelLine.match(/NB\(([\d.-]+)\.\.([\d.-]+)\/([\d.-]+)\)/);
+        const nbMatch = getLevelLine.match(/\bNB\(([\d.-]+)\.\.([\d.-]+)\/([\d.-]+)\)/);
+        ctx.rigctldSettings.nbLevelSupported = !!nbMatch;
         ctx.rigctldSettings.nbLevelRange = nbMatch
           ? { min: parseFloat(nbMatch[1]), max: parseFloat(nbMatch[2]), step: parseFloat(nbMatch[3]) }
           : { min: 0, max: 1, step: 0.1 };
 
-        const nrMatch = getLevelLine.match(/NR\(([\d.-]+)\.\.([\d.-]+)\/([\d.-]+)\)/);
+        const nrMatch = getLevelLine.match(/\bNR\(([\d.-]+)\.\.([\d.-]+)\/([\d.-]+)\)/);
+        ctx.rigctldSettings.nrLevelSupported = !!nrMatch;
         ctx.rigctldSettings.nrLevelRange = nrMatch
           ? { min: parseFloat(nrMatch[1]), max: parseFloat(nrMatch[2]), step: parseFloat(nrMatch[3]) }
           : { min: 0, max: 1, step: 0.066667 };
+
+        const rfMatch = getLevelLine.match(/\bRF\(([\d.-]+)\.\.([\d.-]+)\/([\d.-]+)\)/);
+        ctx.rigctldSettings.rfLevelSupported = !!rfMatch;
+        ctx.rigctldSettings.rfLevelRange = rfMatch
+          ? { min: parseFloat(rfMatch[1]), max: parseFloat(rfMatch[2]), step: parseFloat(rfMatch[3]) }
+          : { min: 0, max: 1, step: 0.1 };
 
         const rfPowerMatch = getLevelLine.match(/RFPOWER\(([\d.-]+)\.\.([\d.-]+)\/([\d.-]+)\)/);
         ctx.rigctldSettings.rfPowerRange = rfPowerMatch
           ? { min: parseFloat(rfPowerMatch[1]), max: parseFloat(rfPowerMatch[2]), step: parseFloat(rfPowerMatch[3]) }
           : { min: 0, max: 1, step: 0.01 };
+      } else {
+        ctx.rigctldSettings.nbLevelSupported = false;
+        ctx.rigctldSettings.nrLevelSupported = false;
+        ctx.rigctldSettings.rfLevelSupported = false;
       }
 
       resolve(true);

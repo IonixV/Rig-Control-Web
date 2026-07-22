@@ -169,10 +169,11 @@ export async function startServer(appPath?: string, userDataPath?: string) {
     socket.emit("preamp-capabilities", ctx.rigctldSettings.preampCapabilities);
     socket.emit("attenuator-capabilities", ctx.rigctldSettings.attenuatorCapabilities);
     socket.emit("agc-capabilities", ctx.rigctldSettings.agcCapabilities);
-    socket.emit("nb-capabilities", { supported: ctx.rigctldSettings.nbSupported, range: ctx.rigctldSettings.nbLevelRange });
-    socket.emit("nr-capabilities", { supported: ctx.rigctldSettings.nrSupported, range: ctx.rigctldSettings.nrLevelRange });
+    socket.emit("nb-capabilities", { supported: ctx.rigctldSettings.nbSupported, levelSupported: ctx.rigctldSettings.nbLevelSupported, range: ctx.rigctldSettings.nbLevelRange });
+    socket.emit("nr-capabilities", { supported: ctx.rigctldSettings.nrSupported, levelSupported: ctx.rigctldSettings.nrLevelSupported, range: ctx.rigctldSettings.nrLevelRange });
     socket.emit("mic-active-client", ctx.activeMicClientId);
     socket.emit("rfpower-capabilities", { range: ctx.rigctldSettings.rfPowerRange });
+    socket.emit("rflevel-capabilities", { supported: ctx.rigctldSettings.rfLevelSupported, range: ctx.rigctldSettings.rfLevelRange });
     socket.emit("anf-capabilities", { supported: ctx.rigctldSettings.anfSupported });
 
     if (ctx.isConnected) {

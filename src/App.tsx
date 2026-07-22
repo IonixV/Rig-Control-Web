@@ -246,6 +246,7 @@ export default function App() {
     nrCapabilities,
     anfCapabilities,
     rfPowerCapabilities,
+    rfLevelCapabilities,
     logEndRef,
     isSettingsValid,
   } = useRigctld({ socket });
@@ -821,6 +822,7 @@ export default function App() {
             handleSetFreq={handleSetFreq}
             handleSetMode={handleSetMode}
             handleSetBw={handleSetBw}
+            bwDisabled={connected && status?.bandwidth === "0"}
             videoStatus={videoStatus}
             isVideoCollapsed={isPhoneVideoCollapsed}
             isElectronSource={isElectronSource}
@@ -859,6 +861,7 @@ export default function App() {
             anfCapabilities={anfCapabilities}
             localRFPower={localRFPower}
             rfPowerCapabilities={rfPowerCapabilities}
+            rfLevelCapabilities={rfLevelCapabilities}
             localRFLevel={localRFLevel}
             localNRLevel={localNRLevel}
             localNBLevel={localNBLevel}
@@ -981,6 +984,7 @@ export default function App() {
             handleSetFreq={handleSetFreq}
             handleSetMode={handleSetMode}
             handleSetBw={handleSetBw}
+            bwDisabled={connected && status?.bandwidth === "0"}
             history={history}
             activeMeter={activeMeter}
             isCompactSMeterCollapsed={isCompactSMeterCollapsed}
@@ -1026,6 +1030,7 @@ export default function App() {
             anfCapabilities={anfCapabilities}
             localRFPower={localRFPower}
             rfPowerCapabilities={rfPowerCapabilities}
+            rfLevelCapabilities={rfLevelCapabilities}
             localRFLevel={localRFLevel}
             localNRLevel={localNRLevel}
             localNBLevel={localNBLevel}
