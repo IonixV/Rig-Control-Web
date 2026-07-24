@@ -202,7 +202,7 @@ async function probeDumpCaps(ctx: ServerContext): Promise<string> {
   }
 }
 
-function parseDumpCapsIntoContext(dump: string, ctx: ServerContext): void {
+export function parseDumpCapsIntoContext(dump: string, ctx: ServerContext): void {
   const lines = dump.split('\n');
 
   const preampLine = lines.find(l => l.trim().startsWith('Preamp:'));
@@ -248,15 +248,30 @@ function parseDumpCapsIntoContext(dump: string, ctx: ServerContext): void {
       ? { min: parseFloat(nrMatch[1]), max: parseFloat(nrMatch[2]), step: parseFloat(nrMatch[3]) }
       : { min: 0, max: 1, step: 0.066667 };
 
+    // Some rigs (e.g. Xiegu G90) list RF in dump_caps but with a degenerate 0..0/0 range even
+    // though get/set RF genuinely work at runtime — treat a degenerate match the same as no
+    // match at all (unsupported, default range), so probeCapabilities()'s live "l RF"
+    // corroboration probe below gets a chance to override it instead of the slider getting
+    // stuck at min=max=0.
     const rfMatch = getLevelLine.match(/\bRF\(([\d.-]+)\.\.([\d.-]+)\/([\d.-]+)\)/);
-    ctx.rigctldSettings.rfLevelSupported = !!rfMatch;
-    ctx.rigctldSettings.rfLevelRange = rfMatch
+    const rfParsed = rfMatch
       ? { min: parseFloat(rfMatch[1]), max: parseFloat(rfMatch[2]), step: parseFloat(rfMatch[3]) }
+      : null;
+    const rfSane = !!rfParsed && rfParsed.max > rfParsed.min && rfParsed.step > 0;
+    ctx.rigctldSettings.rfLevelSupported = rfSane;
+    ctx.rigctldSettings.rfLevelRange = rfSane
+      ? rfParsed!
       : { min: 0, max: 1, step: 0.1 };
 
+    // Some rigs (e.g. Xiegu G90) list RFPOWER in dump_caps but with a degenerate 0..0/0 range
+    // even though get/set RFPOWER genuinely work at runtime — feeding that straight into the
+    // slider's min/max leaves it stuck, so fall back to the default range in that case too.
     const rfPowerMatch = getLevelLine.match(/RFPOWER\(([\d.-]+)\.\.([\d.-]+)\/([\d.-]+)\)/);
-    ctx.rigctldSettings.rfPowerRange = rfPowerMatch
+    const rfPowerParsed = rfPowerMatch
       ? { min: parseFloat(rfPowerMatch[1]), max: parseFloat(rfPowerMatch[2]), step: parseFloat(rfPowerMatch[3]) }
+      : null;
+    ctx.rigctldSettings.rfPowerRange = rfPowerParsed && rfPowerParsed.max > rfPowerParsed.min && rfPowerParsed.step > 0
+      ? rfPowerParsed
       : { min: 0, max: 1, step: 0.01 };
   } else {
     ctx.rigctldSettings.nbLevelSupported = false;
@@ -297,6 +312,21 @@ async function probeCapabilities(ctx: ServerContext): Promise<void> {
       }
     } catch (importErr) {
       vlog("[RIG] Could not load local capability fallback:", importErr);
+    }
+  }
+
+  // dump_caps's static Get level line doesn't always list RF at all, and even when it does
+  // (e.g. Xiegu G90) it can report a degenerate 0..0/0 range — parseDumpCapsIntoContext()
+  // normalizes both cases to rfLevelSupported=false, default range. Either way, the rig can
+  // demonstrably support get_level RF at runtime, so corroborate with a live probe before
+  // trusting dump_caps as authoritative, so the RF Level slider isn't hidden/stuck needlessly.
+  if (!ctx.rigctldSettings.rfLevelSupported) {
+    try {
+      await sendToRig(ctx, "l RF", true);
+      ctx.rigctldSettings.rfLevelSupported = true;
+      vlog("[RIG] RF level missing/degenerate in dump_caps but live get_level RF succeeded; enabling RF Level slider");
+    } catch {
+      vlog("[RIG] RF level unsupported (dump_caps missing/degenerate and live probe failed)");
     }
   }
 

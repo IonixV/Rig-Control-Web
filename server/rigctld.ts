@@ -169,15 +169,26 @@ export function fetchRadioCapabilities(ctx: ServerContext, rigNumber: string): P
           ? { min: parseFloat(nrMatch[1]), max: parseFloat(nrMatch[2]), step: parseFloat(nrMatch[3]) }
           : { min: 0, max: 1, step: 0.066667 };
 
+        // Some rigs (e.g. Xiegu G90) list RF with a degenerate 0..0/0 range even though get/set
+        // RF genuinely work at runtime — treat a degenerate match the same as no match at all.
         const rfMatch = getLevelLine.match(/\bRF\(([\d.-]+)\.\.([\d.-]+)\/([\d.-]+)\)/);
-        ctx.rigctldSettings.rfLevelSupported = !!rfMatch;
-        ctx.rigctldSettings.rfLevelRange = rfMatch
+        const rfParsed = rfMatch
           ? { min: parseFloat(rfMatch[1]), max: parseFloat(rfMatch[2]), step: parseFloat(rfMatch[3]) }
+          : null;
+        const rfSane = !!rfParsed && rfParsed.max > rfParsed.min && rfParsed.step > 0;
+        ctx.rigctldSettings.rfLevelSupported = rfSane;
+        ctx.rigctldSettings.rfLevelRange = rfSane
+          ? rfParsed!
           : { min: 0, max: 1, step: 0.1 };
 
+        // Some rigs (e.g. Xiegu G90) list RFPOWER with a degenerate 0..0/0 range even though
+        // get/set RFPOWER genuinely work at runtime — fall back to the default range in that case.
         const rfPowerMatch = getLevelLine.match(/RFPOWER\(([\d.-]+)\.\.([\d.-]+)\/([\d.-]+)\)/);
-        ctx.rigctldSettings.rfPowerRange = rfPowerMatch
+        const rfPowerParsed = rfPowerMatch
           ? { min: parseFloat(rfPowerMatch[1]), max: parseFloat(rfPowerMatch[2]), step: parseFloat(rfPowerMatch[3]) }
+          : null;
+        ctx.rigctldSettings.rfPowerRange = rfPowerParsed && rfPowerParsed.max > rfPowerParsed.min && rfPowerParsed.step > 0
+          ? rfPowerParsed
           : { min: 0, max: 1, step: 0.01 };
       } else {
         ctx.rigctldSettings.nbLevelSupported = false;

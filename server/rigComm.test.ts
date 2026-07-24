@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { formatExtendedCommand, normalizeVfoName, parseExtendedResponse, resetRigState } from './rigComm.ts';
+import { formatExtendedCommand, normalizeVfoName, parseDumpCapsIntoContext, parseExtendedResponse, resetRigState } from './rigComm.ts';
 import { createInitialContext } from './context.ts';
 
 describe('normalizeVfoName', () => {
@@ -67,6 +67,78 @@ describe('parseExtendedResponse', () => {
   it('passes through lines with no colon label as-is', () => {
     const resp = 'dump_state:\nplain line\nRPRT 0';
     expect(parseExtendedResponse(resp)).toBe('plain line');
+  });
+});
+
+describe('parseDumpCapsIntoContext', () => {
+  // Reproduces the Xiegu G90's dump_caps "Get level:" line as seen in a real diagnostics log:
+  // RFPOWER is listed but with a degenerate 0..0/0 range, and RF (receiver gain) isn't listed
+  // as a distinct token at all — both despite the rig genuinely supporting live get/set for
+  // both levels (confirmed by "l RFPOWER"/"l RF" succeeding with RPRT 0 during polling).
+  const g90GetLevelLine =
+    'Get level: PREAMP(0,0/0) ATT(0,0/0) VOX(0.000000..1.000000/0.000000) AF(0.000000..1.000000/0.000000) ' +
+    'SQL(0.000000..1.000000/0.000000) RFPOWER(0.000000..0.000000/0.000000) ' +
+    'MICGAIN(0.000000..1.000000/0.000000) AGC(0,0/0) CWPITCH(0.000000..1.000000/0.000000) ' +
+    'KEYSPD(0.000000..1.000000/0.000000)\n';
+
+  it('falls back to the default RFPOWER range when dump_caps reports a degenerate 0..0/0 range', () => {
+    const ctx = createInitialContext({} as any, '/base', '/data');
+    const dump = `Caps dump for model:\nGet functions: NB\n${g90GetLevelLine}`;
+
+    parseDumpCapsIntoContext(dump, ctx);
+
+    expect(ctx.rigctldSettings.rfPowerRange).toEqual({ min: 0, max: 1, step: 0.01 });
+  });
+
+  it('reports RF as unsupported when dump_caps has no distinct RF( token', () => {
+    const ctx = createInitialContext({} as any, '/base', '/data');
+    const dump = `Caps dump for model:\nGet functions: NB\n${g90GetLevelLine}`;
+
+    parseDumpCapsIntoContext(dump, ctx);
+
+    // dump_caps parsing alone reports false here — this is why probeCapabilities() additionally
+    // corroborates with a live "l RF" probe before trusting this as the final answer, since the
+    // G90 demonstrably supports get_level RF at runtime despite dump_caps staying silent on it.
+    expect(ctx.rigctldSettings.rfLevelSupported).toBe(false);
+    expect(ctx.rigctldSettings.rfLevelRange).toEqual({ min: 0, max: 1, step: 0.1 });
+  });
+
+  it('reports RF as unsupported when dump_caps lists RF( with a degenerate 0..0/0 range', () => {
+    // Captured live from a real G90 (2026-07-24): unlike the fixture above, this firmware/
+    // dump_caps snapshot DOES include a distinct "RF(" token, but with the same degenerate
+    // 0.000000..0.000000/0.000000 range RFPOWER has. Trusting the bare regex match (as an
+    // earlier version of this fix did) sets rfLevelSupported=true with rfLevelRange stuck at
+    // min=max=0 — broken the same way the unfixed RFPOWER case was, just via a different path
+    // (a "present but useless" match rather than "absent"), and one the live-probe
+    // corroboration in probeCapabilities() never even reaches, since it's gated on
+    // rfLevelSupported already being false.
+    const ctx = createInitialContext({} as any, '/base', '/data');
+    const dump =
+      'Caps dump for model: 3088\nGet functions: NB COMP VOX TONE TSQL SBKIN FBKIN MON MN LOCK VSC TUNER\n' +
+      'Get level: PREAMP(0..0/0) ATT(0..0/0) AF(0.000000..0.000000/0.000000) ' +
+      'RF(0.000000..0.000000/0.000000) SQL(0.000000..0.000000/0.000000) CWPITCH(0..0/0) ' +
+      'RFPOWER(0.000000..0.000000/0.000000) KEYSPD(0..0/0) AGC(0..0/0) RAWSTR(0..255/0) ' +
+      'SWR(0.000000..0.000000/0.000000)\n';
+
+    parseDumpCapsIntoContext(dump, ctx);
+
+    expect(ctx.rigctldSettings.rfLevelSupported).toBe(false);
+    expect(ctx.rigctldSettings.rfLevelRange).toEqual({ min: 0, max: 1, step: 0.1 });
+    expect(ctx.rigctldSettings.rfPowerRange).toEqual({ min: 0, max: 1, step: 0.01 });
+  });
+
+  it('parses a well-formed Get level line (e.g. Hamlib Dummy rig) without falling back', () => {
+    const ctx = createInitialContext({} as any, '/base', '/data');
+    const dump =
+      'Caps dump for model:\nGet functions: NB NR ANF\n' +
+      'Get level: RF(0.050000..1.000000/0.001957) RFPOWER(0.000000..1.000000/0.001957) ' +
+      'NB(0.000000..1.000000/0.100000) NR(0.000000..1.000000/0.066667)\n';
+
+    parseDumpCapsIntoContext(dump, ctx);
+
+    expect(ctx.rigctldSettings.rfLevelSupported).toBe(true);
+    expect(ctx.rigctldSettings.rfLevelRange).toEqual({ min: 0.05, max: 1, step: 0.001957 });
+    expect(ctx.rigctldSettings.rfPowerRange).toEqual({ min: 0, max: 1, step: 0.001957 });
   });
 });
 
