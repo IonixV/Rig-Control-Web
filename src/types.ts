@@ -171,10 +171,13 @@ export interface SpectrumData {
 
 export interface SpectrumSettings {
   enabled: boolean;
-  source: "hamlib" | "ft4222";
+  source: "hamlib" | "ft4222" | "iq";
   multicastAddr: string;
   multicastPort: number;
   ft4222SpanIndex: number;
+  iqAudioDevice: string;
+  iqSampleRate: number;
+  iqSwapChannels: boolean;
 }
 
 export interface DebugFlags {

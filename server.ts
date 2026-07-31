@@ -17,6 +17,7 @@ import { registerVideoHandlers } from "./server/video.ts";
 import { registerSolarHandlers, pushSolarData } from "./server/solar.ts";
 import { startSpectrumListener, stopSpectrumListener } from "./server/spectrum.ts";
 import { startYaesuScope, stopYaesuScope } from "./server/yaesuScope.ts";
+import { startIqScope, stopIqScope } from "./server/iqScope.ts";
 import {
   initAuth,
   issueToken,
@@ -95,6 +96,8 @@ export async function startServer(appPath?: string, userDataPath?: string) {
   if (ctx.spectrumSettings.enabled) {
     if (ctx.spectrumSettings.source === "ft4222") {
       startYaesuScope(ctx);
+    } else if (ctx.spectrumSettings.source === "iq") {
+      startIqScope(ctx);
     } else {
       startSpectrumListener(ctx);
     }
@@ -144,6 +147,7 @@ export async function startServer(appPath?: string, userDataPath?: string) {
     });
     socket.emit("spectrum-supported", ctx.spectrumSupported);
     socket.emit("yaesu-scope-status", { running: ctx.yaesuScopeRunning, error: ctx.yaesuScopeError });
+    socket.emit("iq-scope-status", { running: ctx.iqScopeRunning, error: ctx.iqScopeError });
     socket.emit("rigctld-status", {
       status: ctx.rigctldStatus,
       logs: ctx.rigctldLogs,
@@ -219,12 +223,15 @@ export async function startServer(appPath?: string, userDataPath?: string) {
       () => startPolling(ctx),
       (forceReopen) => syncKeyerPort(ctx, forceReopen),
       (_enabled) => {
-        /* Always stop both sources first, then start whichever is now active */
+        /* Always stop all sources first, then start whichever is now active */
         stopSpectrumListener(ctx);
         stopYaesuScope(ctx);
+        stopIqScope(ctx);
         if (ctx.spectrumSettings.enabled) {
           if (ctx.spectrumSettings.source === "ft4222") {
             startYaesuScope(ctx);
+          } else if (ctx.spectrumSettings.source === "iq") {
+            startIqScope(ctx);
           } else {
             startSpectrumListener(ctx);
           }
@@ -410,6 +417,11 @@ export async function startServer(appPath?: string, userDataPath?: string) {
 
     done = step("stopYaesuScope");
     stopYaesuScope(ctx);
+    done();
+
+    // stopIqScope awaits naudiodon's async quit(); cap it like stopAudio so shutdown always proceeds.
+    done = step("stopIqScope (3s cap)");
+    await Promise.race([stopIqScope(ctx), new Promise<void>(r => setTimeout(r, 3000))]);
     done();
 
     done = step("destroy rigSocket");

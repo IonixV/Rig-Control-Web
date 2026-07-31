@@ -34,6 +34,9 @@ describe('createInitialContext', () => {
       multicastAddr: '224.0.0.1',
       multicastPort: 4531,
       ft4222SpanIndex: 5,
+      iqAudioDevice: '',
+      iqSampleRate: 48000,
+      iqSwapChannels: false,
     });
     expect(ctx.spectrumSupported).toBe(false);
     expect(ctx.spectrumSocket).toBeNull();

@@ -254,10 +254,13 @@ export interface ServerContext {
   // Spectrum scope
   spectrumSettings: {
     enabled: boolean;
-    source: "hamlib" | "ft4222";
+    source: "hamlib" | "ft4222" | "iq";
     multicastAddr: string;
     multicastPort: number;
     ft4222SpanIndex: number;
+    iqAudioDevice: string;
+    iqSampleRate: number;
+    iqSwapChannels: boolean;
   };
   spectrumSocket: dgram.Socket | null;
   spectrumSupported: boolean;
@@ -266,6 +269,14 @@ export interface ServerContext {
   yaesuScopeError: string | null;
   yaesuScopeRestartTimer: NodeJS.Timeout | null;
   yaesuScopeRetryStartedAt: number | null;
+
+  // I/Q audio spectrum scope (Xiegu G90 and similar radios with a baseband
+  // I/Q output, captured via a stereo USB audio interface). Unlike the
+  // FT4222 path this drives naudiodon directly in-process rather than
+  // spawning a child binary.
+  iqCaptureProcess: any;
+  iqScopeRunning: boolean;
+  iqScopeError: string | null;
 
   // Cross-module callbacks (wired in orchestrator after modules init)
   saveSettings: () => void;
@@ -443,6 +454,9 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
       multicastAddr: "224.0.0.1",
       multicastPort: 4531,
       ft4222SpanIndex: 5,
+      iqAudioDevice: "",
+      iqSampleRate: 48000,
+      iqSwapChannels: false,
     },
     spectrumSocket: null,
     spectrumSupported: false,
@@ -451,6 +465,10 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
     yaesuScopeError: null,
     yaesuScopeRestartTimer: null,
     yaesuScopeRetryStartedAt: null,
+
+    iqCaptureProcess: null,
+    iqScopeRunning: false,
+    iqScopeError: null,
 
     saveSettings: () => {},
     sendToRig: () => Promise.reject("sendToRig not yet initialized"),

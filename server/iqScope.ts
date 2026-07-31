@@ -1,0 +1,225 @@
+import { ServerContext } from "./context.ts";
+import { vlogSpectrum } from "./vlog.ts";
+import { resolveDeviceId } from "./audio.ts";
+import { fftComplex, fftShift, hannWindow, magnitudesDb } from "./fft.ts";
+
+// Non-overlapping block size for the complex FFT. 2048 balances frequency
+// resolution against waterfall refresh rate across the supported sample
+// rates (~23fps/23Hz-per-bin at 48kHz, ~47fps/47Hz-per-bin at 96kHz).
+export const IQ_FFT_SIZE = 2048;
+
+// Fixed dB range the raw FFT magnitude is quantized into before being sent
+// as a 0-255 amplitude byte (SpectrumHamlibPanel's floor/ceiling sliders
+// then pick a sub-window of this range for display, same as the other two
+// sources). Chosen to stay within the panel's existing floor/ceiling slider
+// bounds (-160..-60 / -100..0) rather than the theoretical ±60dB range a
+// full-scale digital tone could reach — the G90's I/Q output is a low-level
+// (~50-100mV) analog signal well below digital full scale, so real captured
+// levels are expected to sit well inside this range. Not a calibrated dBm
+// reference (no absolute level is known without real hardware); tune the
+// panel's floor/ceiling defaults once verified against real equipment.
+export const IQ_ENCODE_MIN_DB = -100;
+export const IQ_ENCODE_MAX_DB = 20;
+
+const FRAME_BYTES = IQ_FFT_SIZE * 4; // 2 channels * 2 bytes (16-bit signed PCM)
+const ENGINE_RETRY_DELAY_MS = 500;
+const ENGINE_RETRY_ATTEMPTS = 6;
+
+const iqWindow = hannWindow(IQ_FFT_SIZE);
+
+export interface IqSpectrumFrameOptions {
+  /** Interleaved 16-bit signed PCM, exactly `fftSize * 4` bytes (2 channels). */
+  pcm: Buffer;
+  fftSize: number;
+  sampleRate: number;
+  centerFreq: number;
+  swapChannels: boolean;
+  window: Float64Array;
+}
+
+export interface IqSpectrumFrame {
+  id: number;
+  name: string;
+  type: "CENTER";
+  length: number;
+  amplitudes: number[];
+  minLevel: number;
+  maxLevel: number;
+  centerFreq: number;
+  span: number;
+  lowFreq: number;
+  highFreq: number;
+  timestamp: number;
+}
+
+/**
+ * Pure transform: interleaved stereo PCM -> a spectrum-data-shaped frame.
+ * Left/right channels are treated as I/Q (swappable via `swapChannels`,
+ * mirroring HDSDR's own "Swap IQ" fix for reversed-sideband I/Q sources).
+ * Kept dependency-free (no naudiodon) so it's unit-testable without real
+ * hardware.
+ */
+export function buildIqSpectrumFrame(opts: IqSpectrumFrameOptions): IqSpectrumFrame {
+  const { pcm, fftSize, sampleRate, centerFreq, swapChannels, window } = opts;
+  if (pcm.length !== fftSize * 4) {
+    throw new Error(`buildIqSpectrumFrame: expected ${fftSize * 4} bytes, got ${pcm.length}`);
+  }
+
+  const re = new Float64Array(fftSize);
+  const im = new Float64Array(fftSize);
+  for (let i = 0; i < fftSize; i++) {
+    const chA = pcm.readInt16LE(i * 4) / 32768;
+    const chB = pcm.readInt16LE(i * 4 + 2) / 32768;
+    const iSample = swapChannels ? chB : chA;
+    const qSample = swapChannels ? chA : chB;
+    const w = window[i];
+    re[i] = iSample * w;
+    im[i] = qSample * w;
+  }
+
+  fftComplex(re, im);
+  const dbValues = fftShift(magnitudesDb(re, im, IQ_ENCODE_MIN_DB));
+
+  const range = IQ_ENCODE_MAX_DB - IQ_ENCODE_MIN_DB;
+  const amplitudes: number[] = new Array(fftSize);
+  for (let i = 0; i < fftSize; i++) {
+    const norm = Math.max(0, Math.min(1, (dbValues[i] - IQ_ENCODE_MIN_DB) / range));
+    amplitudes[i] = Math.round(norm * 255);
+  }
+
+  return {
+    id: 0,
+    name: "Audio I/Q",
+    type: "CENTER",
+    length: fftSize,
+    amplitudes,
+    minLevel: IQ_ENCODE_MIN_DB,
+    maxLevel: IQ_ENCODE_MAX_DB,
+    centerFreq,
+    span: sampleRate,
+    lowFreq: centerFreq - sampleRate / 2,
+    highFreq: centerFreq + sampleRate / 2,
+    timestamp: Date.now(),
+  };
+}
+
+function emitStatus(ctx: ServerContext, running: boolean, error: string | null): void {
+  ctx.iqScopeRunning = running;
+  ctx.iqScopeError = error;
+  ctx.io.emit("iq-scope-status", { running, error });
+}
+
+/**
+ * Opens a stereo naudiodon capture stream against the configured I/Q device
+ * and streams `spectrum-data` frames — no child binary involved (unlike the
+ * FT4222 path), naudiodon is driven directly in-process, the same way
+ * server/audio.ts's radio-audio capture is.
+ */
+export function startIqScope(ctx: ServerContext, attempt = 0): void {
+  if (ctx.iqCaptureProcess) return; // already running
+
+  if (!ctx.isAudioEngineReady || !ctx.portAudio) {
+    // initAudioEngine(ctx) is fire-and-forget at server startup — it usually
+    // resolves well under a second, so a short bounded retry covers the
+    // startup-autostart race without a full FT4222-style retry budget.
+    if (attempt >= ENGINE_RETRY_ATTEMPTS) {
+      const msg = "Audio engine not ready (naudiodon failed to load)";
+      console.error(`[IQ-SCOPE] ${msg}`);
+      emitStatus(ctx, false, msg);
+      return;
+    }
+    setTimeout(() => startIqScope(ctx, attempt + 1), ENGINE_RETRY_DELAY_MS);
+    return;
+  }
+
+  if (!ctx.spectrumSettings.iqAudioDevice) {
+    const msg = "No I/Q capture device selected";
+    vlogSpectrum(`[IQ-SCOPE] ${msg}`);
+    emitStatus(ctx, false, msg);
+    return;
+  }
+
+  const sampleRate = ctx.spectrumSettings.iqSampleRate || 48000;
+
+  let deviceId: number;
+  try {
+    deviceId = resolveDeviceId(ctx, ctx.spectrumSettings.iqAudioDevice, "input");
+  } catch (err: any) {
+    const msg = `Failed to resolve I/Q device: ${err.message}`;
+    console.error(`[IQ-SCOPE] ${msg}`);
+    emitStatus(ctx, false, msg);
+    return;
+  }
+
+  if (deviceId < 0) {
+    const msg = "Configured I/Q capture device not found";
+    console.error(`[IQ-SCOPE] ${msg}`);
+    emitStatus(ctx, false, msg);
+    return;
+  }
+
+  vlogSpectrum(`[IQ-SCOPE] Starting capture: device=${deviceId} sampleRate=${sampleRate} fftSize=${IQ_FFT_SIZE}`);
+
+  let proc: any;
+  try {
+    proc = new ctx.portAudio.AudioIO({
+      inOptions: {
+        channelCount: 2,
+        sampleFormat: ctx.portAudio.SampleFormat16Bit,
+        sampleRate,
+        deviceId,
+        closeOnError: true,
+        framesPerBuffer: 0,
+        maxQueue: 10,
+        highwaterMark: 256,
+      },
+    });
+  } catch (err: any) {
+    const msg = `Failed to open I/Q capture device: ${err.message}`;
+    console.error(`[IQ-SCOPE] ${msg}`);
+    emitStatus(ctx, false, msg);
+    return;
+  }
+
+  ctx.iqCaptureProcess = proc;
+  let pcmBuffer = Buffer.alloc(0);
+
+  proc.on("data", (data: Buffer) => {
+    try {
+      pcmBuffer = Buffer.concat([pcmBuffer, data]);
+      while (pcmBuffer.length >= FRAME_BYTES) {
+        const block = pcmBuffer.subarray(0, FRAME_BYTES);
+        pcmBuffer = pcmBuffer.subarray(FRAME_BYTES);
+        const frame = buildIqSpectrumFrame({
+          pcm: block,
+          fftSize: IQ_FFT_SIZE,
+          sampleRate,
+          centerFreq: Number(ctx.lastStatus.frequency) || 0,
+          swapChannels: ctx.spectrumSettings.iqSwapChannels,
+          window: iqWindow,
+        });
+        ctx.io.emit("spectrum-data", frame);
+      }
+    } catch (err: any) {
+      console.error("[IQ-SCOPE] Frame build error:", err.message);
+    }
+  });
+
+  proc.on("error", (err: any) => {
+    const msg = `naudiodon error: ${err.message}`;
+    console.error(`[IQ-SCOPE] ${msg}`);
+    ctx.iqCaptureProcess = null;
+    emitStatus(ctx, false, msg);
+  });
+
+  proc.start();
+  emitStatus(ctx, true, null);
+}
+
+export async function stopIqScope(ctx: ServerContext): Promise<void> {
+  if (ctx.iqCaptureProcess) {
+    try { await ctx.iqCaptureProcess.quit(); } catch { /* already stopped */ }
+    ctx.iqCaptureProcess = null;
+  }
+  emitStatus(ctx, false, null);
+}

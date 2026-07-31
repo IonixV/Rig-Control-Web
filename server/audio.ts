@@ -104,7 +104,7 @@ function logDeviceResolution(label: "input" | "output", saved: string, branch: s
   }
 }
 
-function resolveDeviceId(ctx: ServerContext, saved: string, label: "input" | "output"): number {
+export function resolveDeviceId(ctx: ServerContext, saved: string, label: "input" | "output"): number {
   const devices = ctx.portAudio.getDevices();
   // PortAudio enumerates many physical devices as two separate rows under
   // the same host API — one input-capable, one output-capable — sharing an

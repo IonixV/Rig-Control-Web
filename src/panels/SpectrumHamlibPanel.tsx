@@ -15,8 +15,21 @@ const FLOOR_DEFAULT_HAMLIB = -80;
 const CEILING_DEFAULT_HAMLIB = -40;
 const FLOOR_DEFAULT_FT4222 = -100;
 const CEILING_DEFAULT_FT4222 = -50;
+const FLOOR_DEFAULT_IQ = -80;
+const CEILING_DEFAULT_IQ = -20;
 const LS_PREFIX = "spectrum-hamlib-";
 const TOOLTIP_MAX_WIDTH = 90;
+
+// Keyed by spectrumSettings.source. lsKey suffixes preserve the existing
+// localStorage keys for hamlib ("floor"/"ceiling") and ft4222
+// ("floor-ft4222"/"ceiling-ft4222") for backward compatibility.
+const SOURCE_DISPLAY_DEFAULTS: Record<SpectrumSettings["source"], { floor: number; ceiling: number; lsKey: string }> = {
+  hamlib: { floor: FLOOR_DEFAULT_HAMLIB, ceiling: CEILING_DEFAULT_HAMLIB, lsKey: "" },
+  ft4222: { floor: FLOOR_DEFAULT_FT4222, ceiling: CEILING_DEFAULT_FT4222, lsKey: "-ft4222" },
+  iq: { floor: FLOOR_DEFAULT_IQ, ceiling: CEILING_DEFAULT_IQ, lsKey: "-iq" },
+};
+
+const IQ_SAMPLE_RATE_OPTIONS = [48000, 96000, 192000];
 
 function lsGet(key: string, fallback: string): string {
   try { return localStorage.getItem(LS_PREFIX + key) ?? fallback; } catch { return fallback; }
@@ -62,17 +75,19 @@ export default function SpectrumHamlibPanel({
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [colorMapId, setColorMapId] = useState(() => lsGet("colormap", "classic"));
-  const isFt4222 = spectrumSettings.source === "ft4222";
-  const floorDefault = isFt4222 ? FLOOR_DEFAULT_FT4222 : FLOOR_DEFAULT_HAMLIB;
-  const ceilingDefault = isFt4222 ? CEILING_DEFAULT_FT4222 : CEILING_DEFAULT_HAMLIB;
-  const lsFloorKey = isFt4222 ? "floor-ft4222" : "floor";
-  const lsCeilingKey = isFt4222 ? "ceiling-ft4222" : "ceiling";
+  const sourceDefaults = SOURCE_DISPLAY_DEFAULTS[spectrumSettings.source];
+  const floorDefault = sourceDefaults.floor;
+  const ceilingDefault = sourceDefaults.ceiling;
+  const lsFloorKey = `floor${sourceDefaults.lsKey}`;
+  const lsCeilingKey = `ceiling${sourceDefaults.lsKey}`;
 
   const [floor, setFloor] = useState(() => Number(lsGet(lsFloorKey, String(floorDefault))));
   const [ceiling, setCeiling] = useState(() => Number(lsGet(lsCeilingKey, String(ceilingDefault))));
   const [tooltip, setTooltip] = useState<{ x: number; y: number; label: string } | null>(null);
   const [cursorLineX, setCursorLineX] = useState<number | null>(null);
   const [yaesuStatus, setYaesuStatus] = useState<{ running: boolean; error: string | null }>({ running: false, error: null });
+  const [iqStatus, setIqStatus] = useState<{ running: boolean; error: string | null }>({ running: false, error: null });
+  const [iqInputDevices, setIqInputDevices] = useState<{ name: string; altName: string; hostAPIName: string; defaultSampleRate: number }[]>([]);
   const [optimisticSpanIndex, setOptimisticSpanIndex] = useState<number | null>(null);
   const optimisticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -86,6 +101,20 @@ export default function SpectrumHamlibPanel({
     const handler = (s: { running: boolean; error: string | null }) => setYaesuStatus(s);
     socket.on("yaesu-scope-status", handler);
     return () => { socket.off("yaesu-scope-status", handler); };
+  }, [socket]);
+
+  useEffect(() => {
+    if (!socket) return;
+    const handler = (s: { running: boolean; error: string | null }) => setIqStatus(s);
+    socket.on("iq-scope-status", handler);
+    return () => { socket.off("iq-scope-status", handler); };
+  }, [socket]);
+
+  useEffect(() => {
+    if (!socket) return;
+    const handler = (data: { inputs: typeof iqInputDevices; outputs: any[] }) => setIqInputDevices(data.inputs ?? []);
+    socket.on("audio-devices-list", handler);
+    return () => { socket.off("audio-devices-list", handler); };
   }, [socket]);
 
   const spectrumHeight = Math.floor(heightPx * SPECTRUM_RATIO);
@@ -324,8 +353,8 @@ export default function SpectrumHamlibPanel({
           {/* Source selector */}
           <div className="space-y-2">
             <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Spectrum Source</label>
-            <div className="grid grid-cols-2 gap-1 bg-[#0a0a0a] rounded-lg p-1 border border-[#2a2b2e]">
-              {(["hamlib", "ft4222"] as const).map(src => (
+            <div className="grid grid-cols-3 gap-1 bg-[#0a0a0a] rounded-lg p-1 border border-[#2a2b2e]">
+              {(["hamlib", "ft4222", "iq"] as const).map(src => (
                 <button
                   key={src}
                   onClick={() => {
@@ -339,7 +368,7 @@ export default function SpectrumHamlibPanel({
                       : "text-[#8e9299] hover:text-[#e0e0e0]"
                   }`}
                 >
-                  {src === "hamlib" ? "Hamlib UDP" : "FT-710 via USB"}
+                  {src === "hamlib" ? "Hamlib UDP" : src === "ft4222" ? "FT-710 via USB" : "Audio I/Q"}
                 </button>
               ))}
             </div>
@@ -352,7 +381,9 @@ export default function SpectrumHamlibPanel({
               <div className="text-[0.625rem] text-[#8e9299] mt-0.5">
                 {spectrumSettings.source === "hamlib"
                   ? "Receives spectrum data via rigctld UDP multicast"
-                  : "Reads spectrum via FT4222 USB-SPI bridge"}
+                  : spectrumSettings.source === "ft4222"
+                  ? "Reads spectrum via FT4222 USB-SPI bridge"
+                  : "Captures a stereo I/Q signal via a USB audio interface"}
               </div>
             </div>
             <button
@@ -470,6 +501,89 @@ export default function SpectrumHamlibPanel({
             );
           })()}
 
+          {/* I/Q: status indicator */}
+          {spectrumSettings.source === "iq" && spectrumSettings.enabled && (
+            <div className="rounded-lg bg-[#1a1b1e] border border-[#2a2b2e] p-3 space-y-1">
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${iqStatus.running ? "bg-emerald-400" : "bg-gray-600"}`} />
+                <span className="text-xs text-[#e0e0e0]">
+                  {iqStatus.running ? "Capture running" : "Capture stopped"}
+                </span>
+              </div>
+              {iqStatus.error && (
+                <div className="text-[0.625rem] text-red-400 leading-relaxed mt-1">{iqStatus.error}</div>
+              )}
+            </div>
+          )}
+
+          {/* I/Q: device, sample rate, swap */}
+          {spectrumSettings.source === "iq" && (
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Capture Device</label>
+                <select
+                  value={spectrumSettings.iqAudioDevice}
+                  onFocus={() => socket?.emit("get-audio-devices")}
+                  onChange={e => {
+                    const next = { ...spectrumSettings, iqAudioDevice: e.target.value };
+                    setSpectrumSettings(next);
+                    socket?.emit("save-settings", { spectrumSettings: next });
+                  }}
+                  className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-3 py-2 text-xs text-[#e0e0e0] focus:outline-none focus:border-emerald-500 transition-all"
+                >
+                  <option value="">Select capture device</option>
+                  {iqInputDevices.map(d => {
+                    const value = JSON.stringify({ name: d.name, hostAPIName: d.hostAPIName });
+                    const rateK = d.defaultSampleRate / 1000;
+                    const rate = d.defaultSampleRate ? `${rateK === Math.floor(rateK) ? rateK : rateK.toFixed(1)}k` : "";
+                    const label = `${d.name}${d.hostAPIName || rate ? ` [${[d.hostAPIName, rate].filter(Boolean).join(", ")}]` : ""}`;
+                    return <option key={d.altName} value={value}>{label}</option>;
+                  })}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Sample Rate (Span)</label>
+                <div className="grid grid-cols-3 gap-1">
+                  {IQ_SAMPLE_RATE_OPTIONS.map(rate => (
+                    <button
+                      key={rate}
+                      onClick={() => {
+                        const next = { ...spectrumSettings, iqSampleRate: rate };
+                        setSpectrumSettings(next);
+                        socket?.emit("save-settings", { spectrumSettings: next });
+                      }}
+                      className={`py-1.5 px-1 rounded text-[0.5625rem] font-semibold transition-colors ${
+                        spectrumSettings.iqSampleRate === rate
+                          ? "bg-emerald-600 text-white"
+                          : "bg-[#0a0a0a] border border-[#2a2b2e] text-[#8e9299] hover:text-[#e0e0e0]"
+                      }`}
+                    >
+                      {rate / 1000} kHz
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-semibold text-[#e0e0e0]">Swap I/Q</div>
+                  <div className="text-[0.625rem] text-[#8e9299] mt-0.5">Fixes a mirrored/reversed-sideband display</div>
+                </div>
+                <button
+                  onClick={() => {
+                    const next = { ...spectrumSettings, iqSwapChannels: !spectrumSettings.iqSwapChannels };
+                    setSpectrumSettings(next);
+                    socket?.emit("save-settings", { spectrumSettings: next });
+                  }}
+                  className={`w-10 h-5 rounded-full transition-colors relative ${spectrumSettings.iqSwapChannels ? "bg-emerald-500" : "bg-[#2a2b2e]"}`}
+                >
+                  <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${spectrumSettings.iqSwapChannels ? "left-5.5" : "left-0.5"}`} />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Color map */}
           <div className="space-y-2">
             <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Color Map</label>
@@ -522,11 +636,18 @@ export default function SpectrumHamlibPanel({
                 <div>• CI-V Transceive must remain OFF on the radio</div>
                 <div>• CI-V USB Echo must be ON in radio settings</div>
               </>
-            ) : (
+            ) : spectrumSettings.source === "ft4222" ? (
               <>
                 <div>• Yaesu FT-710 connected via USB</div>
                 <div>• libft4222 must be installed (FTDI FT4222 driver)</div>
                 <div>• <a href="https://github.com/jbdubbs/Rig-Control-Web/blob/main/docs/ft4222-spectrum-setup.md" target="_blank" rel="noreferrer" className="text-emerald-400 underline hover:text-emerald-300">See wiki for setup instructions</a></div>
+              </>
+            ) : (
+              <>
+                <div>• A radio with a baseband I/Q output (tested: Xiegu G90) wired to a stereo USB audio interface's Line-In — never Mic-In, which can carry bias voltage that may stress the radio's low-level output</div>
+                <div>• The displayed span equals the selected sample rate, but a radio's real usable I/Q bandwidth is fixed by its own hardware — sampling faster doesn't create more real spectrum, only more headroom against aliasing</div>
+                <div>• If the displayed spectrum is mirrored (a signal appears on the wrong side of center), toggle Swap I/Q</div>
+                <div>• <a href="https://github.com/jbdubbs/Rig-Control-Web/blob/main/docs/iq-spectrum-setup.md" target="_blank" rel="noreferrer" className="text-emerald-400 underline hover:text-emerald-300">See wiki for setup instructions</a></div>
               </>
             )}
           </div>
