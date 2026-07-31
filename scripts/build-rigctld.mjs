@@ -30,6 +30,19 @@ if (pl === "win32") {
 const jobs = cpus().length;
 const srcDir = "hamlib-src";
 
+// jbdubbs/hamlib-RCW carries local Xiegu G90 driver fixes not present
+// upstream (see README-RCW.md in that repo) — the checked-in bin/*/rigctld
+// binaries are built from it, so a from-source rebuild (this script's own
+// fallback path, hit whenever a platform's binary isn't already committed —
+// e.g. macOS, which has no bin/mac/rigctld checked in) must clone the same
+// fork, not vanilla Hamlib, or it silently ships a rigctld missing those
+// fixes. The fork is private: HAMLIB_RCW_TOKEN (a PAT with read access)
+// authenticates the clone in CI; local machines with their own git
+// credentials for the repo (e.g. via `gh auth` or SSH) don't need it.
+const hamlibRepoUrl = process.env.HAMLIB_RCW_TOKEN
+  ? `https://x-access-token:${process.env.HAMLIB_RCW_TOKEN}@github.com/jbdubbs/hamlib-RCW.git`
+  : "https://github.com/jbdubbs/hamlib-RCW.git";
+
 // Clean up any leftover source tree from a previous failed run
 if (existsSync(srcDir)) {
   console.log(`[rigctld] Removing leftover ${srcDir} from previous run...`);
@@ -56,8 +69,8 @@ try {
     execSync("brew install autoconf automake libtool pkg-config glib", { stdio: "inherit" });
   }
 
-  console.log("[rigctld] Cloning Hamlib source (master)...");
-  execSync(`git clone --depth=1 https://github.com/Hamlib/Hamlib.git ${srcDir}`, { stdio: "inherit" });
+  console.log("[rigctld] Cloning hamlib-RCW source (master)...");
+  execSync(`git clone --depth=1 ${hamlibRepoUrl} ${srcDir}`, { stdio: ["ignore", "inherit", "inherit"] });
 
   console.log("[rigctld] Running autoreconf...");
   execSync("autoreconf -fi", { cwd: srcDir, stdio: "inherit" });

@@ -93,9 +93,13 @@ jobs:
       - name: Build rigctld (MSYS2)
         if: env.RIGCTLD_EXISTS != 'true'
         shell: msys2 {0}
+        env:
+          HAMLIB_RCW_TOKEN: ${{ secrets.HAMLIB_RCW_TOKEN }}
         run: |
           set -e
-          git clone --depth=1 https://github.com/Hamlib/Hamlib.git hamlib-src
+          # jbdubbs/hamlib-RCW, not vanilla Hamlib — see scripts/build-rigctld.mjs
+          # for why. Private repo, so the clone needs an authenticated URL in CI.
+          git clone --depth=1 "https://x-access-token:${HAMLIB_RCW_TOKEN}@github.com/jbdubbs/hamlib-RCW.git" hamlib-src
           cd hamlib-src
           autoreconf -fi
           ./configure --disable-shared --enable-static --without-tcl --without-cxx-binding LDFLAGS="-static-libgcc -static-libstdc++"

@@ -128,6 +128,8 @@ jobs:
 
       - name: Build rigctld (Linux/macOS)
         if: matrix.os != 'windows-2022'
+        env:
+          HAMLIB_RCW_TOKEN: ${{ secrets.HAMLIB_RCW_TOKEN }}
         run: node scripts/build-rigctld.mjs
 
       # The committed bin/linux/rigctld is normally reused as-is by the step
@@ -181,9 +183,13 @@ jobs:
       - name: Build rigctld (Windows MSYS2)
         if: matrix.os == 'windows-2022' && env.RIGCTLD_EXISTS != 'true'
         shell: msys2 {0}
+        env:
+          HAMLIB_RCW_TOKEN: ${{ secrets.HAMLIB_RCW_TOKEN }}
         run: |
           set -e
-          git clone --depth=1 https://github.com/Hamlib/Hamlib.git hamlib-src
+          # jbdubbs/hamlib-RCW, not vanilla Hamlib — see scripts/build-rigctld.mjs
+          # for why. Private repo, so the clone needs an authenticated URL in CI.
+          git clone --depth=1 "https://x-access-token:${HAMLIB_RCW_TOKEN}@github.com/jbdubbs/hamlib-RCW.git" hamlib-src
           cd hamlib-src
           autoreconf -fi
           ./configure --disable-shared --enable-static --without-tcl --without-cxx-binding LDFLAGS="-static-libgcc -static-libstdc++"
