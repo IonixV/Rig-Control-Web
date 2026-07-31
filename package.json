@@ -31,6 +31,7 @@
     "build:ft4222-reader": "node scripts/build-ft4222-reader.mjs",
     "build:wsjtx-bridge": "node scripts/build-wsjtx-bridge.mjs",
     "build:rigctld": "node scripts/build-rigctld.mjs",
+    "build:rigctld-win-cross": "node scripts/build-rigctld-win-cross.mjs",
     "postinstall": "electron-builder install-app-deps"
   },
   "build": {

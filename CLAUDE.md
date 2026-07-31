@@ -28,6 +28,7 @@ npm run test:hardware    # Run Playwright e2e tests requiring a real, USB-connec
 npm run clean            # Remove dist/, dist-electron/, build/
 npm run build:cw-helper      # Compile cw-key-helper.c for the current platform (scripts/build-cw-helper.mjs)
 npm run build:ft4222-reader  # Compile ft4222-scope-reader.c for the current platform (scripts/build-ft4222-reader.mjs)
+npm run build:rigctld-win-cross  # Cross-compile bin/windows/rigctld.exe from Linux via mingw64 (scripts/build-rigctld-win-cross.mjs) — for iterating on Windows-side rigctld fixes without a full CI run; see script header for one-time Fedora setup
 
 # Electron
 npm run electron:dev     # Run as Electron desktop app in dev mode

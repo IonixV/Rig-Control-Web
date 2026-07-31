@@ -1,6 +1,7 @@
 import { execSync } from "child_process";
 import { existsSync, copyFileSync, chmodSync, mkdirSync, rmSync } from "fs";
 import { platform, cpus } from "os";
+import { getHamlibRepoUrl } from "./hamlib-repo.mjs";
 
 const pl = platform();
 
@@ -30,18 +31,7 @@ if (pl === "win32") {
 const jobs = cpus().length;
 const srcDir = "hamlib-src";
 
-// jbdubbs/hamlib-RCW carries local Xiegu G90 driver fixes not present
-// upstream (see README-RCW.md in that repo) — the checked-in bin/*/rigctld
-// binaries are built from it, so a from-source rebuild (this script's own
-// fallback path, hit whenever a platform's binary isn't already committed —
-// e.g. macOS, which has no bin/mac/rigctld checked in) must clone the same
-// fork, not vanilla Hamlib, or it silently ships a rigctld missing those
-// fixes. The fork is private: HAMLIB_RCW_TOKEN (a PAT with read access)
-// authenticates the clone in CI; local machines with their own git
-// credentials for the repo (e.g. via `gh auth` or SSH) don't need it.
-const hamlibRepoUrl = process.env.HAMLIB_RCW_TOKEN
-  ? `https://x-access-token:${process.env.HAMLIB_RCW_TOKEN}@github.com/jbdubbs/hamlib-RCW.git`
-  : "https://github.com/jbdubbs/hamlib-RCW.git";
+const hamlibRepoUrl = getHamlibRepoUrl();
 
 // Clean up any leftover source tree from a previous failed run
 if (existsSync(srcDir)) {
