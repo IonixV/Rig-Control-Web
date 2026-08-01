@@ -58,6 +58,11 @@ export interface IqSpectrumFrame {
  * mirroring HDSDR's own "Swap IQ" fix for reversed-sideband I/Q sources).
  * Kept dependency-free (no naudiodon) so it's unit-testable without real
  * hardware.
+ *
+ * Removes each block's own I/Q DC offset (mean) before windowing — cheap USB
+ * audio ADCs carry a per-channel DC bias, which is indistinguishable from a
+ * real signal at 0 Hz and otherwise shows up as a strong, spurious spike at
+ * the center (DC) bin after fftShift.
  */
 export function buildIqSpectrumFrame(opts: IqSpectrumFrameOptions): IqSpectrumFrame {
   const { pcm, fftSize, sampleRate, centerFreq, swapChannels, window } = opts;
@@ -65,16 +70,29 @@ export function buildIqSpectrumFrame(opts: IqSpectrumFrameOptions): IqSpectrumFr
     throw new Error(`buildIqSpectrumFrame: expected ${fftSize * 4} bytes, got ${pcm.length}`);
   }
 
-  const re = new Float64Array(fftSize);
-  const im = new Float64Array(fftSize);
+  const iSamples = new Float64Array(fftSize);
+  const qSamples = new Float64Array(fftSize);
+  let sumI = 0;
+  let sumQ = 0;
   for (let i = 0; i < fftSize; i++) {
     const chA = pcm.readInt16LE(i * 4) / 32768;
     const chB = pcm.readInt16LE(i * 4 + 2) / 32768;
     const iSample = swapChannels ? chB : chA;
     const qSample = swapChannels ? chA : chB;
+    iSamples[i] = iSample;
+    qSamples[i] = qSample;
+    sumI += iSample;
+    sumQ += qSample;
+  }
+  const meanI = sumI / fftSize;
+  const meanQ = sumQ / fftSize;
+
+  const re = new Float64Array(fftSize);
+  const im = new Float64Array(fftSize);
+  for (let i = 0; i < fftSize; i++) {
     const w = window[i];
-    re[i] = iSample * w;
-    im[i] = qSample * w;
+    re[i] = (iSamples[i] - meanI) * w;
+    im[i] = (qSamples[i] - meanQ) * w;
   }
 
   fftComplex(re, im);

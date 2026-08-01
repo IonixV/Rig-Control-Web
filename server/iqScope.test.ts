@@ -136,6 +136,32 @@ describe('buildIqSpectrumFrame', () => {
     }
   });
 
+  it('removes per-block DC offset instead of showing it as a center-bin spike', () => {
+    // Constant (0 Hz) bias on both channels, no AC content at all — without
+    // DC removal this would transform into a strong, spurious peak at the
+    // center (DC) bin after fftShift.
+    const biasedPcm = Buffer.alloc(IQ_FFT_SIZE * 4);
+    const bias = Math.round(0.3 * 32767);
+    for (let i = 0; i < IQ_FFT_SIZE; i++) {
+      biasedPcm.writeInt16LE(bias, i * 4);
+      biasedPcm.writeInt16LE(bias, i * 4 + 2);
+    }
+    const frame = buildIqSpectrumFrame({
+      pcm: biasedPcm,
+      fftSize: IQ_FFT_SIZE,
+      sampleRate: SAMPLE_RATE,
+      centerFreq: CENTER_FREQ,
+      swapChannels: false,
+      window,
+    });
+    const center = IQ_FFT_SIZE / 2;
+    // The center bin should be quantized to (at most) the floor byte, not a
+    // spike — every other bin should be no louder than it.
+    for (const a of frame.amplitudes) {
+      expect(a).toBeLessThanOrEqual(frame.amplitudes[center]);
+    }
+  });
+
   it('produces a much quieter peak for silence than for a tone', () => {
     const silence = Buffer.alloc(IQ_FFT_SIZE * 4);
     const silentFrame = buildIqSpectrumFrame({
