@@ -11,13 +11,12 @@ export const IQ_FFT_SIZE = 2048;
 // Fixed dB range the raw FFT magnitude is quantized into before being sent
 // as a 0-255 amplitude byte (SpectrumHamlibPanel's floor/ceiling sliders
 // then pick a sub-window of this range for display, same as the other two
-// sources). Chosen to stay within the panel's existing floor/ceiling slider
-// bounds (-160..-60 / -100..0) rather than the theoretical ±60dB range a
-// full-scale digital tone could reach — the G90's I/Q output is a low-level
-// (~50-100mV) analog signal well below digital full scale, so real captured
-// levels are expected to sit well inside this range. Not a calibrated dBm
-// reference (no absolute level is known without real hardware); tune the
-// panel's floor/ceiling defaults once verified against real equipment.
+// sources). Not a calibrated dBm reference (no absolute level is known
+// without real hardware) — real captured levels have turned out to run
+// hotter than originally assumed for a low-level (~50-100mV) analog G90
+// I/Q signal, which is why the panel's floor/ceiling sliders were widened;
+// tune these bounds and the panel's floor/ceiling defaults further once
+// verified against real equipment.
 export const IQ_ENCODE_MIN_DB = -100;
 export const IQ_ENCODE_MAX_DB = 20;
 

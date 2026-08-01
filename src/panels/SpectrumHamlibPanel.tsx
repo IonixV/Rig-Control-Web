@@ -605,7 +605,7 @@ export default function SpectrumHamlibPanel({
               <span className="text-xs font-mono text-[#8e9299]">{floor} dBm</span>
             </div>
             <input
-              type="range" min={-160} max={-60} step={5}
+              type="range" min={-160} max={-10} step={5}
               value={floor}
               onChange={e => { setFloor(Number(e.target.value)); lsSet(lsFloorKey, e.target.value); }}
               className="w-full accent-emerald-500"
@@ -619,7 +619,7 @@ export default function SpectrumHamlibPanel({
               <span className="text-xs font-mono text-[#8e9299]">{ceiling} dBm</span>
             </div>
             <input
-              type="range" min={-100} max={0} step={5}
+              type="range" min={-100} max={50} step={5}
               value={ceiling}
               onChange={e => { setCeiling(Number(e.target.value)); lsSet(lsCeilingKey, e.target.value); }}
               className="w-full accent-emerald-500"
