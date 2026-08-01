@@ -2,15 +2,16 @@ name: Test
 
 on:
   push:
-    branches: [main]
-  pull_request:
+    tags:
+      - 'v*'
 
-# This workflow is a signal only — it does not gate anything automatically.
-# Commits go straight to main (no required-PR-review flow), so GitHub
-# branch-protection "required status checks" wouldn't block a direct push
-# anyway. The real release gate is the manual pre-release checklist in
-# CLAUDE.md (this suite + the FT4222 hardware suite + the Linux packaging
-# smoke test), run by hand before tagging a release.
+# Scoped to release tag pushes only — same trigger as build.yml's real
+# release path — so this suite (and its ~10min e2e job) doesn't run on every
+# commit pushed to main or on manual/non-release electron builds
+# (workflow_dispatch). This workflow is a signal only — it does not gate
+# anything automatically. The real release gate is the manual pre-release
+# checklist in CLAUDE.md (this suite + the FT4222 hardware suite + the Linux
+# packaging smoke test), run by hand before tagging a release.
 #
 # Hardware-dependent tests (FT4222/FT-710) are intentionally NOT run here —
 # no CI runner has a physical FT-710 attached. See `npm run test:hardware`,

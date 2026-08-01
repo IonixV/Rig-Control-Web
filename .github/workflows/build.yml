@@ -303,3 +303,44 @@ jobs:
             git commit -m "ci: update WSJTX bridge helper binaries for GitHub Pages"
             git push
           fi
+
+  # Deploys docs/ to GitHub Pages. Deliberately a job in *this* workflow
+  # (release tag push or workflow_dispatch "all") rather than a separate
+  # pages.yml triggered on push to main — Pages is configured with
+  # build_type "workflow" (not the legacy "deploy from a branch" mode, which
+  # auto-rebuilds on every push with no way to scope it), and chaining off
+  # publish-helper specifically means this job checks out main *after*
+  # publish-helper's commit, so the deployed site always includes that
+  # release's freshly-built wsjtx-bridge download binaries rather than
+  # whatever was on main before the release ran.
+  deploy-pages:
+    needs: [prepare, publish-helper]
+    if: needs.prepare.outputs.all_platforms == 'true' || startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout main (post publish-helper commit)
+        uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload docs/ as Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
