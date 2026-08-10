@@ -120,7 +120,7 @@ These Icom radios can stream live spectrum data over their CI-V bus while `rigct
 
 #### Enabling
 
-See the [Hamlib UDP Spectrum Scope Setup](Hamlib-UDP-Spectrum-Scope) page for complete radio menu settings and step-by-step instructions.
+See the [Hamlib UDP Spectrum Scope Setup](Spectrum-Scope-Hamlib-UDP) page for complete radio menu settings and step-by-step instructions.
 
 In brief: in the Spectrum Scope settings modal, set **Source** to **Hamlib UDP**, then enable the scope. Click **Stop** and **Start** (or **Kill and Restart**) in the RIGCTLD settings to restart `rigctld` with multicast enabled.
 
@@ -140,7 +140,7 @@ The Yaesu FT-710's single USB cable exposes three devices to your computer: the 
 
 #### Requirements
 
-- **`libft4222`** from FTDI must be installed on your computer. See the [FT-710 Spectrum Scope Setup](FT-710-Spectrum-Scope-Setup) page for full platform-specific setup instructions (Linux, macOS, Windows).
+- **`libft4222`** from FTDI must be installed on your computer. See the [FT-710 Spectrum Scope Setup](Spectrum-Scope-FT-710) page for full platform-specific setup instructions (Linux, macOS, Windows).
 - The spectrum output must be enabled in the radio's menu: **OPERATION SETTING → GENERAL → SCU-LAN10: ON**. (This enables the FT-710's built-in FT4222H chip over USB — no physical SCU-LAN10 device is needed.)
 
 #### Enabling

@@ -40,9 +40,9 @@ Both layouts show the same information and controls, just arranged differently f
 
 - [Authentication](Authentication) — Login, user accounts, roles, and the admin panel
 - [Setting Up rigctld](Setting-Up-rigctld) — Configure your radio connection and start the control process
-- [Hamlib UDP Spectrum Scope](Hamlib-UDP-Spectrum-Scope) — Live panadapter for IC-7300, IC-7300MK2, IC-7610, IC-7850/7851, IC-705, IC-9700, and IC-905
-- [FT-710 Spectrum Scope Setup](FT-710-Spectrum-Scope-Setup) — Live panadapter for the Yaesu FT-710 via USB
-- [Audio I/Q Spectrum Scope Setup](Audio-IQ-Spectrum-Scope-Setup) — Live panadapter from a radio's baseband I/Q output via a USB audio interface (tested on the Xiegu G90)
+- [Hamlib UDP Spectrum Scope](Spectrum-Scope-Hamlib-UDP) — Live panadapter for IC-7300, IC-7300MK2, IC-7610, IC-7850/7851, IC-705, IC-9700, and IC-905
+- [FT-710 Spectrum Scope Setup](Spectrum-Scope-FT-710) — Live panadapter for the Yaesu FT-710 via USB
+- [Audio I/Q Spectrum Scope Setup](Spectrum-Scope-Audio-IQ) — Live panadapter from a radio's baseband I/Q output via a USB audio interface (tested on the Xiegu G90)
 - [Connecting the Local Client](Connecting-the-Local-Client) — Connect to your rig and understand the status display
 - [Controls](Controls) — VFO, mode, meters, PTT, radio power on/off, and radio function buttons
 - [CW Keying Setup](CW-Keying-Setup) — Get your radio actually transmitting CW from the keyer (radio menu settings and troubleshooting)

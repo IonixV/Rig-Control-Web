@@ -1,6 +1,6 @@
 # Audio I/Q Spectrum Scope Setup
 
-RigControl Web can drive its spectrum waterfall from a radio's baseband I/Q output, captured through a stereo USB audio interface. This is the third spectrum source alongside [Hamlib UDP](Hamlib-UDP-Spectrum-Scope) (Icom) and [FT-710 via USB](FT-710-Spectrum-Scope-Setup) — it's generic (any radio with a baseband I/Q output on a stereo jack should work), but it has only been tested against the **Xiegu G90**.
+RigControl Web can drive its spectrum waterfall from a radio's baseband I/Q output, captured through a stereo USB audio interface. This is the third spectrum source alongside [Hamlib UDP](Spectrum-Scope-Hamlib-UDP) (Icom) and [FT-710 via USB](Spectrum-Scope-FT-710) — it's generic (any radio with a baseband I/Q output on a stereo jack should work), but it has only been tested against the **Xiegu G90**.
 
 No FTDI drivers, udev rules, or special permissions are required — this source uses the same generic USB audio device enumeration as regular backend radio audio.
 
