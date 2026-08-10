@@ -8,7 +8,7 @@ A web-first app for controlling your radio and making CW and SSB contacts!
   
 - Audio via your radio's virtual USB Audio Device, Digirig or similar.
   
-- Spectrum scope available on supported Icom radios (IC-7300, IC-7300MK2, IC-7610, IC-7850/7851, IC-705, IC-9700, IC-905) and the Yaesu FT-710.
+- Spectrum scope available on supported Icom radios (IC-7300, IC-7300MK2, IC-7610, IC-7850/7851, IC-705, IC-9700, IC-905), the Yaesu FT-710, and — via a generic Audio I/Q source over any USB audio interface — the Xiegu G90.
   
 - Video support so you can see the front panel of your radio (by feeding DVI/HDMI into your PC with an HDMI to USB capture dongle).
 
@@ -33,7 +33,7 @@ For full usage instructions, see the **[Wiki](https://github.com/jbdubbs/Rig-Con
 
 - **Split VFO Support**: Full control over split operations with visual feedback.
 - **Real-time Graphing**: Frequency, mode, and meter displays (S-Meter, SWR, ALC, Power, VDD) polled live from the rig.
-- **Spectrum Scope**: Live panadapter and waterfall display. Supports Yaesu FT-710 (without SCU-LAN10), Icom IC-7300, IC-7300MK2, IC-7610, IC-7850/7851, IC-705, IC-9700, IC-905
+- **Spectrum Scope**: Live panadapter and waterfall display. Three sources: Hamlib UDP multicast (Icom IC-7300, IC-7300MK2, IC-7610, IC-7850/7851, IC-705, IC-9700, IC-905), direct USB-SPI on the Yaesu FT-710 (without SCU-LAN10), or a generic Audio I/Q source that captures baseband I/Q through any USB audio interface — tested against the Xiegu G90.
 - **Rig Video Feed**: Display a system video capture device (e.g. HDMI capture card or webcam) so you can see your radio's front panel remotely. Example: FT-710 DVI out → USB HDMI capture card.
 - **Bidirectional Audio**: Full transmit and receive audio from your radio to your remote browser window.
 

@@ -217,9 +217,13 @@ Use the **NB Level** slider that appears below the buttons to adjust how aggress
 
 **DNR** stands for Digital Noise Reduction. Unlike the hardware noise blanker, DNR uses digital signal processing to reduce random background noise — hiss, hash, and general band noise. Click DNR to toggle it on or off. When on, use the **DNR Level** slider to adjust the strength of the noise reduction. Start low and increase until the noise drops without making voices sound processed.
 
+### RF Power
+
+The **RF Power** slider controls the radio's transmit output power. Slide left to reduce power, right for full power. The current level is shown as a percentage.
+
 ### RF Level
 
-The **RF Level** slider controls the radio's RF output power. Slide left to reduce power, right for full power. The current level is shown as a percentage.
+The **RF Level** slider controls the radio's receiver RF gain, separate from transmit power. This control only appears if your radio's Hamlib driver reports it as an independently adjustable level (as opposed to a plain on/off function) — not all radios expose it this way.
 
 ---
 
