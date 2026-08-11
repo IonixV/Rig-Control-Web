@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import type { Socket } from 'socket.io-client';
-import { checkAndClearPreferences, clearUserPreferences, nsKey, useAuth } from './useAuth';
+import { checkAndClearPreferences, clearUserPreferences, NAMESPACED_KEYS, nsKey, useAuth } from './useAuth';
 
 // Minimal stub matching only the on/off/emit surface useAuth actually uses,
 // so tests exercise the hook's state machine without a real Socket.io
@@ -56,6 +56,23 @@ describe('clearUserPreferences', () => {
     clearUserPreferences('w1abc');
 
     expect(localStorage.getItem('K2XYZ:console-collapsed')).toBe('false');
+  });
+
+  // Regression test: NAMESPACED_KEYS previously only listed pre-compact/phone-split
+  // legacy key names, so a preferences reset silently left most current panel
+  // collapse-state and spectrum-settings keys behind. This asserts every entry in
+  // the list is actually cleared, so the list can't silently drift out of sync
+  // with usePanelState.ts / usePotaSpots.tsx / the spectrum panels again.
+  it('clears every key currently listed in NAMESPACED_KEYS', () => {
+    NAMESPACED_KEYS.forEach((key) => {
+      localStorage.setItem(`W1ABC:${key}`, 'x');
+    });
+
+    clearUserPreferences('w1abc');
+
+    NAMESPACED_KEYS.forEach((key) => {
+      expect(localStorage.getItem(`W1ABC:${key}`)).toBeNull();
+    });
   });
 });
 

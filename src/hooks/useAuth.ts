@@ -175,7 +175,7 @@ export function useAuth(socket: Socket | null): UseAuthReturn {
 
 // ─── localStorage preference helpers ─────────────────────────────────────────
 
-const NAMESPACED_KEYS = [
+export const NAMESPACED_KEYS = [
   "grid-layout-v1",
   "spots-combo-tab",
   MUFMAP_STORAGE_KEY,
