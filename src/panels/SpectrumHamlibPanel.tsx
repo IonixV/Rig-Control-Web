@@ -32,10 +32,10 @@ const SOURCE_DISPLAY_DEFAULTS: Record<SpectrumSettings["source"], { floor: numbe
 const IQ_SAMPLE_RATE_OPTIONS = [48000, 96000, 192000];
 
 function lsGet(key: string, fallback: string): string {
-  try { return localStorage.getItem(LS_PREFIX + key) ?? fallback; } catch { return fallback; }
+  try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; }
 }
 function lsSet(key: string, value: string): void {
-  try { localStorage.setItem(LS_PREFIX + key, value); } catch { /* ignore */ }
+  try { localStorage.setItem(key, value); } catch { /* ignore */ }
 }
 
 interface Props {
@@ -51,6 +51,7 @@ interface Props {
   isCollapsed: boolean;
   setIsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
   heightPx?: number;
+  callsign?: string;
 }
 
 export default function SpectrumHamlibPanel({
@@ -66,7 +67,12 @@ export default function SpectrumHamlibPanel({
   isCollapsed,
   setIsCollapsed,
   heightPx = DEFAULT_HEIGHT,
+  callsign = "",
 }: Props) {
+  const lsKey = useCallback(
+    (key: string) => (callsign ? `${callsign.toUpperCase()}:${LS_PREFIX}${key}` : `${LS_PREFIX}${key}`),
+    [callsign]
+  );
   const spectrumCanvasRef = useRef<HTMLCanvasElement>(null);
   const waterfallCanvasRef = useRef<HTMLCanvasElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
@@ -74,15 +80,15 @@ export default function SpectrumHamlibPanel({
   const lastDrawnTimestampRef = useRef<number>(0);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [colorMapId, setColorMapId] = useState(() => lsGet("colormap", "classic"));
+  const [colorMapId, setColorMapId] = useState(() => lsGet(lsKey("colormap"), "classic"));
   const sourceDefaults = SOURCE_DISPLAY_DEFAULTS[spectrumSettings.source];
   const floorDefault = sourceDefaults.floor;
   const ceilingDefault = sourceDefaults.ceiling;
   const lsFloorKey = `floor${sourceDefaults.lsKey}`;
   const lsCeilingKey = `ceiling${sourceDefaults.lsKey}`;
 
-  const [floor, setFloor] = useState(() => Number(lsGet(lsFloorKey, String(floorDefault))));
-  const [ceiling, setCeiling] = useState(() => Number(lsGet(lsCeilingKey, String(ceilingDefault))));
+  const [floor, setFloor] = useState(() => Number(lsGet(lsKey(lsFloorKey), String(floorDefault))));
+  const [ceiling, setCeiling] = useState(() => Number(lsGet(lsKey(lsCeilingKey), String(ceilingDefault))));
   const [tooltip, setTooltip] = useState<{ x: number; y: number; label: string } | null>(null);
   const [cursorLineX, setCursorLineX] = useState<number | null>(null);
   const [yaesuStatus, setYaesuStatus] = useState<{ running: boolean; error: string | null }>({ running: false, error: null });
@@ -92,8 +98,8 @@ export default function SpectrumHamlibPanel({
   const optimisticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    setFloor(Number(lsGet(lsFloorKey, String(floorDefault))));
-    setCeiling(Number(lsGet(lsCeilingKey, String(ceilingDefault))));
+    setFloor(Number(lsGet(lsKey(lsFloorKey), String(floorDefault))));
+    setCeiling(Number(lsGet(lsKey(lsCeilingKey), String(ceilingDefault))));
   }, [spectrumSettings.source]);
 
   useEffect(() => {
@@ -589,7 +595,7 @@ export default function SpectrumHamlibPanel({
             <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Color Map</label>
             <select
               value={colorMapId}
-              onChange={e => { setColorMapId(e.target.value); lsSet("colormap", e.target.value); }}
+              onChange={e => { setColorMapId(e.target.value); lsSet(lsKey("colormap"), e.target.value); }}
               className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-all"
             >
               {COLORMAP_NAMES.map(cm => (
@@ -607,7 +613,7 @@ export default function SpectrumHamlibPanel({
             <input
               type="range" min={-160} max={-10} step={5}
               value={floor}
-              onChange={e => { setFloor(Number(e.target.value)); lsSet(lsFloorKey, e.target.value); }}
+              onChange={e => { setFloor(Number(e.target.value)); lsSet(lsKey(lsFloorKey), e.target.value); }}
               className="w-full accent-emerald-500"
             />
           </div>
@@ -621,7 +627,7 @@ export default function SpectrumHamlibPanel({
             <input
               type="range" min={-100} max={50} step={5}
               value={ceiling}
-              onChange={e => { setCeiling(Number(e.target.value)); lsSet(lsCeilingKey, e.target.value); }}
+              onChange={e => { setCeiling(Number(e.target.value)); lsSet(lsKey(lsCeilingKey), e.target.value); }}
               className="w-full accent-emerald-500"
             />
           </div>

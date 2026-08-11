@@ -833,6 +833,7 @@ function PhoneLayout({
             isCollapsed={isSpectrumHamlibCollapsed}
             setIsCollapsed={setIsSpectrumHamlibCollapsed}
             heightPx={item.heightPx}
+            callsign={callsign}
           />
         );
 
@@ -846,6 +847,7 @@ function PhoneLayout({
             heightPx={item.heightPx}
             bandwidth={parseInt(status?.bandwidth ?? "0", 10) || 0}
             mode={status?.mode ?? ""}
+            callsign={callsign}
           />
         );
 

@@ -934,6 +934,7 @@ function CompactLayout({
             isCollapsed={isSpectrumHamlibCollapsed}
             setIsCollapsed={setIsSpectrumHamlibCollapsed}
             heightPx={_item.heightPx}
+            callsign={callsign}
           />
         );
 
@@ -947,6 +948,7 @@ function CompactLayout({
             heightPx={_item.heightPx}
             bandwidth={parseInt(status?.bandwidth ?? "0", 10) || 0}
             mode={status?.mode ?? ""}
+            callsign={callsign}
           />
         );
 

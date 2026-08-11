@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import { Settings, Waves, X } from "lucide-react";
 import PanelChrome from "../components/PanelChrome";
 import { COLORMAPS, COLORMAP_NAMES, amplitudeToPixel } from "../utils/spectrumColors";
@@ -37,6 +37,7 @@ interface Props {
   heightPx?: number;
   bandwidth?: number;
   mode?: string;
+  callsign?: string;
 }
 
 export function computeDisplayBandwidth(bandwidth: number, mode: string, maxHz: number): number {
@@ -47,10 +48,10 @@ export function computeDisplayBandwidth(bandwidth: number, mode: string, maxHz: 
 }
 
 function lsGet(key: string, fallback: string): string {
-  try { return localStorage.getItem(LS_PREFIX + key) ?? fallback; } catch { return fallback; }
+  try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; }
 }
 function lsSet(key: string, value: string): void {
-  try { localStorage.setItem(LS_PREFIX + key, value); } catch { /* ignore */ }
+  try { localStorage.setItem(key, value); } catch { /* ignore */ }
 }
 
 export default function SpectrumAudioPanel({
@@ -61,7 +62,12 @@ export default function SpectrumAudioPanel({
   heightPx = DEFAULT_HEIGHT,
   bandwidth = 0,
   mode = "",
+  callsign = "",
 }: Props) {
+  const lsKey = useCallback(
+    (key: string) => (callsign ? `${callsign.toUpperCase()}:${LS_PREFIX}${key}` : `${LS_PREFIX}${key}`),
+    [callsign]
+  );
   const spectrumCanvasRef = useRef<HTMLCanvasElement>(null);
   const waterfallCanvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number>(0);
@@ -70,10 +76,10 @@ export default function SpectrumAudioPanel({
   const prevDisplayBwRef = useRef<number>(0);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [colorMapId, setColorMapId] = useState(() => lsGet("colormap", "classic"));
-  const [floor, setFloor] = useState(() => Number(lsGet("floor", String(FLOOR_DEFAULT))));
-  const [ceiling, setCeiling] = useState(() => Number(lsGet("ceiling", String(CEILING_DEFAULT))));
-  const [bwOverride, setBwOverride] = useState<string>(() => lsGet("bwOverride", "auto"));
+  const [colorMapId, setColorMapId] = useState(() => lsGet(lsKey("colormap"), "classic"));
+  const [floor, setFloor] = useState(() => Number(lsGet(lsKey("floor"), String(FLOOR_DEFAULT))));
+  const [ceiling, setCeiling] = useState(() => Number(lsGet(lsKey("ceiling"), String(CEILING_DEFAULT))));
+  const [bwOverride, setBwOverride] = useState<string>(() => lsGet(lsKey("bwOverride"), "auto"));
 
   const spectrumHeight = Math.floor(heightPx * SPECTRUM_RATIO);
   const waterfallHeight = heightPx - spectrumHeight - 20;
@@ -255,7 +261,7 @@ export default function SpectrumAudioPanel({
               value={bwOverride}
               onChange={e => {
                 setBwOverride(e.target.value);
-                lsSet("bwOverride", e.target.value);
+                lsSet(lsKey("bwOverride"), e.target.value);
                 waterfallLinesRef.current = [];
               }}
               className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all"
@@ -277,7 +283,7 @@ export default function SpectrumAudioPanel({
             <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Color Map</label>
             <select
               value={colorMapId}
-              onChange={e => { setColorMapId(e.target.value); lsSet("colormap", e.target.value); }}
+              onChange={e => { setColorMapId(e.target.value); lsSet(lsKey("colormap"), e.target.value); }}
               className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all"
             >
               {COLORMAP_NAMES.map(cm => (
@@ -295,7 +301,7 @@ export default function SpectrumAudioPanel({
             <input
               type="range" min={-160} max={-20} step={5}
               value={floor}
-              onChange={e => { setFloor(Number(e.target.value)); lsSet("floor", e.target.value); }}
+              onChange={e => { setFloor(Number(e.target.value)); lsSet(lsKey("floor"), e.target.value); }}
               className="w-full accent-blue-500"
             />
           </div>
@@ -309,7 +315,7 @@ export default function SpectrumAudioPanel({
             <input
               type="range" min={-80} max={0} step={5}
               value={ceiling}
-              onChange={e => { setCeiling(Number(e.target.value)); lsSet("ceiling", e.target.value); }}
+              onChange={e => { setCeiling(Number(e.target.value)); lsSet(lsKey("ceiling"), e.target.value); }}
               className="w-full accent-blue-500"
             />
           </div>
