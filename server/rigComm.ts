@@ -614,8 +614,12 @@ export async function pollRig(ctx: ServerContext): Promise<void> {
         isSplit = isSplitStr === "1";
         txVFO = txVFOStr ? normalizeVfoName(txVFOStr) : "VFOB";
       }
-      att = parseInt(await sendToRig(ctx, "l ATT", true)) || 0;
-      preamp = parseInt(await sendToRig(ctx, "l PREAMP", true)) || 0;
+      if (ctx.rigctldSettings.attenuatorCapabilities.length > 0) {
+        att = parseInt(await sendToRig(ctx, "l ATT", true).catch(() => String(att))) || 0;
+      }
+      if (ctx.rigctldSettings.preampCapabilities.length > 0) {
+        preamp = parseInt(await sendToRig(ctx, "l PREAMP", true).catch(() => String(preamp))) || 0;
+      }
       nb = (await sendToRig(ctx, "u NB", true).catch(() => "0")) === "1";
       nbLevel = parseFloat(await sendToRig(ctx, "l NB", true).catch(() => "0"));
       nr = (await sendToRig(ctx, "u NR", true).catch(() => "0")) === "1";
@@ -636,8 +640,8 @@ export async function pollRig(ctx: ServerContext): Promise<void> {
     if (ctx.pendingQuickPolls.size > 0) {
       const pending = new Set(ctx.pendingQuickPolls);
       ctx.pendingQuickPolls.clear();
-      if (pending.has('attenuation')) att = parseInt(await sendToRig(ctx, "l ATT", true).catch(() => String(att))) || 0;
-      if (pending.has('preamp')) preamp = parseInt(await sendToRig(ctx, "l PREAMP", true).catch(() => String(preamp))) || 0;
+      if (pending.has('attenuation') && ctx.rigctldSettings.attenuatorCapabilities.length > 0) att = parseInt(await sendToRig(ctx, "l ATT", true).catch(() => String(att))) || 0;
+      if (pending.has('preamp') && ctx.rigctldSettings.preampCapabilities.length > 0) preamp = parseInt(await sendToRig(ctx, "l PREAMP", true).catch(() => String(preamp))) || 0;
       if (pending.has('agc')) agc = parseInt(await sendToRig(ctx, "l AGC", true).catch(() => String(agc)));
       if (pending.has('nb')) nb = (await sendToRig(ctx, "u NB", true).catch(() => nb ? "1" : "0")) === "1";
       if (pending.has('nbLevel')) nbLevel = parseFloat(await sendToRig(ctx, "l NB", true).catch(() => String(nbLevel)));
