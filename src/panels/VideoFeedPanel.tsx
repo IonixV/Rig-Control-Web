@@ -24,8 +24,16 @@ export function VideoFeedHeaderActions({
 
   const handleSettingsClick = () => {
     setIsVideoSettingsOpen(true);
-    if (variant !== "compact") socket?.emit("get-video-devices");
-    if (isElectronSource) enumerateVideoDevices();
+    // Pull whatever the server currently has cached, in every layout, then
+    // ask the Electron source (if any) to re-enumerate and push a fresh
+    // list — this lets a remote-only browser session recover from a stale
+    // or never-populated device list without a page reload.
+    socket?.emit("get-video-devices");
+    if (isElectronSource) {
+      enumerateVideoDevices();
+    } else {
+      socket?.emit("request-video-devices-refresh");
+    }
   };
 
   return (

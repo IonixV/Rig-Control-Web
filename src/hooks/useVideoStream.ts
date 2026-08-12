@@ -317,6 +317,10 @@ export function useVideoStream({ socket, settingsLoaded }: UseVideoStreamOptions
       if (isElectronSource) stopVideoCapture();
     };
 
+    const onVideoDevicesRefreshRequested = () => {
+      if (isElectronSource) enumerateVideoDevices();
+    };
+
     let clientFrameCount = 0;
     const onVideoFrame = (chunk: { data: ArrayBuffer; type: string; timestamp: number; description?: ArrayBuffer }) => {
       if (isElectronSource) return;
@@ -350,6 +354,7 @@ export function useVideoStream({ socket, settingsLoaded }: UseVideoStreamOptions
     socket.on("video-settings-updated", onVideoSettingsUpdated);
     socket.on("video-start-requested", onVideoStartRequested);
     socket.on("video-stop-requested", onVideoStopRequested);
+    socket.on("video-devices-refresh-requested", onVideoDevicesRefreshRequested);
     socket.on("video-frame", onVideoFrame);
     socket.on("debug-flags", onDebugFlags);
 
@@ -363,6 +368,7 @@ export function useVideoStream({ socket, settingsLoaded }: UseVideoStreamOptions
       socket.off("video-settings-updated", onVideoSettingsUpdated);
       socket.off("video-start-requested", onVideoStartRequested);
       socket.off("video-stop-requested", onVideoStopRequested);
+      socket.off("video-devices-refresh-requested", onVideoDevicesRefreshRequested);
       socket.off("video-frame", onVideoFrame);
       socket.off("debug-flags", onDebugFlags);
     };

@@ -83,3 +83,79 @@ test.describe('VideoFeedPanel encode -> decode round trip via a fake camera', ()
     await receiverContext.close();
   });
 });
+
+// Regression test for bug #46: a remote-only browser session (no local
+// Electron app ever opened) had no way to recover from an empty/stale
+// Video Device dropdown. Root cause was twofold — see server/video.ts,
+// src/hooks/useVideoStream.ts, and src/panels/VideoFeedPanel.tsx:
+//   1. VideoFeedPanel's handleSettingsClick only re-emitted "get-video-devices"
+//      when `variant !== "compact"` — a leftover condition from a
+//      three-layout ("phone"|"compact"|"desktop") era that made sense before
+//      the "desktop" variant was folded into "compact" (2026-05-01,
+//      commit 86ebfad); after that merge it silently excluded the primary
+//      desktop/browser layout from ever refreshing.
+//   2. Even with that fixed, a remote browser has no camera of its own to
+//      enumerate — only the Electron source can — so it also needs a way to
+//      ask the Electron source to actually re-run enumerateDevices(),
+//      not just re-fetch whatever the server has cached.
+test.describe('VideoFeedPanel remote device-list refresh (bug #46)', () => {
+  test('a remote browser can force the Electron source to re-enumerate cameras', async ({ browser }) => {
+    const sourceContext = await browser.newContext({ storageState: AUTH_STATE_PATH, ignoreHTTPSErrors: true });
+    const sourcePage = await sourceContext.newPage();
+    await sourcePage.addInitScript(() => {
+      (window as any).electron = { resizeWindow: () => {} };
+      (window as any).__enumerateCallCount = 0;
+      const original = navigator.mediaDevices.enumerateDevices.bind(navigator.mediaDevices);
+      navigator.mediaDevices.enumerateDevices = (...args: []) => {
+        (window as any).__enumerateCallCount++;
+        return original(...args);
+      };
+    });
+    await sourcePage.goto('/');
+
+    // Let the mount-time auto-enumerate (unconditional, unaffected by this
+    // fix) complete before taking the baseline count.
+    await expect.poll(
+      () => sourcePage.evaluate(() => (window as any).__enumerateCallCount),
+      { timeout: 10_000 },
+    ).toBeGreaterThan(0);
+    const initialCount = await sourcePage.evaluate(() => (window as any).__enumerateCallCount);
+
+    // Plain remote browser — default viewport (1280x720 for the
+    // 'video-fake-device' project) renders CompactLayout, exactly the
+    // "compact" desktop/browser view bug #46 was filed against.
+    const receiverContext = await browser.newContext({ storageState: AUTH_STATE_PATH, ignoreHTTPSErrors: true });
+    const receiverPage = await receiverContext.newPage();
+    await receiverPage.goto('/');
+    const panel = receiverPage.locator(
+      'xpath=//span[normalize-space(text())="Video Feed"]/ancestor::div[contains(@class,"rounded-xl")][1]',
+    );
+    const expandButton = panel.getByTitle('Expand');
+    if (await expandButton.isVisible().catch(() => false)) {
+      await expandButton.click();
+    }
+
+    await receiverPage.getByTitle('Video Settings').click();
+
+    // The click should round-trip through the server
+    // (request-video-devices-refresh -> video-devices-refresh-requested) and
+    // cause the Electron source to call enumerateDevices() again.
+    await expect.poll(
+      () => sourcePage.evaluate(() => (window as any).__enumerateCallCount),
+      { timeout: 10_000 },
+    ).toBeGreaterThan(initialCount);
+
+    // And the receiver's own dropdown should end up populated with a real
+    // device, not just the placeholder option.
+    const deviceSelect = receiverPage
+      .locator('label:text-is("Video Device")')
+      .locator('xpath=following-sibling::select[1]');
+    await expect.poll(
+      () => deviceSelect.locator('option').count(),
+      { timeout: 10_000 },
+    ).toBeGreaterThan(1);
+
+    await sourceContext.close();
+    await receiverContext.close();
+  });
+});

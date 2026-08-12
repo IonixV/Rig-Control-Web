@@ -13,6 +13,11 @@ export function registerVideoHandlers(socket: Socket, ctx: ServerContext): void 
     ctx.io.emit("video-devices-list", ctx.videoDeviceList);
   });
 
+  socket.on("request-video-devices-refresh", () => {
+    vlog(`[VIDEO] Device refresh requested by socket=${socket.id}`);
+    ctx.io.emit("video-devices-refresh-requested");
+  });
+
   socket.on("update-video-settings", (settings: { device?: string; videoWidth?: number; videoHeight?: number; framerate?: string }) => {
     vlog("[VIDEO] Updating video settings:", settings);
     ctx.videoSettings = { ...ctx.videoSettings, ...settings };
