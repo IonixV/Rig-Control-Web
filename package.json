@@ -4,6 +4,7 @@
   "version": "1.2.0",
   "license": "Apache-2.0",
   "author": "Jason Weisberger NT0Y",
+  "homepage": "https://github.com/jbdubbs/Rig-Control-Web",
   "description": "A web-based frontend for hamlib rigctld for local installation and portable backend capabilities.",
   "engines": {
     "node": ">=24.0.0"
