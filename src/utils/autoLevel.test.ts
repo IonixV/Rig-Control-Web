@@ -4,11 +4,26 @@ import {
   DEFAULT_AUTO_LEVEL_OPTIONS,
   ewmaStep,
   percentile,
+  sanitizeDb,
+  SILENCE_FLOOR_DB,
   stepAutoLevel,
   updateCeilingDecay,
   updateCeilingRatchet,
   updateFloorHysteresis,
 } from './autoLevel';
+
+describe('sanitizeDb', () => {
+  it('passes finite values through unchanged', () => {
+    expect(sanitizeDb(-42.5)).toBe(-42.5);
+    expect(sanitizeDb(0)).toBe(0);
+  });
+
+  it('replaces -Infinity, +Infinity, and NaN with the silence floor', () => {
+    expect(sanitizeDb(-Infinity)).toBe(SILENCE_FLOOR_DB);
+    expect(sanitizeDb(Infinity)).toBe(SILENCE_FLOOR_DB);
+    expect(sanitizeDb(NaN)).toBe(SILENCE_FLOOR_DB);
+  });
+});
 
 describe('percentile', () => {
   const sorted = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
@@ -224,12 +239,81 @@ describe('stepAutoLevel', () => {
     return arr;
   }
 
-  it('seeds directly from the first frame with no gating', () => {
+  it('does not fully commit on the first frame, but shows a live running estimate immediately', () => {
     const s = stepAutoLevel(createAutoLevelState(), flatPlusSignal(-90, -20), 0, null, null);
-    expect(s.seeded).toBe(true);
+    expect(s.seeded).toBe(false); // still warming up
+    // With only one pooled sample, the running estimate equals what a
+    // direct (ungated) seed would have produced -- no visible gap on frame 1.
     expect(s.committedFloorDb).toBeCloseTo(-90 - DEFAULT_AUTO_LEVEL_OPTIONS.floorMarginDb, 0);
     expect(s.displayFloorDb).toBe(s.committedFloorDb);
     expect(s.displayCeilingDb).toBe(s.committedCeilingDb);
+  });
+
+  it('commits (seeded=true) once the warm-up window elapses', () => {
+    let s = createAutoLevelState();
+    let t = 0;
+    while (t < DEFAULT_AUTO_LEVEL_OPTIONS.seedWarmupMs) {
+      s = stepAutoLevel(s, flatPlusSignal(-90, -20), t, null, null);
+      expect(s.seeded).toBe(false);
+      t += 100;
+    }
+    s = stepAutoLevel(s, flatPlusSignal(-90, -20), t, null, null);
+    expect(s.seeded).toBe(true);
+    expect(s.committedFloorDb).toBeCloseTo(-90 - DEFAULT_AUTO_LEVEL_OPTIONS.floorMarginDb, 0);
+    expect(s.committedCeilingDb).toBeCloseTo(-20 + DEFAULT_AUTO_LEVEL_OPTIONS.ceilingHeadroomDb, 0);
+  });
+
+  it('dilutes a single anomalous first frame instead of letting it become the seed directly', () => {
+    // A startup-transient-like spike on frame 1 (e.g. a click/pop), followed
+    // by several frames of the real, much quieter signal -- reproduces the
+    // real e2e regression this warm-up mechanism fixes.
+    let s = stepAutoLevel(createAutoLevelState(), flatPlusSignal(-90, 20), 0, null, null); // spurious +20dB spike
+    let t = 0;
+    while (t < DEFAULT_AUTO_LEVEL_OPTIONS.seedWarmupMs) {
+      t += 100;
+      s = stepAutoLevel(s, flatPlusSignal(-90, -20), t, null, null); // real signal from here on
+    }
+    expect(s.seeded).toBe(true);
+    // The median-of-samples pulls the seed close to the *real* peak, nowhere
+    // near the one-off spike -- an ungated single-frame seed would have
+    // committed a ceiling around 20+3=23dB instead.
+    expect(s.committedCeilingDb).toBeLessThan(0);
+    expect(s.committedCeilingDb).toBeCloseTo(-20 + DEFAULT_AUTO_LEVEL_OPTIONS.ceilingHeadroomDb, 0);
+  });
+
+  it('never lets a real -Infinity bin (e.g. AnalyserNode silence) corrupt state into NaN', () => {
+    // Reproduces the real e2e regression found on SpectrumAudioPanel:
+    // AnalyserNode.getFloatFrequencyData() legitimately returns -Infinity
+    // for zero-energy bins during real silence at stream start. Without
+    // sanitizing, a -Infinity committed value transitioning to a finite one
+    // via ewmaStep computes -Infinity + Infinity = NaN, which never heals.
+    const silentFrame = new Float32Array(500).fill(-Infinity);
+    let s = stepAutoLevel(createAutoLevelState(), silentFrame, 0, null, null);
+    expect(Number.isFinite(s.committedFloorDb)).toBe(true);
+    expect(Number.isFinite(s.committedCeilingDb)).toBe(true);
+    expect(Number.isFinite(s.displayFloorDb)).toBe(true);
+    expect(Number.isFinite(s.displayCeilingDb)).toBe(true);
+
+    let t = 0;
+    while (t < DEFAULT_AUTO_LEVEL_OPTIONS.seedWarmupMs) {
+      t += 100;
+      // Several more silent frames, then the real signal kicks in -- the
+      // exact transition that produced NaN before the fix.
+      const frame = t < DEFAULT_AUTO_LEVEL_OPTIONS.seedWarmupMs / 2 ? silentFrame : flatPlusSignal(-90, -20);
+      s = stepAutoLevel(s, frame, t, null, null);
+      expect(Number.isFinite(s.displayFloorDb)).toBe(true);
+      expect(Number.isFinite(s.displayCeilingDb)).toBe(true);
+    }
+    // A few more frames of real signal past the warm-up window, well into
+    // normal (post-seed) operation.
+    for (let i = 0; i < 10; i++) {
+      t += 500;
+      s = stepAutoLevel(s, flatPlusSignal(-90, -20), t, null, null);
+      expect(Number.isFinite(s.committedFloorDb)).toBe(true);
+      expect(Number.isFinite(s.committedCeilingDb)).toBe(true);
+      expect(Number.isFinite(s.displayFloorDb)).toBe(true);
+      expect(Number.isFinite(s.displayCeilingDb)).toBe(true);
+    }
   });
 
   it('converges floor near noiseLevel - margin and ceiling near signalPeak + headroom over time', () => {

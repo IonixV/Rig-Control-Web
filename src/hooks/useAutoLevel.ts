@@ -39,9 +39,23 @@ interface UseAutoLevelParams {
   // Per-source algorithm tuning (e.g. a higher floorPercentile for a source
   // whose raw bins are a single-look/un-averaged estimate — see autoLevel.ts).
   algorithmOptions?: Partial<AutoLevelOptions>;
+  // Out-of-box Auto Floor/Ceiling state for a source with no localStorage
+  // key yet (a fresh browser, or after a preferences reset). Once a user
+  // has ever toggled Auto for a given source, their persisted choice always
+  // wins — this only governs first-use.
+  autoFloorDefault?: boolean;
+  autoCeilingDefault?: boolean;
 }
 
-export function useAutoLevel({ lsKey, sourceSuffix, manualFloorDefault, manualCeilingDefault, algorithmOptions }: UseAutoLevelParams) {
+export function useAutoLevel({
+  lsKey,
+  sourceSuffix,
+  manualFloorDefault,
+  manualCeilingDefault,
+  algorithmOptions,
+  autoFloorDefault = false,
+  autoCeilingDefault = false,
+}: UseAutoLevelParams) {
   const floorKey = `floor${sourceSuffix}`;
   const ceilingKey = `ceiling${sourceSuffix}`;
   const autoFloorKey = `autoFloor${sourceSuffix}`;
@@ -49,8 +63,8 @@ export function useAutoLevel({ lsKey, sourceSuffix, manualFloorDefault, manualCe
 
   const [floor, setFloorState] = useState(() => Number(lsGet(lsKey(floorKey), String(manualFloorDefault))));
   const [ceiling, setCeilingState] = useState(() => Number(lsGet(lsKey(ceilingKey), String(manualCeilingDefault))));
-  const [autoFloor, setAutoFloorState] = useState(() => lsGetBool(lsKey(autoFloorKey), false));
-  const [autoCeiling, setAutoCeilingState] = useState(() => lsGetBool(lsKey(autoCeilingKey), false));
+  const [autoFloor, setAutoFloorState] = useState(() => lsGetBool(lsKey(autoFloorKey), autoFloorDefault));
+  const [autoCeiling, setAutoCeilingState] = useState(() => lsGetBool(lsKey(autoCeilingKey), autoCeilingDefault));
   const [displayFloor, setDisplayFloor] = useState(manualFloorDefault);
   const [displayCeiling, setDisplayCeiling] = useState(manualCeilingDefault);
 
@@ -120,8 +134,8 @@ export function useAutoLevel({ lsKey, sourceSuffix, manualFloorDefault, manualCe
   useEffect(() => {
     setFloorState(Number(lsGet(lsKey(floorKey), String(manualFloorDefault))));
     setCeilingState(Number(lsGet(lsKey(ceilingKey), String(manualCeilingDefault))));
-    setAutoFloorState(lsGetBool(lsKey(autoFloorKey), false));
-    setAutoCeilingState(lsGetBool(lsKey(autoCeilingKey), false));
+    setAutoFloorState(lsGetBool(lsKey(autoFloorKey), autoFloorDefault));
+    setAutoCeilingState(lsGetBool(lsKey(autoCeilingKey), autoCeilingDefault));
     const s = getState();
     setDisplayFloor(s.displayFloorDb || manualFloorDefault);
     setDisplayCeiling(s.displayCeilingDb || manualCeilingDefault);

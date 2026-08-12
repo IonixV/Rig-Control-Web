@@ -33,6 +33,7 @@ export interface AutoLevelOptions {
   ceilingDecaySustainMs: number;
   displayGlideTauMs: number;
   floorCeilingMinGapDb: number;
+  seedWarmupMs: number;
 }
 
 export const DEFAULT_AUTO_LEVEL_OPTIONS: Required<AutoLevelOptions> = {
@@ -76,6 +77,15 @@ export const DEFAULT_AUTO_LEVEL_OPTIONS: Required<AutoLevelOptions> = {
   // (e.g. a sudden band-wide noise event), guarantee a render-safe gap so
   // (ceiling - floor) never collapses to zero or goes negative.
   floorCeilingMinGapDb: 10,
+  // The very first sampled frame is not trustworthy on its own — real audio
+  // pipelines commonly produce a startup transient (a click/pop, a DC-offset
+  // spike) in their first buffer, and with no gating that transient would
+  // become the seed directly, potentially pinning the ceiling far too high
+  // until the (much slower, 60s) decay path eventually corrects it. Instead,
+  // pool percentile samples across this warm-up window and seed from their
+  // median, diluting a single bad frame's influence. 750ms comfortably spans
+  // several frames even on the slowest ~5Hz sources.
+  seedWarmupMs: 750,
 };
 
 export interface AutoLevelState {
@@ -88,6 +98,9 @@ export interface AutoLevelState {
   ceilingAboveMs: number;
   ceilingCandidatePeakDb: number | null;
   ceilingDecaySinceMs: number | null;
+  warmupStartMs: number | null;
+  warmupFloorSamples: number[];
+  warmupCeilingSamples: number[];
   displayFloorDb: number;
   displayCeilingDb: number;
   lastSampleMs: number | null;
@@ -104,6 +117,9 @@ export function createAutoLevelState(): AutoLevelState {
     ceilingAboveMs: 0,
     ceilingCandidatePeakDb: null,
     ceilingDecaySinceMs: null,
+    warmupStartMs: null,
+    warmupFloorSamples: [],
+    warmupCeilingSamples: [],
     displayFloorDb: 0,
     displayCeilingDb: 0,
     lastSampleMs: null,
@@ -121,6 +137,21 @@ export function percentile(values: ArrayLike<number>, p: number): number {
   if (lo === hi) return sorted[lo];
   const frac = idx - lo;
   return sorted[lo] + (sorted[hi] - sorted[lo]) * frac;
+}
+
+// AnalyserNode.getFloatFrequencyData() (and potentially other future
+// sources) can legitimately return -Infinity for a bin with zero measured
+// energy — real silence, not a data error. Left unclamped, a single
+// -Infinity percentile reading corrupts every downstream computation
+// permanently: transitioning from a -Infinity committed value to a finite
+// one in ewmaStep works out to -Infinity + Infinity, the classic
+// indeterminate form, which produces NaN — and NaN never heals, since every
+// arithmetic operation that touches it produces NaN in turn. Clamp to a
+// very quiet but finite floor instead, mirroring the epsilonDb convention
+// already used server-side (server/fft.ts's magnitudesDb()).
+export const SILENCE_FLOOR_DB = -300;
+export function sanitizeDb(value: number): number {
+  return Number.isFinite(value) ? value : SILENCE_FLOOR_DB;
 }
 
 export function ewmaStep(prev: number, sample: number, dtMs: number, tauMs: number): number {
@@ -216,29 +247,71 @@ export function stepAutoLevel(
 ): AutoLevelState {
   const o: Required<AutoLevelOptions> = { ...DEFAULT_AUTO_LEVEL_OPTIONS, ...opts };
 
-  const pFloor = percentile(dbValues, o.floorPercentile);
-  const pCeiling = percentile(dbValues, o.ceilingPercentile);
+  const pFloor = sanitizeDb(percentile(dbValues, o.floorPercentile));
+  const pCeiling = sanitizeDb(percentile(dbValues, o.ceilingPercentile));
 
-  if (!prev.seeded) {
-    const committedCeilingDb = pCeiling + o.ceilingHeadroomDb;
-    const committedFloorDb = Math.min(pFloor - o.floorMarginDb, committedCeilingDb - o.floorCeilingMinGapDb);
+  // The true first-ever sample: nothing to glide the display from yet and
+  // nothing pooled yet, so this is the one case that initializes directly
+  // rather than easing from a previous value.
+  if (prev.warmupStartMs === null && !prev.seeded) {
+    const ceilingEstimate = pCeiling + o.ceilingHeadroomDb;
+    const floorEstimate = Math.min(pFloor - o.floorMarginDb, ceilingEstimate - o.floorCeilingMinGapDb);
     return {
-      seeded: true,
+      seeded: false,
       floorTrendDb: pFloor,
       ceilingTrendDb: pCeiling,
-      committedFloorDb,
-      committedCeilingDb,
+      committedFloorDb: floorEstimate,
+      committedCeilingDb: ceilingEstimate,
       floorDriftSinceMs: null,
       ceilingAboveMs: 0,
       ceilingCandidatePeakDb: null,
       ceilingDecaySinceMs: null,
-      displayFloorDb: floorTarget ?? committedFloorDb,
-      displayCeilingDb: ceilingTarget ?? committedCeilingDb,
+      warmupStartMs: nowMs,
+      warmupFloorSamples: [pFloor],
+      warmupCeilingSamples: [pCeiling],
+      displayFloorDb: floorTarget ?? floorEstimate,
+      displayCeilingDb: ceilingTarget ?? ceilingEstimate,
       lastSampleMs: nowMs,
     };
   }
 
   const dtMs = prev.lastSampleMs === null ? 0 : Math.max(0, nowMs - prev.lastSampleMs);
+
+  if (!prev.seeded) {
+    // Still warming up: pool this frame's percentile sample alongside the
+    // prior ones and re-estimate from their median, so a single anomalous
+    // frame (a startup click/pop) only ever contributes a bounded share of
+    // the eventual seed rather than becoming it outright. The display still
+    // eases smoothly toward this running estimate (or the manual target, if
+    // set) via the same glide used post-seed — no visible jump once warm-up
+    // completes and the "official" commit takes over.
+    const warmupFloorSamples = [...prev.warmupFloorSamples, pFloor];
+    const warmupCeilingSamples = [...prev.warmupCeilingSamples, pCeiling];
+    const ceilingEstimate = percentile(warmupCeilingSamples, 50) + o.ceilingHeadroomDb;
+    const floorEstimate = Math.min(percentile(warmupFloorSamples, 50) - o.floorMarginDb, ceilingEstimate - o.floorCeilingMinGapDb);
+
+    const stillWarming = nowMs - prev.warmupStartMs < o.seedWarmupMs;
+    const floorGlideTarget = floorTarget ?? floorEstimate;
+    const ceilingGlideTarget = ceilingTarget ?? ceilingEstimate;
+
+    return {
+      seeded: !stillWarming,
+      floorTrendDb: pFloor,
+      ceilingTrendDb: pCeiling,
+      committedFloorDb: floorEstimate,
+      committedCeilingDb: ceilingEstimate,
+      floorDriftSinceMs: null,
+      ceilingAboveMs: 0,
+      ceilingCandidatePeakDb: null,
+      ceilingDecaySinceMs: null,
+      warmupStartMs: stillWarming ? prev.warmupStartMs : null,
+      warmupFloorSamples: stillWarming ? warmupFloorSamples : [],
+      warmupCeilingSamples: stillWarming ? warmupCeilingSamples : [],
+      displayFloorDb: ewmaStep(prev.displayFloorDb, floorGlideTarget, dtMs, o.displayGlideTauMs),
+      displayCeilingDb: ewmaStep(prev.displayCeilingDb, ceilingGlideTarget, dtMs, o.displayGlideTauMs),
+      lastSampleMs: nowMs,
+    };
+  }
 
   const floorTrendDb = ewmaStep(prev.floorTrendDb, pFloor, dtMs, o.trendTauMs);
   const ceilingTrendDb = ewmaStep(prev.ceilingTrendDb, pCeiling, dtMs, o.trendTauMs);
@@ -297,6 +370,9 @@ export function stepAutoLevel(
     ceilingAboveMs: decayCommittedThisFrame ? 0 : ceilingRiseResult.ceilingAboveMs,
     ceilingCandidatePeakDb: decayCommittedThisFrame ? null : ceilingRiseResult.ceilingCandidatePeakDb,
     ceilingDecaySinceMs: ceilingDecayResult.ceilingDecaySinceMs,
+    warmupStartMs: null,
+    warmupFloorSamples: [],
+    warmupCeilingSamples: [],
     displayFloorDb: ewmaStep(prev.displayFloorDb, floorGlideTarget, dtMs, o.displayGlideTauMs),
     displayCeilingDb: ewmaStep(prev.displayCeilingDb, ceilingGlideTarget, dtMs, o.displayGlideTauMs),
     lastSampleMs: nowMs,

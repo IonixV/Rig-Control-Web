@@ -24,24 +24,38 @@ const TOOLTIP_MAX_WIDTH = 90;
 
 // Keyed by spectrumSettings.source. lsKey suffixes preserve the existing
 // localStorage keys for hamlib ("floor"/"ceiling") and ft4222
-// ("floor-ft4222"/"ceiling-ft4222") for backward compatibility.
-const SOURCE_DISPLAY_DEFAULTS: Record<SpectrumSettings["source"], { floor: number; ceiling: number; lsKey: string }> = {
-  hamlib: { floor: FLOOR_DEFAULT_HAMLIB, ceiling: CEILING_DEFAULT_HAMLIB, lsKey: "" },
-  ft4222: { floor: FLOOR_DEFAULT_FT4222, ceiling: CEILING_DEFAULT_FT4222, lsKey: "-ft4222" },
-  iq: { floor: FLOOR_DEFAULT_IQ, ceiling: CEILING_DEFAULT_IQ, lsKey: "-iq" },
+// ("floor-ft4222"/"ceiling-ft4222") for backward compatibility. autoDefault
+// is the out-of-box Auto Floor/Ceiling state for a source with no
+// localStorage key yet — see SOURCE_ALGORITHM_OPTIONS below for why hamlib
+// is held back.
+const SOURCE_DISPLAY_DEFAULTS: Record<SpectrumSettings["source"], { floor: number; ceiling: number; lsKey: string; autoDefault: boolean }> = {
+  hamlib: { floor: FLOOR_DEFAULT_HAMLIB, ceiling: CEILING_DEFAULT_HAMLIB, lsKey: "", autoDefault: false },
+  ft4222: { floor: FLOOR_DEFAULT_FT4222, ceiling: CEILING_DEFAULT_FT4222, lsKey: "-ft4222", autoDefault: true },
+  iq: { floor: FLOOR_DEFAULT_IQ, ceiling: CEILING_DEFAULT_IQ, lsKey: "-iq", autoDefault: true },
 };
 
-// The FT4222 SPI stream is a raw, single-look (un-averaged) periodogram
-// straight from the radio's DSP, so its floor estimate needs a higher
-// percentile than the p10 default to avoid landing in the tail of a
-// single-look power estimate's exponential distribution (see autoLevel.ts
-// header comment) — p63.2 is the percentile that equals that distribution's
-// own mean, i.e. ~0dB bias instead of p10's ~-9.8dB. hamlib/iq are left at
-// the default: hamlib's reported level may already reflect radio-side
-// detector averaging, and the iq source's Web Audio AnalyserNode applies its
-// own smoothingTimeConstant averaging before we ever see the FFT bins.
+// Both ft4222 (server/yaesuScope.ts, raw FT-710 SPI stream) and iq
+// (server/iqScope.ts, a hand-rolled FFT over independent non-overlapping
+// 2048-sample blocks) are single-look/un-averaged periodograms — no
+// temporal averaging happens before we see their bins — so both need a
+// higher floorPercentile than the p10 default to avoid landing in the tail
+// of a single-look power estimate's exponential distribution (see
+// autoLevel.ts header comment): p63.2 is the percentile that equals that
+// distribution's own mean, i.e. ~0dB bias instead of p10's ~-9.8dB.
+// (Earlier reasoning here incorrectly assumed iq benefited from a Web Audio
+// AnalyserNode's smoothingTimeConstant averaging — that applies to the
+// separate SpectrumAudioPanel component, not this server-side FFT path.)
+// hamlib is deliberately left at the p10 default and Auto is off by default
+// for it (SOURCE_DISPLAY_DEFAULTS above) — real-hardware validation on
+// FT4222 and iq confirmed p63.2 is correct there, but hamlib's minLevel/
+// maxLevel come from whatever the radio itself reports over CI-V, which may
+// or may not already reflect radio-side detector/sweep averaging depending
+// on the model. Needs its own real-hardware validation before enabling —
+// do not flip autoDefault or add a floorPercentile override for hamlib
+// without it.
 const SOURCE_ALGORITHM_OPTIONS: Partial<Record<SpectrumSettings["source"], Partial<AutoLevelOptions>>> = {
   ft4222: { floorPercentile: 63.2 },
+  iq: { floorPercentile: 63.2 },
 };
 
 const IQ_SAMPLE_RATE_OPTIONS = [48000, 96000, 192000];
@@ -106,6 +120,8 @@ export default function SpectrumHamlibPanel({
     manualFloorDefault: floorDefault,
     manualCeilingDefault: ceilingDefault,
     algorithmOptions: SOURCE_ALGORITHM_OPTIONS[spectrumSettings.source],
+    autoFloorDefault: sourceDefaults.autoDefault,
+    autoCeilingDefault: sourceDefaults.autoDefault,
   });
   // Keeps the draw loop's closure on the latest sampleFrame/getEffective*
   // without needing floor/ceiling/auto-toggle changes to tear down and

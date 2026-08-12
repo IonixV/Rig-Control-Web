@@ -85,6 +85,8 @@ export default function SpectrumAudioPanel({
     sourceSuffix: "",
     manualFloorDefault: FLOOR_DEFAULT,
     manualCeilingDefault: CEILING_DEFAULT,
+    autoFloorDefault: true,
+    autoCeilingDefault: true,
   });
   // See SpectrumHamlibPanel.tsx for why the draw loop reads through a ref
   // rather than depending on floor/ceiling/auto-toggle state directly.

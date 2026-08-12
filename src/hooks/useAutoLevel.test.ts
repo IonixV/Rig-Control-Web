@@ -85,6 +85,22 @@ describe('useAutoLevel', () => {
     expect(result.current.getEffectiveCeiling()).toBeCloseTo(-70 + 3, 0);
   });
 
+  it('honors autoFloorDefault/autoCeilingDefault when no localStorage key exists yet', () => {
+    const { result } = renderHook(() =>
+      useAutoLevel({ ...defaults, sourceSuffix: '-ft4222', autoFloorDefault: true, autoCeilingDefault: true }),
+    );
+    expect(result.current.autoFloor).toBe(true);
+    expect(result.current.autoCeiling).toBe(true);
+  });
+
+  it('a persisted explicit choice always wins over autoFloorDefault/autoCeilingDefault', () => {
+    localStorage.setItem(lsKey('autoFloor-ft4222'), 'false');
+    const { result } = renderHook(() =>
+      useAutoLevel({ ...defaults, sourceSuffix: '-ft4222', autoFloorDefault: true }),
+    );
+    expect(result.current.autoFloor).toBe(false);
+  });
+
   it('sampleFrame does not trigger a React re-render on every call (ref-based, rAF-safe)', () => {
     let renders = 0;
     const { result } = renderHook(() => {
