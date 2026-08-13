@@ -65,8 +65,12 @@ export function resolveBackendUrl(
   return { url: stored, reason: "none" };
 }
 
-export function formatPreampLabel(preamp: number, compact: boolean): string {
+export function formatPreampLabel(preamp: number, compact: boolean, levelCount: number = 2): string {
   if (preamp === 0) return compact ? "P.AMP" : "OFF";
+  // A single preamp level (e.g. the FT-857's IPO EEPROM bit) is a bypass toggle,
+  // not a documented gain figure -- showing a fabricated "NdB" overstates precision
+  // that doesn't exist. Multi-level rigs (e.g. FT-710 AMP1/AMP2) have real dB specs.
+  if (levelCount <= 1) return "ON";
   return `${preamp}dB`;
 }
 
@@ -493,8 +497,8 @@ export default function App() {
 
   // ── Label helpers (depend on isCompact/isPhone layout state) ─────────────
   const getPreampLabel = useCallback(
-    () => formatPreampLabel(status.preamp, isCompact || isPhone),
-    [status.preamp, isCompact, isPhone]
+    () => formatPreampLabel(status.preamp, isCompact || isPhone, preampLevels.length),
+    [status.preamp, isCompact, isPhone, preampLevels.length]
   );
 
   const getAttenuatorLabel = useCallback(

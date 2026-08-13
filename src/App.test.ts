@@ -45,9 +45,14 @@ describe('formatPreampLabel', () => {
   it('shows "OFF" for 0 dB outside compact/phone layouts', () => {
     expect(formatPreampLabel(0, false)).toBe('OFF');
   });
-  it('shows "{n}dB" for a non-zero value regardless of layout', () => {
-    expect(formatPreampLabel(20, true)).toBe('20dB');
-    expect(formatPreampLabel(20, false)).toBe('20dB');
+  it('shows "{n}dB" for a non-zero value when multiple preamp levels exist', () => {
+    expect(formatPreampLabel(20, true, 2)).toBe('20dB');
+    expect(formatPreampLabel(20, false, 2)).toBe('20dB');
+  });
+  it('shows "ON" instead of a fabricated dB figure when only one preamp level exists', () => {
+    // e.g. the FT-857's IPO bit -- a bypass toggle, not a documented gain value
+    expect(formatPreampLabel(10, true, 1)).toBe('ON');
+    expect(formatPreampLabel(10, false, 1)).toBe('ON');
   });
 });
 
