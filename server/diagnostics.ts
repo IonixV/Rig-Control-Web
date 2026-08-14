@@ -1,5 +1,5 @@
 import { Socket } from "socket.io";
-import { ServerContext } from "./context.ts";
+import type { ServerContext } from "./context.ts";
 import { ts, debugFlags, setDebugFlag, type DebugFlags } from "./vlog.ts";
 
 // Rolling window: entries older than this are dropped regardless of count,

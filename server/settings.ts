@@ -1,6 +1,6 @@
 import fs from "fs";
 import { Socket } from "socket.io";
-import { ServerContext } from "./context.ts";
+import type { ServerContext } from "./context.ts";
 import { vlogInfra as vlog, debugFlags, setDebugFlag, type DebugFlags } from "./vlog.ts";
 
 export function loadSettings(ctx: ServerContext, settingsFile: string): void {

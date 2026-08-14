@@ -1,4 +1,4 @@
-import { ServerContext } from "./context.ts";
+import type { ServerContext } from "./context.ts";
 import { vlogSpectrum } from "./vlog.ts";
 import { resolveDeviceId } from "./audio.ts";
 import { fftComplex, fftShift, hannWindow, magnitudesDb } from "./fft.ts";

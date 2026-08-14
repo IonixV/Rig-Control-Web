@@ -52,3 +52,4 @@ Both layouts show the same information and controls, just arranged differently f
 - [Solar and Propagation](Solar-and-Propagation) — HF/VHF band conditions, solar indices, and the MUF world map
 - [WSJTX Integration](WSJTX-Integration) — Use WSJTX for FT8, FT4, and other digital modes via the wsjtx-bridge helper
 - [Diagnostic Logging](Diagnostic-Logging) — Capture debug output for troubleshooting and bug reports
+- [Headless Deployment](Headless-Deployment) — Run on a dedicated Raspberry Pi or mini PC via Docker or systemd, no display required

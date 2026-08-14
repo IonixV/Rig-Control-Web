@@ -1,0 +1,29 @@
+node_modules
+dist
+dist-electron
+build
+coverage
+test-results
+playwright-report
+.git
+.github
+hamlib-src
+
+# Platform binaries not used by the headless Linux image
+bin/mac
+bin/windows
+
+# Local dev/runtime state — regenerated inside the container's /data volume
+*.pem
+users.json
+auth.json
+audit.json
+rig-power-state.json
+settings.json
+tests/.rcw-test-data
+tests/.rcw-test-data-hardware
+tests/.auth
+tests/.auth-hardware
+
+*.md
+!README.md

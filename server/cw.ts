@@ -2,7 +2,7 @@ import path from "path";
 import fs from "fs";
 import { spawn } from "child_process";
 import { Socket } from "socket.io";
-import { ServerContext, CwPaddleEvent } from "./context.ts";
+import type { ServerContext, CwPaddleEvent } from "./context.ts";
 import { vlogCw as vlog } from "./vlog.ts";
 
 const CW_BUFFER_DEPTH_MS = 60;

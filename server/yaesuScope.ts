@@ -1,7 +1,7 @@
 import path from "path";
 import fs from "fs";
 import { spawn } from "child_process";
-import { ServerContext } from "./context.ts";
+import type { ServerContext } from "./context.ts";
 import { vlogSpectrum } from "./vlog.ts";
 
 const RESTART_DELAY_MS = 3000;

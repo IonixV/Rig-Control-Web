@@ -1,0 +1,29 @@
+# systemd unit for running RigControl Web headless (no Docker, no Electron/GUI).
+# See docs/headless-deployment.md for the full setup walkthrough (creating
+# the rigcontrol-web user, npm ci/build, first-login credential change).
+#
+# Install:
+#   sudo cp docs/rigcontrol-web.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now rigcontrol-web
+
+[Unit]
+Description=RigControl Web (headless)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=rigcontrol-web
+Group=rigcontrol-web
+# Serial (CAT control) and audio (naudiodon/ALSA) device access.
+SupplementaryGroups=dialout audio
+WorkingDirectory=/opt/rigcontrol-web
+Environment=NODE_ENV=production
+Environment=RCW_DATA_DIR=/var/lib/rigcontrol-web
+ExecStart=/usr/bin/node server.ts
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

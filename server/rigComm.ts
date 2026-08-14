@@ -2,7 +2,7 @@ import net from "net";
 import fs from "fs";
 import path from "path";
 import { Socket } from "socket.io";
-import { ServerContext } from "./context.ts";
+import type { ServerContext } from "./context.ts";
 import { vlogRig as vlog, vlogWsjtx, ts } from "./vlog.ts";
 import { startRigctld } from "./rigctld.ts";
 

@@ -1,5 +1,5 @@
 import { Socket } from "socket.io";
-import { ServerContext } from "./context.ts";
+import type { ServerContext } from "./context.ts";
 import { vlogVideo as vlog } from "./vlog.ts";
 
 export function registerVideoHandlers(socket: Socket, ctx: ServerContext): void {

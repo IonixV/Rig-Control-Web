@@ -1,6 +1,6 @@
 import dgram from "dgram";
 import os from "os";
-import { ServerContext } from "./context.ts";
+import type { ServerContext } from "./context.ts";
 import { vlogSpectrum } from "./vlog.ts";
 
 let packetCount = 0;

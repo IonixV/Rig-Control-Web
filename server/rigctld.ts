@@ -2,7 +2,7 @@ import path from "path";
 import fs from "fs";
 import { spawn, exec, ChildProcess } from "child_process";
 import { Socket } from "socket.io";
-import { ServerContext } from "./context.ts";
+import type { ServerContext } from "./context.ts";
 import { vlogRig as vlog } from "./vlog.ts";
 
 export function getRigctldPath(baseDir: string): string {

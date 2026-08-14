@@ -17,6 +17,7 @@ RigControl Web (`v1.0.0`) is a full-stack web + Electron desktop application for
 ```bash
 # Development
 npm run dev              # Start Express + Socket.io backend (tsx server.ts)
+npm start                # Start the backend standalone (node server.ts) — no Electron; this is the headless entry point, see docs/headless-deployment.md
 npm run build            # Build Vite frontend to dist/
 npm run lint             # TypeScript type-check (tsc --noEmit)
 npm run test             # Run Vitest unit tests (jsdom, hardware-independent)
@@ -80,6 +81,15 @@ Run all of these before tagging a release:
    ```
 
    Requires `podman`. The script installs the DEB in an Ubuntu 24.04 container and the RPM in a Fedora 39 container, then checks: package install succeeds, `.desktop` file and icon are placed correctly, and `ldd` finds all shared libraries for every bundled binary (rigctld, cw-key-helper, ft4222-scope-reader, naudiodon/libportaudio, libopus-node, Electron).
+
+4. **Headless Docker Image Smoke Test**: verifies the headless deployment image (`./Dockerfile`) starts, serves HTTPS, and resolves shared libraries against the same glibc-2.39 floor:
+
+   ```bash
+   bash scripts/test-headless-docker.sh                # build from the current tree + test (slow)
+   bash scripts/test-headless-docker.sh IMAGE:TAG       # test a pre-built/pulled image (fast)
+   ```
+
+   Requires `docker` or `podman` (auto-detected; prefers `docker` if both are present — override with `CONTAINER_ENGINE=docker|podman`). Root-daemon Docker and podman both fully verified (real device passthrough included, on a real Fedora 44 host); rootless podman has a documented device-access limitation — see `docs/headless-deployment.md`'s Troubleshooting section. See that doc for the full headless deployment guide (Docker Compose, `docker run`, and systemd — x64 only for now; ARM64/Raspberry Pi is a planned follow-up, tracked in issue #23).
 
 ## Architecture
 
