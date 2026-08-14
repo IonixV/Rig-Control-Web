@@ -1,10 +1,10 @@
 # RigControl Web (Headless)
 
-Open-source web app for controlling amateur radio equipment via [Hamlib](https://github.com/Hamlib/Hamlib). This image runs the **headless backend only** (no Electron/GUI, no video-source feature) — a good fit for a dedicated radio-controller box (Raspberry Pi–class x64 mini PC, N100/N150, an old laptop, a NAS) running in the shack, controlled remotely from any browser.
+Open-source web app for controlling amateur radio equipment via [Hamlib](https://github.com/Hamlib/Hamlib). This image runs the **headless backend only** (no Electron/GUI, no video-source feature) — a good fit for a dedicated radio-controller box (x64 mini PC, N100/N150, an old laptop, a NAS) running in the shack, controlled remotely from any browser.
 
 Full-featured desktop builds (Windows/macOS/Linux, with the video feed) are on the [GitHub Releases page](https://github.com/jbdubbs/Rig-Control-Web/releases).
 
-**Latest release: v1.3.0** — headless deployment (this image) is new in this release: Docker Compose, plain `docker run`, and systemd options, including a verified FT-710 (FT4222 USB-SPI) spectrum scope and second-serial-port CW keying path through Docker. Also brings official Yaesu FT-857 support (preamp/attenuator control and CAT polling now work correctly against real hardware). See the [full release notes](https://github.com/jbdubbs/Rig-Control-Web/releases/tag/v1.3.0) for everything else included.
+**Latest release: v1.3.0** — headless deployment (this image) is new in this release: Docker Compose, plain `docker run`, and systemd options, including a verified FT-710 (FT4222 USB-SPI) spectrum scope and second-serial-port CW keying path through Docker. Also brings official Yaesu FT-857 support — preamp, attenuator control, and PKTUSB/PKTLSB/PKTFM modes now work correctly against real hardware (thanks @phfu for testing!). See the [full release notes](https://github.com/jbdubbs/Rig-Control-Web/releases/tag/v1.3.0) for everything else included.
 
 ## Quick start (Docker Compose)
 
