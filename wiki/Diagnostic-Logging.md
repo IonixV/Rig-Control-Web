@@ -74,6 +74,34 @@ npm run dev -- --debug-all
 
 Log output appears in the terminal where you ran the command.
 
+### Docker / Docker Compose (Headless)
+
+There's no interactive terminal to pass `--debug-*` args to in a container, so use the environment-variable form instead — every flag has a matching env var (`DEBUG_ALL`, `DEBUG_RIG`, `DEBUG_AUDIO`, `DEBUG_VIDEO`, `DEBUG_CW`, `DEBUG_INFRA`, `DEBUG_SPECTRUM`, `DEBUG_SPOTS`, `DEBUG_WSJTX`), set to `"1"`. In `docker-compose.yml`, add it to the existing `environment:` block alongside `RCW_DATA_DIR`:
+
+```yaml
+environment:
+  RCW_DATA_DIR: /data
+  DEBUG_ALL: "1"
+```
+
+Then `docker compose up -d` (or `docker compose restart` if it's already running). For plain `docker run`, add `-e DEBUG_ALL=1` to the command shown in [Headless Deployment](Headless-Deployment). View output with `docker compose logs -f` (or `docker logs -f rigcontrol-web`).
+
+### systemd (Headless)
+
+Add an `Environment=` line to the `[Service]` block of `/etc/systemd/system/rigcontrol-web.service`:
+
+```
+Environment=DEBUG_ALL=1
+```
+
+Then apply it and watch the log:
+
+```
+sudo systemctl daemon-reload
+sudo systemctl restart rigcontrol-web
+journalctl -u rigcontrol-web -f
+```
+
 ---
 
 ## Capturing the Output

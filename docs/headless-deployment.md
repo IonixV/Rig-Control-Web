@@ -24,7 +24,9 @@ spectrum, spots, solar data, admin panel) works exactly as in the desktop
 app, viewed from any browser pointed at the controller's IP.
 
 **Platform support:** this stage is **x64 only**. ARM64 (Raspberry Pi
-3/4/5, running a 64-bit OS) is a planned follow-up — track it in issue #23.
+3/4/5, running a 64-bit OS) is intentionally deferred — the maintainer is
+holding off on enabling it until the amd64 image gets enough real-world
+usage reports (see [issue #23](https://github.com/jbdubbs/Rig-Control-Web/issues/23)).
 N100/N150 mini PCs and any other x86_64 Linux box are supported today.
 
 ---

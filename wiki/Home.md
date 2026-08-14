@@ -14,7 +14,9 @@ This guide assumes you are a licensed amateur radio operator who is comfortable 
 
 ## Installation
 
-For most users, the right way to get started is to **download a pre-built installer from the [GitHub Releases page](https://github.com/jbdubbs/Rig-Control-Web/releases)**. Pick the installer for your operating system (Windows or Linux), run it, and you are ready to go. You do not need to install Node.js, build anything from source, or touch a command line.
+For most users, the right way to get started is to **download a pre-built installer from the [GitHub Releases page](https://github.com/jbdubbs/Rig-Control-Web/releases)**. Pick the installer for your operating system (Windows, macOS, or Linux), run it, and you are ready to go. You do not need to install Node.js, build anything from source, or touch a command line.
+
+**Running on a dedicated Raspberry Pi or mini PC instead?** See [Headless Deployment](Headless-Deployment) for Docker Compose, `docker run`, and systemd options — no display or Electron required.
 
 Developers and advanced users who want to run from source can find instructions in the project [README](https://github.com/jbdubbs/Rig-Control-Web/blob/main/README.md).
 
