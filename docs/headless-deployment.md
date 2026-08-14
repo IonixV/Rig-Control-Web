@@ -77,6 +77,16 @@ ls -l /dev/serial/by-id/
 
 Use that path in place of `/dev/ttyUSB0` below.
 
+**CW keying on a second serial port:** some setups need DTR/RTS keying on
+a serial port distinct from CAT control — e.g. the IC-7300's single-port
+conflict (see Known Issues in `CLAUDE.md`), or any radio wired to a second
+USB-serial adapter for its key jack. This is a separate `docker-compose.yml`
+line (commented out by default, tagged "CW keying"), governed by the same
+`dialout` group already granted above — no extra config beyond adding the
+line and pointing the app's Settings → KEYER → Keyer Port at the matching
+in-container path. Verified against a real dual-port CP2105 adapter during
+development.
+
 ### Audio (radio's USB sound card)
 
 Pass through the whole ALSA subsystem (`/dev/snd`) rather than a specific
@@ -90,29 +100,45 @@ ALSA passthrough sidesteps that whole problem.
 
 ### FT4222 (FT-710 spectrum scope)
 
-This one is genuinely harder to containerize than serial or audio:
+Verified working end to end against a real FT-710 during development —
+harder to set up than serial or audio, but reliable once configured. Three
+things beyond serial/audio, all pre-written (commented out) in
+`docker-compose.yml` — uncomment every line tagged "FT4222" there:
 
-- There's no single stable device path — USB bus/device numbers renumber
-  on replug.
-- The host's udev rules from
-  [`docs/ft4222-spectrum-setup.md`](ft4222-spectrum-setup.md) (the
-  `uaccess`/`dialout` group grant) still govern access even through a bind
-  mount — Docker doesn't bypass host device permissions.
+1. **Install `libft4222` on the host first**, following
+   [`docs/ft4222-spectrum-setup.md`](ft4222-spectrum-setup.md) — FTDI
+   doesn't distribute it through any Linux package manager, only a direct
+   download from ftdi.com. It's deliberately **not** baked into the
+   published image: doing so would mean redistributing FTDI's proprietary
+   SDK binary through a public Docker Hub image, which its license doesn't
+   clearly permit. `docker-compose.yml` instead bind-mounts your own,
+   already-licensed host installation (the whole `/usr/local/lib`
+   directory, not a specific filename, since the exact patch version
+   varies by what you downloaded).
+2. **The whole USB bus**, not a specific device path — the FT4222 library
+   enumerates devices itself by VID:PID rather than opening a fixed path,
+   and bus/device numbers renumber on replug/reboot anyway. Needs both the
+   bind mount and a cgroup rule granting the USB device class (a separate
+   permission layer from file mode bits):
+   ```yaml
+   devices:
+     - /dev/bus/usb:/dev/bus/usb
+   device_cgroup_rules:
+     - "c 189:* rmw"
+   ```
+   The host's udev rules from `docs/ft4222-spectrum-setup.md` (the
+   `uaccess`/`dialout` group grant) still govern access even through a
+   bind mount — same as running on bare metal.
+3. **`LD_LIBRARY_PATH=/usr/local/lib`** — required because `dlopen()`
+   needs it: the image's `ld.so.cache` was built without `libft4222` (it
+   only exists via the runtime bind mount), so the bare
+   `dlopen("libft4222.so")` call in `ft4222-scope-reader.c` wouldn't
+   otherwise find it.
 
-If you want to try it anyway, mount the whole USB bus and grant the USB
-device class via cgroup rule (uncomment the relevant block in
-`docker-compose.yml`):
-
-```yaml
-devices:
-  - /dev/bus/usb:/dev/bus/usb
-device_cgroup_rules:
-  - "c 189:* rmw"
-```
-
-**Recommendation:** if FT4222 spectrum is important to you, use the
-systemd deployment below instead — the existing FT4222 setup doc applies
-unmodified on bare metal, with none of the above caveats.
+The systemd deployment remains slightly simpler for FT4222 specifically
+(no bus-renumbering or library-mounting considerations, since it's just
+running on the host directly) — but Docker is a fully supported, verified
+option too, not a fallback.
 
 ---
 

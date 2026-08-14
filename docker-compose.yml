@@ -17,6 +17,33 @@
 #   3. docker compose up -d
 #   4. Log in at https://<this-host>:3000 as ADMIN/admin (forced password
 #      change on first login).
+#
+# FT-710 spectrum scope (FT4222 USB-SPI) — verified working end to end
+# against a real FT-710 during development, but off by default since most
+# users don't have this radio. To enable it, uncomment every line below
+# tagged "FT4222" (one line each in devices/volumes/environment, plus the
+# standalone device_cgroup_rules block), then:
+#   1. Install libft4222 on THIS HOST first, following
+#      docs/ft4222-spectrum-setup.md (FTDI doesn't distribute it through any
+#      Linux package manager — direct download from ftdi.com only). It is
+#      deliberately NOT baked into the published image: doing so would mean
+#      redistributing FTDI's proprietary SDK binary through a public Docker
+#      Hub image, which its license does not clearly permit. Bind-mounting
+#      your own, already-licensed host installation avoids that question
+#      entirely — hence mounting the whole /usr/local/lib directory below
+#      rather than a specific pinned filename, since the exact patch
+#      version varies by what you downloaded.
+#   2. You'll still need the host udev rule from that same doc — it governs
+#      access even through a bind mount, same as running on bare metal.
+#   3. LD_LIBRARY_PATH=/usr/local/lib is required because dlopen() needs it:
+#      the image's ld.so.cache was built without libft4222 (it only exists
+#      via the runtime bind mount), so the bare `dlopen("libft4222.so")`
+#      call in ft4222-scope-reader.c wouldn't otherwise find it.
+#   4. The FT4222 library enumerates devices itself by VID:PID
+#      (FT_OpenEx(..., FT_OPEN_BY_DESCRIPTION, ...)) rather than opening a
+#      fixed path, so the whole USB bus must be visible — not just today's
+#      /dev/bus/usb/<bus>/<device> path, which renumbers on replug/reboot
+#      anyway.
 
 services:
   rigcontrol-web:
@@ -52,24 +79,34 @@ services:
       # Radio's USB audio interface (whole ALSA subsystem — the exact
       # card index isn't stable either).
       - /dev/snd:/dev/snd
+      # CW keying (DTR/RTS) on a SEPARATE serial port, only if your radio
+      # needs one distinct from CAT control above — e.g. the IC-7300's
+      # single-USB-port conflict (see Known Issues in CLAUDE.md), or any
+      # setup using a second USB-serial adapter wired to the key jack.
+      # Governed by the same dialout group already granted above — no
+      # extra config needed beyond this line. Set the matching path in the
+      # app under Settings → KEYER → Keyer Port.
+      # - /dev/serial/by-id/<your-cw-keyer-device-path>:/dev/ttyUSB1
+      # FT4222: whole USB bus, needed for the spectrum scope. See the FT-710
+      # spectrum scope note at the top of this file before enabling.
+      # - /dev/bus/usb:/dev/bus/usb
 
-    # FT-710 spectrum scope (FT4222 USB-SPI) needs raw USB bus access,
-    # which is harder to pin reliably in Docker (bus/device numbers
-    # renumber on replug). If you need it, uncomment below — you'll also
-    # still need the host udev rule from docs/ft4222-spectrum-setup.md,
-    # since that governs access even through a bind mount. Otherwise, the
-    # systemd deployment path (docs/headless-deployment.md) is recommended
-    # for FT4222 users.
-    # devices:
-    #   - /dev/bus/usb:/dev/bus/usb
+    # FT4222: grants cgroup-level access to the USB device class (major
+    # 189) — a separate permission layer from the file mode bits above,
+    # required in addition to them.
     # device_cgroup_rules:
     #   - "c 189:* rmw"
 
     environment:
       RCW_DATA_DIR: /data
+      # FT4222: see the FT-710 spectrum scope note at the top of this file.
+      # LD_LIBRARY_PATH: /usr/local/lib
 
     volumes:
       - rcw-data:/data
+      # FT4222: bind-mount your own host installation of libft4222 (see the
+      # FT-710 spectrum scope note at the top of this file).
+      # - /usr/local/lib:/usr/local/lib:ro
 
 volumes:
   rcw-data:

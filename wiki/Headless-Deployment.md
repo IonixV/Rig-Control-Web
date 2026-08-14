@@ -68,6 +68,16 @@ Find your radio's stable device path (survives reboots/replugging, unlike
 ls -l /dev/serial/by-id/
 ```
 
+**CW keying on a second serial port:** some setups need DTR/RTS keying on
+a serial port distinct from CAT control — e.g. the IC-7300's single-port
+conflict, or any radio wired to a second USB-serial adapter for its key
+jack (see [CW Keying Setup](CW-Keying-Setup)). This is a separate
+`docker-compose.yml` line (commented out by default, tagged "CW keying"),
+governed by the same `dialout` group already granted above — no extra
+config beyond adding the line and pointing the app's
+Settings → KEYER → Keyer Port at the matching in-container path. Verified
+against a real dual-port CP2105 adapter during development.
+
 ### Audio (radio's USB sound card)
 
 Pass through the whole ALSA subsystem (`/dev/snd`) rather than a specific
@@ -80,11 +90,37 @@ passthrough sidesteps that entire problem.
 
 ### FT4222 (FT-710 spectrum scope)
 
-Harder to containerize than serial or audio — USB bus/device numbers
-renumber on replug, and the host udev rules from
-[FT-710 Spectrum Scope Setup](Spectrum-Scope-FT-710) still govern access
-even through a bind mount. If FT4222 spectrum matters to you, use the
-systemd option below instead, where that setup guide applies unmodified.
+Verified working end to end against a real FT-710 during development —
+harder to set up than serial or audio, but reliable once configured. Three
+things beyond serial/audio, all pre-written (commented out) in
+`docker-compose.yml` — uncomment every line tagged "FT4222" there:
+
+1. **Install `libft4222` on the host first**, following
+   [FT-710 Spectrum Scope Setup](Spectrum-Scope-FT-710) — FTDI doesn't
+   distribute it through any Linux package manager, only a direct download
+   from ftdi.com. It's deliberately **not** baked into the published
+   image: doing so would mean redistributing FTDI's proprietary SDK binary
+   through a public Docker Hub image, which its license doesn't clearly
+   permit. `docker-compose.yml` instead bind-mounts your own,
+   already-licensed host installation (the whole `/usr/local/lib`
+   directory, not a specific filename, since the exact patch version
+   varies by what you downloaded).
+2. **The whole USB bus**, not a specific device path — the FT4222 library
+   enumerates devices itself by VID:PID rather than opening a fixed path,
+   and bus/device numbers renumber on replug/reboot anyway. Needs both the
+   bind mount and a cgroup rule granting the USB device class (a separate
+   permission layer from file mode bits). The host's udev rules still
+   govern access even through a bind mount — same as running on bare
+   metal.
+3. **`LD_LIBRARY_PATH=/usr/local/lib`** — required because `dlopen()`
+   needs it: the image's `ld.so.cache` was built without `libft4222` (it
+   only exists via the runtime bind mount), so the bare
+   `dlopen("libft4222.so")` call in `ft4222-scope-reader.c` wouldn't
+   otherwise find it.
+
+The systemd deployment remains slightly simpler for FT4222 specifically
+(no bus-renumbering or library-mounting considerations) — but Docker is a
+fully supported, verified option too, not a fallback.
 
 ---
 
