@@ -91,6 +91,8 @@ Run all of these before tagging a release:
 
    Requires `docker` or `podman` (auto-detected; prefers `docker` if both are present — override with `CONTAINER_ENGINE=docker|podman`). Root-daemon Docker and podman both fully verified (real device passthrough included, on a real Fedora 44 host); rootless podman has a documented device-access limitation — see `docs/headless-deployment.md`'s Troubleshooting section. See that doc for the full headless deployment guide (Docker Compose, `docker run`, and systemd — x64 only for now; ARM64/Raspberry Pi support is intentionally deferred until the amd64 image gets sufficient real-world usage reports, per the maintainer's comment on the now-closed issue #23).
 
+`.github/workflows/docker-publish.yml` (triggered on `v*` tag push or manual dispatch) builds/pushes the image to Docker Hub (`jbdubbs/rigcontrol-web`, tags `latest` + the version) and then syncs `DOCKERHUB.md` to the Docker Hub repo page's description via `peter-evans/dockerhub-description`. **`DOCKERHUB.md`'s "Latest release" line must be updated by hand as part of cutting each release** — it doesn't auto-generate from the GitHub Release body.
+
 ## Architecture
 
 ### Process Model

@@ -56,3 +56,16 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: ${{ steps.tags.outputs.tags }}
+
+      # Keeps the Docker Hub repo page (description + "Latest release" pointer)
+      # in sync with DOCKERHUB.md on every publish, so release notes actually
+      # reach Docker Hub instead of only living in the GitHub Release. Update
+      # DOCKERHUB.md's "Latest release" line as part of cutting each release.
+      - name: Sync description to Docker Hub
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: jbdubbs/rigcontrol-web
+          short-description: "Headless web backend for RigControl Web — control amateur radio via Hamlib rigctld"
+          readme-filepath: ./DOCKERHUB.md
