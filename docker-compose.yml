@@ -1,49 +1,6 @@
 # RigControl Web — headless deployment (no Electron/GUI).
-# See docs/headless-deployment.md for the full setup guide, including why
-# host networking is required (Hamlib UDP multicast spectrum reception) and
-# how serial/audio/FT4222 device access works.
-#
-# Quick start:
-#   1. Find your radio's stable serial device path:
-#        ls -l /dev/serial/by-id/
-#      and replace the placeholder below.
-#   2. Find this host's actual dialout/audio GIDs (these vary by distro —
-#      do NOT assume the values below; confirmed on a real Ubuntu 24.04
-#      test host that they differ from the image's baked-in defaults):
-#        getent group dialout audio | awk -F: '{print $1"_GID="$3}'
-#      Export them (or put them in a .env file next to this compose file)
-#      before running:
-#        export DIALOUT_GID=<value> AUDIO_GID=<value>
-#   3. docker compose up -d
-#   4. Log in at https://<this-host>:3000 as ADMIN/admin (forced password
-#      change on first login).
-#
-# FT-710 spectrum scope (FT4222 USB-SPI) — verified working end to end
-# against a real FT-710 during development, but off by default since most
-# users don't have this radio. To enable it, uncomment every line below
-# tagged "FT4222" (one line each in devices/volumes/environment, plus the
-# standalone device_cgroup_rules block), then:
-#   1. Install libft4222 on THIS HOST first, following
-#      docs/ft4222-spectrum-setup.md (FTDI doesn't distribute it through any
-#      Linux package manager — direct download from ftdi.com only). It is
-#      deliberately NOT baked into the published image: doing so would mean
-#      redistributing FTDI's proprietary SDK binary through a public Docker
-#      Hub image, which its license does not clearly permit. Bind-mounting
-#      your own, already-licensed host installation avoids that question
-#      entirely — hence mounting the whole /usr/local/lib directory below
-#      rather than a specific pinned filename, since the exact patch
-#      version varies by what you downloaded.
-#   2. You'll still need the host udev rule from that same doc — it governs
-#      access even through a bind mount, same as running on bare metal.
-#   3. LD_LIBRARY_PATH=/usr/local/lib is required because dlopen() needs it:
-#      the image's ld.so.cache was built without libft4222 (it only exists
-#      via the runtime bind mount), so the bare `dlopen("libft4222.so")`
-#      call in ft4222-scope-reader.c wouldn't otherwise find it.
-#   4. The FT4222 library enumerates devices itself by VID:PID
-#      (FT_OpenEx(..., FT_OPEN_BY_DESCRIPTION, ...)) rather than opening a
-#      fixed path, so the whole USB bus must be visible — not just today's
-#      /dev/bus/usb/<bus>/<device> path, which renumbers on replug/reboot
-#      anyway.
+# Full guide: https://github.com/jbdubbs/Rig-Control-Web/wiki/Headless-Deployment
+# FT4222 (FT-710 spectrum scope) setup: https://github.com/jbdubbs/Rig-Control-Web/wiki/Spectrum-Scope-FT-710
 
 services:
   rigcontrol-web:
@@ -51,81 +8,31 @@ services:
     container_name: rigcontrol-web
     restart: unless-stopped
 
-    # Required for the Hamlib UDP multicast spectrum source to receive
-    # traffic at all — Docker's default bridge network NATs the container
-    # behind a virtual interface that LAN multicast doesn't reach. Loses
-    # Docker's port isolation, which is irrelevant on a dedicated
-    # controller box.
-    network_mode: host
+    network_mode: host # required for Hamlib UDP multicast spectrum reception
 
-    # Non-root container user (see Dockerfile) needs these host groups to
-    # reach the bind-mounted device nodes below. IMPORTANT: --group-add
-    # resolves group *names* against /etc/group inside the image, not the
-    # host — the image (built from ubuntu:24.04) bakes in dialout=20,
-    # audio=29, but real hosts commonly differ (confirmed on a real test
-    # host: dialout=18, audio=63 — using the names here silently granted
-    # the WRONG groups and device access failed). Numeric host GIDs (set
-    # via DIALOUT_GID/AUDIO_GID above) are the only portable fix. See
-    # docs/headless-deployment.md for the rootless-container caveat if
-    # you're running Docker/Podman rootless.
-    group_add:
-      - "${DIALOUT_GID:?Set DIALOUT_GID — see the Quick start comment above}"
-      - "${AUDIO_GID:?Set AUDIO_GID — see the Quick start comment above}"
+    group_add: # numeric host GIDs, not names — see wiki
+      - "${DIALOUT_GID:?Set DIALOUT_GID — see wiki}"
+      - "${AUDIO_GID:?Set AUDIO_GID — see wiki}"
 
-    # Required alongside the /dev/snd device below: Docker/Podman mask
-    # /proc/asound by default (security hardening — an unmasked /proc/asound
-    # can otherwise leak the HOST's audio playback/recording status to the
-    # container, see containerd commit 703786c) regardless of what's passed
-    # via `devices`. naudiodon's PortAudio ALSA backend enumerates cards by
-    # reading /proc/asound, so without this the Audio Backend Input/Output
-    # dropdowns stay empty even though /dev/snd's device nodes are present
-    # and readable (see issue #55). A plain bind mount of /proc/asound does
-    # NOT work as a fix on current Docker — runc rejects any bind mount
-    # targeting a path inside /proc outright ("proc-safety" check, confirmed
-    # against runc 1.4.3/Docker 29.7.2: "cannot be mounted because it is
-    # inside /proc"), regardless of source. `systempaths=unconfined` un-masks
-    # every default-masked path (not just /proc/asound) but is the only
-    # approach confirmed working on both Docker and Podman.
-    security_opt:
+    security_opt: # required alongside /dev/snd below for audio device enumeration
       - systempaths=unconfined
 
     devices:
-      # CAT control serial port. Prefer the stable /dev/serial/by-id/...
-      # path over /dev/ttyUSB0, which can shift across reboots/replugs.
-      - /dev/serial/by-id/<your-device-path>:/dev/ttyUSB0
-      # Radio's USB audio interface (whole ALSA subsystem — the exact
-      # card index isn't stable either). NOTE: this alone is not enough for
-      # naudiodon/PortAudio to actually list any devices — see the
-      # systempaths=unconfined security_opt below, which is also required.
-      - /dev/snd:/dev/snd
-      # CW keying (DTR/RTS) on a SEPARATE serial port, only if your radio
-      # needs one distinct from CAT control above — e.g. the IC-7300's
-      # single-USB-port conflict (see Known Issues in CLAUDE.md), or any
-      # setup using a second USB-serial adapter wired to the key jack.
-      # Governed by the same dialout group already granted above — no
-      # extra config needed beyond this line. Set the matching path in the
-      # app under Settings → KEYER → Keyer Port.
-      # - /dev/serial/by-id/<your-cw-keyer-device-path>:/dev/ttyUSB1
-      # FT4222: whole USB bus, needed for the spectrum scope. See the FT-710
-      # spectrum scope note at the top of this file before enabling.
-      # - /dev/bus/usb:/dev/bus/usb
+      - /dev/serial/by-id/<your-device-path>:/dev/ttyUSB0 # CAT control
+      - /dev/snd:/dev/snd # radio's USB audio interface
+      # - /dev/serial/by-id/<your-cw-keyer-device-path>:/dev/ttyUSB1 # CW keying, separate port
+      # - /dev/bus/usb:/dev/bus/usb # FT4222
 
-    # FT4222: grants cgroup-level access to the USB device class (major
-    # 189) — a separate permission layer from the file mode bits above,
-    # required in addition to them.
-    # device_cgroup_rules:
+    # device_cgroup_rules: # FT4222
     #   - "c 189:* rmw"
 
     environment:
       RCW_DATA_DIR: /data
-      # FT4222: see the FT-710 spectrum scope note at the top of this file.
-      # LD_LIBRARY_PATH: /usr/local/lib
+      # LD_LIBRARY_PATH: /usr/local/lib # FT4222
 
     volumes:
       - rcw-data:/data
-      # FT4222: bind-mount your own host installation of libft4222 (see the
-      # FT-710 spectrum scope note at the top of this file).
-      # - /usr/local/lib:/usr/local/lib:ro
+      # - /usr/local/lib:/usr/local/lib:ro # FT4222: bind-mount host libft4222
 
 volumes:
   rcw-data:
