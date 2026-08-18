@@ -31,6 +31,31 @@ N100/N150 mini PCs and any other x86_64 Linux box are supported today.
 
 ---
 
+## Image runtime dependencies
+
+Both build stages pin `ubuntu:24.04` rather than a Debian-based Node
+image, for the same glibc-2.39 floor rationale as the DEB/RPM packages
+(see [linux-packages.md](linux-packages.md)). The runtime stage's `apt-get
+install` list is a trimmed subset of the DEB/RPM `depends` lists in
+`package.json` — it drops the Electron/Chromium-only GUI libs (GTK3, NSS,
+X11 libs, etc.) a headless deployment never loads, but otherwise needs the
+same libraries for the same reasons (PortAudio/naudiodon, `rigctld`, the
+FT4222 reader). Two things aren't obvious from the package names alone:
+
+- **`libpulse0`** is required even though naudiodon's actual I/O path is
+  ALSA/PipeWire — its prebuilt `libportaudio.so.2` dynamically links
+  `libpulse.so.0` and fails to import without it.
+- **`libasound2t64`/`libreadline8t64`**, not `libasound2`/`libreadline8`:
+  Ubuntu 24.04's 64-bit `time_t` transition left the old names as
+  ambiguous virtual packages with no installable candidate — `apt-get
+  install` needs the real `t64`-suffixed names directly. This only
+  affects a direct `apt-get install` like the Dockerfile's; electron-builder's
+  `.deb` `Depends: libasound2` field resolves fine via apt's `Provides`
+  mechanism, which is why `test-linux-packages.sh` never catches this
+  class of naming mismatch.
+
+---
+
 ## Why host networking?
 
 The Hamlib UDP spectrum source (`spectrumSettings.source === "hamlib"`)
