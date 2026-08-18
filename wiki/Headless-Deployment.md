@@ -33,9 +33,8 @@ usage reports (see [issue #23](https://github.com/jbdubbs/Rig-Control-Web/issues
 
 Both build stages pin `ubuntu:24.04` rather than a Debian-based Node
 image, for the same glibc-2.39 floor rationale as the DEB/RPM packages
-(see [docs/linux-packages.md](https://github.com/jbdubbs/Rig-Control-Web/blob/main/docs/linux-packages.md)
-in the repo). The runtime stage's `apt-get
-install` list is a trimmed subset of the DEB/RPM dependency lists — it
+(see [Linux DEB & RPM Packages](Linux-Packages)). The runtime stage's
+`apt-get install` list is a trimmed subset of the DEB/RPM dependency lists — it
 drops the Electron/Chromium-only GUI libs (GTK3, NSS, X11 libs, etc.) a
 headless deployment never loads, but otherwise needs the same libraries
 for the same reasons (PortAudio/naudiodon, `rigctld`, the FT4222 reader).

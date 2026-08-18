@@ -18,6 +18,8 @@ For most users, the right way to get started is to **download a pre-built instal
 
 **Running on a dedicated Raspberry Pi or mini PC instead?** See [Headless Deployment](Headless-Deployment) for Docker Compose, `docker run`, and systemd options — no display or Electron required.
 
+**Installing the Linux DEB/RPM package?** See [Linux DEB & RPM Packages](Linux-Packages) for supported distros and dependency details.
+
 Developers and advanced users who want to run from source can find instructions in the project [README](https://github.com/jbdubbs/Rig-Control-Web/blob/main/README.md).
 
 > **Linux users:** The Linux release bundles Hamlib — no separate Hamlib install is needed.
@@ -55,3 +57,4 @@ Both layouts show the same information and controls, just arranged differently f
 - [WSJTX Integration](WSJTX-Integration) — Use WSJTX for FT8, FT4, and other digital modes via the wsjtx-bridge helper
 - [Diagnostic Logging](Diagnostic-Logging) — Capture debug output for troubleshooting and bug reports
 - [Headless Deployment](Headless-Deployment) — Run on a dedicated Raspberry Pi or mini PC via Docker or systemd, no display required
+- [Linux DEB & RPM Packages](Linux-Packages) — Supported distros, dependencies, and installation instructions for the native Linux packages
