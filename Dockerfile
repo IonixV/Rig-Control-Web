@@ -1,6 +1,7 @@
 # Headless (no Electron/GUI) deployment image for RigControl Web.
-# See docs/headless-deployment.md ("Image runtime dependencies") for usage
-# and the rationale behind the package lists below.
+# See https://github.com/jbdubbs/Rig-Control-Web/wiki/Headless-Deployment
+# ("Image runtime dependencies") for usage and the rationale behind the
+# package lists below.
 
 FROM ubuntu:24.04 AS builder
 
@@ -30,7 +31,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     NODE_ENV=production \
     RCW_DATA_DIR=/data
 
-# Trimmed subset of package.json's deb/rpm depends lists — see docs/headless-deployment.md
+# Trimmed subset of package.json's deb/rpm depends lists — see the Headless Deployment wiki page
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates curl gnupg \
       libasound2t64 libpulse0 libusb-1.0-0 libreadline8t64 libportaudio2 libuuid1 \
