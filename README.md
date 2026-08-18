@@ -16,7 +16,7 @@ A web-first app for controlling your radio and making CW and SSB contacts!
 
 **Most users should download the latest pre-built installer from the [Releases page](https://github.com/jbdubbs/Rig-Control-Web/releases).** Pick the installer for your operating system (Windows `.exe`, Linux `.AppImage`, or macOS `.dmg`), run it, and you are ready to go — no Node.js, no build tools required.
 
-**Running on a dedicated Raspberry Pi or mini PC?** See [Headless Deployment](docs/headless-deployment.md) for Docker Compose, `docker run`, and systemd options — no display or Electron required.
+**Running on a dedicated Raspberry Pi or mini PC?** See [Headless Deployment](https://github.com/jbdubbs/Rig-Control-Web/wiki/Headless-Deployment) for Docker Compose, `docker run`, and systemd options — no display or Electron required.
 
 For full usage instructions, see the **[Wiki](https://github.com/jbdubbs/Rig-Control-Web/wiki)**.
 

@@ -6,7 +6,7 @@ name: Publish Docker Image
 # bin/linux/* binaries directly rather than rebuilding them.
 #
 # Stage 1 (current): linux/amd64 only. ARM64 (Raspberry Pi) is a planned
-# follow-up — see docs/headless-deployment.md.
+# follow-up — see https://github.com/jbdubbs/Rig-Control-Web/wiki/Headless-Deployment.
 #
 # Requires two repo secrets that must be created once before this workflow
 # can run: DOCKERHUB_USERNAME and DOCKERHUB_TOKEN (a Docker Hub access

@@ -22,6 +22,6 @@ Tags: `latest` and version-pinned (e.g. `1.3.0`). `linux/amd64` only for now —
 
 ## Full documentation
 
-- [Headless Deployment guide](https://github.com/jbdubbs/Rig-Control-Web/blob/main/docs/headless-deployment.md) — device access (serial/audio/FT4222), `docker run`, systemd, rootless-container caveats, firewall
+- [Headless Deployment guide](https://github.com/jbdubbs/Rig-Control-Web/wiki/Headless-Deployment) — device access (serial/audio/FT4222), `docker run`, systemd, rootless-container caveats, firewall
 - [Wiki](https://github.com/jbdubbs/Rig-Control-Web/wiki) — full user guide
 - [Source / issues](https://github.com/jbdubbs/Rig-Control-Web)

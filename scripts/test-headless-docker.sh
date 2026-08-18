@@ -24,7 +24,8 @@
 # specific one — e.g. to exercise the root-daemon device-permission model
 # real dedicated-controller deployments use, vs. rootless podman's
 # user-namespace-constrained one; see the "Troubleshooting: rootless
-# Docker/Podman" section in docs/headless-deployment.md).
+# Docker/Podman" section on the wiki:
+# https://github.com/jbdubbs/Rig-Control-Web/wiki/Headless-Deployment).
 # Usage:
 #   bash scripts/test-headless-docker.sh              # build from the current tree
 #   bash scripts/test-headless-docker.sh <image:tag>   # test a pre-built/pulled image
@@ -179,8 +180,10 @@ else
     # by default, which breaks naudiodon's ALSA card enumeration even
     # though /dev/snd's device nodes are passed through correctly — see
     # docker-compose.yml's security_opt block and the "Audio" section of
-    # docs/headless-deployment.md for the full story. This is the same
-    # device/security_opt combination docker-compose.yml ships by default.
+    # the wiki's Headless Deployment page for the full story:
+    # https://github.com/jbdubbs/Rig-Control-Web/wiki/Headless-Deployment
+    # This is the same device/security_opt combination docker-compose.yml
+    # ships by default.
     ASOUND_CARDS=$("$ENGINE" run --rm --name "$AUDIO_CONTAINER" \
       --group-add "$AUDIO_GID" \
       --device /dev/snd:/dev/snd \

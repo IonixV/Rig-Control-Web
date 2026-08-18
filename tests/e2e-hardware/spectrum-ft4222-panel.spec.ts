@@ -20,10 +20,12 @@ async function canvasFingerprint(canvas: import('@playwright/test').Locator): Pr
 
 // Requires a physical Yaesu FT-710 connected via USB with SCU-LAN10: ON
 // (see CLAUDE.md's "Spectrum Scope" section) and libft4222 installed on
-// this host (docs/ft4222-spectrum-setup.md). This cannot be faked/mocked
-// meaningfully — the point of this test is verifying the real
-// libft4222/USB/NDJSON-parsing chain end-to-end, per the FT4222 spectrum
-// scope's decision to test against real hardware rather than inject
+// this host (see the wiki's FT-710 Spectrum Scope Setup page:
+// https://github.com/jbdubbs/Rig-Control-Web/wiki/Spectrum-Scope-FT-710).
+// This cannot be faked/mocked meaningfully — the point of this test is
+// verifying the real libft4222/USB/NDJSON-parsing chain end-to-end, per
+// the FT4222 spectrum scope's decision to test against real hardware
+// rather than inject
 // synthetic frames the way the Hamlib UDP path does. Deliberately excluded
 // from `test:e2e`/CI (no FT-710 on any CI runner) — run manually, locally,
 // before tagging a release, with the radio connected.
