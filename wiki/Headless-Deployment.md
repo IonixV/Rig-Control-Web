@@ -90,6 +90,40 @@ happens because a desktop-session PipeWire daemon is running. A headless
 controller has no desktop session and no PipeWire at all, so raw ALSA
 passthrough sidesteps that entire problem.
 
+**`/dev/snd` alone is not enough — `/proc/asound` also needs unmasking.**
+Docker and Podman mask `/proc/asound` inside every container by default,
+regardless of what device nodes are passed through — deliberate security
+hardening, since an unmasked `/proc/asound` can leak the *host's* audio
+playback/recording activity to the container (see
+[containerd's fix](https://github.com/containerd/containerd/commit/703786c5c9fa607a511c1c1a5773d761eb8bb1ae)).
+naudiodon's PortAudio ALSA backend enumerates sound cards by reading
+`/proc/asound`, not just by opening `/dev/snd/controlC*` directly, so with
+the mask in place the Audio Backend's Input/Output dropdowns stay empty
+even though `/dev/snd`'s device nodes are present and correctly
+permissioned ([issue #55](https://github.com/jbdubbs/Rig-Control-Web/issues/55) —
+confirmed by reproducing it against real ALSA hardware, both containerized
+and bare-metal).
+
+The fix — already included by default in `docker-compose.yml` — is
+`security_opt: systempaths=unconfined`:
+
+```yaml
+security_opt:
+  - systempaths=unconfined
+```
+
+**A plain bind mount of `/proc/asound` (`-v /proc/asound:/proc/asound:ro`)
+looks like the more surgical fix, but does not actually work** on current
+Docker: `runc`'s "proc-safety" hardening outright rejects any bind mount
+whose *target* is a path inside `/proc`, regardless of source or intent —
+confirmed against `runc` 1.4.3 / Docker 29.7.2, which fails container
+startup with `... cannot be mounted because it is inside /proc`. This is a
+newer, stricter check than the masking itself and applies even to a
+read-only mount of a real host path. `systempaths=unconfined` un-masks
+*every* default-masked path (not just `/proc/asound`), which is blunter
+than ideal, but it's the only approach confirmed working on both Docker
+and Podman.
+
 ### FT4222 (FT-710 spectrum scope)
 
 Verified working end to end against a real FT-710 during development —
@@ -154,10 +188,16 @@ docker run -d \
   --group-add "$(getent group audio | cut -d: -f3)" \
   --device /dev/serial/by-id/usb-REPLACE_ME:/dev/ttyUSB0 \
   --device /dev/snd:/dev/snd \
+  --security-opt systempaths=unconfined \
   -e RCW_DATA_DIR=/data \
   -v rcw-data:/data \
   jbdubbs/rigcontrol-web:latest
 ```
+
+`--security-opt systempaths=unconfined` is required alongside `--device
+/dev/snd` — see the "Audio" note under "Device access" above for why (a
+`-v /proc/asound:/proc/asound:ro` bind mount looks more targeted but is
+rejected outright by current Docker).
 
 ## Option 3: systemd (no container runtime)
 

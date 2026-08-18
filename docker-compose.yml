@@ -72,12 +72,31 @@ services:
       - "${DIALOUT_GID:?Set DIALOUT_GID — see the Quick start comment above}"
       - "${AUDIO_GID:?Set AUDIO_GID — see the Quick start comment above}"
 
+    # Required alongside the /dev/snd device below: Docker/Podman mask
+    # /proc/asound by default (security hardening — an unmasked /proc/asound
+    # can otherwise leak the HOST's audio playback/recording status to the
+    # container, see containerd commit 703786c) regardless of what's passed
+    # via `devices`. naudiodon's PortAudio ALSA backend enumerates cards by
+    # reading /proc/asound, so without this the Audio Backend Input/Output
+    # dropdowns stay empty even though /dev/snd's device nodes are present
+    # and readable (see issue #55). A plain bind mount of /proc/asound does
+    # NOT work as a fix on current Docker — runc rejects any bind mount
+    # targeting a path inside /proc outright ("proc-safety" check, confirmed
+    # against runc 1.4.3/Docker 29.7.2: "cannot be mounted because it is
+    # inside /proc"), regardless of source. `systempaths=unconfined` un-masks
+    # every default-masked path (not just /proc/asound) but is the only
+    # approach confirmed working on both Docker and Podman.
+    security_opt:
+      - systempaths=unconfined
+
     devices:
       # CAT control serial port. Prefer the stable /dev/serial/by-id/...
       # path over /dev/ttyUSB0, which can shift across reboots/replugs.
       - /dev/serial/by-id/<your-device-path>:/dev/ttyUSB0
       # Radio's USB audio interface (whole ALSA subsystem — the exact
-      # card index isn't stable either).
+      # card index isn't stable either). NOTE: this alone is not enough for
+      # naudiodon/PortAudio to actually list any devices — see the
+      # systempaths=unconfined security_opt below, which is also required.
       - /dev/snd:/dev/snd
       # CW keying (DTR/RTS) on a SEPARATE serial port, only if your radio
       # needs one distinct from CAT control above — e.g. the IC-7300's
