@@ -8,6 +8,16 @@
 #     as scripts/test-linux-packages.sh)
 #   - the HTTPS server answers
 #   - a Hamlib Dummy-backend rigctld can be reached inside the container
+#   - IF real ALSA hardware is present on this host: audio device
+#     enumeration under the exact device/security_opt flags
+#     docker-compose.yml ships (regression test for issue #55's masked
+#     /proc/asound bug). Auto-skipped (not a failure) if this host has no
+#     /dev/snd or no 'audio' group — there's no equivalent of a Dummy rig
+#     backend for ALSA, so unlike the rigctld check above, this one can't
+#     run hardware-free. Manual/local only, same as `npm run test:hardware`
+#     — GitHub-hosted runners can't modprobe snd-dummy/snd-aloop to fake a
+#     card (long-standing, unresolved upstream limitation, see
+#     actions/runner-images#8295), so this can't be a CI gate.
 #
 # Prerequisites: docker or podman (auto-detected; override with
 # CONTAINER_ENGINE=docker|podman if both are installed and you want a
@@ -23,11 +33,13 @@ set -euo pipefail
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
 BOLD='\033[1m'
 RESET='\033[0m'
 
 pass() { echo -e "${GREEN}${BOLD}  PASS${RESET} $1"; }
 fail() { echo -e "${RED}${BOLD}  FAIL${RESET} $1"; FAILURES=$((FAILURES + 1)); }
+warn() { echo -e "${YELLOW}${BOLD}  WARN${RESET} $1"; }
 FAILURES=0
 
 if [ -n "${CONTAINER_ENGINE:-}" ]; then
@@ -135,6 +147,78 @@ if [[ "$FREQ" =~ ^[0-9]+$ ]]; then
   pass "Dummy rigctld responded with a frequency ($FREQ)"
 else
   fail "Dummy rigctld did not respond as expected (got: '$FREQ')"
+fi
+
+# ── Phase 5: Audio device enumeration (issue #55 regression test) ──────
+# Manual/local only — needs real ALSA hardware, which no GitHub-hosted
+# runner can fake (see header comment). Auto-skipped, not failed, if this
+# host has neither.
+
+echo ""
+echo -e "${BOLD}=== TEST: Audio device enumeration under headless container ===${RESET}"
+
+if [ ! -d /dev/snd ] || [ -z "$(ls -A /dev/snd 2>/dev/null)" ]; then
+  echo "  SKIP — no /dev/snd on this host (no ALSA hardware to test against)."
+else
+  AUDIO_GID=$(getent group audio | cut -d: -f3 || true)
+  if [ -z "$AUDIO_GID" ]; then
+    echo "  SKIP — no 'audio' group on this host; can't resolve a GID to pass through."
+  else
+    AUDIO_CONTAINER="${CONTAINER}-audio"
+    "$ENGINE" rm -f "$AUDIO_CONTAINER" > /dev/null 2>&1 || true
+
+    SECURITY_OPTS=(--security-opt systempaths=unconfined)
+    if [ "$ENGINE" = "podman" ]; then
+      # Avoids spurious SELinux denials against /dev/snd's sound_device_t
+      # label on enforcing hosts (Fedora/RHEL) — same rationale as the
+      # build-context label=disable in Phase 1.
+      SECURITY_OPTS+=(--security-opt label=disable)
+    fi
+
+    # THE regression check for issue #55: Docker/Podman mask /proc/asound
+    # by default, which breaks naudiodon's ALSA card enumeration even
+    # though /dev/snd's device nodes are passed through correctly — see
+    # docker-compose.yml's security_opt block and the "Audio" section of
+    # docs/headless-deployment.md for the full story. This is the same
+    # device/security_opt combination docker-compose.yml ships by default.
+    ASOUND_CARDS=$("$ENGINE" run --rm --name "$AUDIO_CONTAINER" \
+      --group-add "$AUDIO_GID" \
+      --device /dev/snd:/dev/snd \
+      "${SECURITY_OPTS[@]}" \
+      --entrypoint cat \
+      "$IMAGE" /proc/asound/cards 2>/dev/null || true)
+    if [ -n "$ASOUND_CARDS" ]; then
+      pass "/proc/asound visible inside container with systempaths=unconfined"
+    else
+      fail "/proc/asound is empty/unreadable inside the container — masking regression (issue #55)"
+    fi
+
+    # Best-effort only, NOT a hard failure: a single misbehaving ALSA
+    # device on the test host can abort naudiodon's entire scan (confirmed
+    # during issue #55 investigation — e.g. a USB HDMI-capture dongle
+    # PortAudio couldn't probe at its default sample rate). That's a real
+    # but separate naudiodon/PortAudio robustness gap, not a masking
+    # regression, so a WARN here doesn't necessarily mean the fix is
+    # broken — the /proc/asound check above is the authoritative one.
+    ENUM_OUTPUT=$("$ENGINE" run --rm \
+      --group-add "$AUDIO_GID" \
+      --device /dev/snd:/dev/snd \
+      "${SECURITY_OPTS[@]}" \
+      --entrypoint node \
+      "$IMAGE" -e '
+        import("naudiodon").then(m => {
+          const d = m.getDevices();
+          console.log("DEVICE_COUNT=" + d.length);
+        }).catch(e => console.log("DEVICE_ERROR=" + e.message));
+      ' 2>/dev/null || true)
+    if echo "$ENUM_OUTPUT" | grep -q "^DEVICE_COUNT="; then
+      COUNT=$(echo "$ENUM_OUTPUT" | grep "^DEVICE_COUNT=" | cut -d= -f2)
+      pass "naudiodon.getDevices() returned $COUNT device(s)"
+    else
+      REASON=$(echo "$ENUM_OUTPUT" | tail -1)
+      warn "naudiodon.getDevices() did not return a device list (informational, see comment above): ${REASON:-no output}"
+    fi
+  fi
 fi
 
 # ── Summary ──────────────────────────────────────────────────────────
