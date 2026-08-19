@@ -1,0 +1,23 @@
+# Reusable aarch64 (Raspberry Pi OS Bookworm / Debian 13 compatible) build
+# environment for scripts/build-headless-arm64.sh. Debian 12 "bookworm" is
+# used deliberately, not ubuntu:24.04 like the rest of this project's Linux
+# tooling — it matches Raspberry Pi OS's own base (glibc 2.36) and Debian 13
+# (Trixie, glibc 2.40) is newer and glibc-back-compatible with anything built
+# here, mirroring the project's existing "build against the oldest supported
+# glibc floor" convention (see scripts/build-rigctld.mjs's Ubuntu 24.04 floor
+# for the x64/amd64 side).
+#
+# Built and run under transparent QEMU user-mode emulation via
+# `podman build/run --arch=arm64` — see scripts/build-headless-arm64.sh for
+# the one-time host setup this requires (qemu-user-static).
+FROM debian:12
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential autoconf automake libtool pkg-config \
+      libglib2.0-dev libreadline-dev libasound2-dev libpulse-dev \
+      git ca-certificates curl gnupg sudo \
+    && curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
