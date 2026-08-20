@@ -384,6 +384,13 @@ export function registerAuthHandlers(
           });
           return;
         }
+        if (newPassword === currentPassword) {
+          socket.emit("auth:op-result", {
+            ok: false,
+            error: "New password must be different from your current password",
+          });
+          return;
+        }
 
         const users = loadUsers(ctx);
         const idx = users.findIndex((u) => u.callsign === authInfo.callsign);

@@ -44,6 +44,10 @@ export default function ChangePasswordModal({
       setError("Current password is required");
       return;
     }
+    if (newPassword === currentPassword) {
+      setError("New password must be different from your current password");
+      return;
+    }
 
     setSubmitting(true);
     socket?.emit("auth:change-password", { currentPassword, newPassword });
