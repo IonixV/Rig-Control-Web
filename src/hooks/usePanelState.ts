@@ -45,6 +45,9 @@ export function usePanelState(callsign = "") {
   const [isPhoneMeterCollapsed, setIsPhoneMeterCollapsed] = usePersistedCollapsed(ns, "phone-meter-collapsed", null, true, callsign);
   const [isPhoneQuickControlsCollapsed, setIsPhoneQuickControlsCollapsed] = usePersistedCollapsed(ns, "phone-quickcontrols-collapsed", null, true, callsign);
 
+  const [isCompactHeaderCollapsed, setIsCompactHeaderCollapsed] = usePersistedCollapsed(ns, "compact-header-collapsed", null, false, callsign);
+  const [isPhoneHeaderCollapsed, setIsPhoneHeaderCollapsed] = usePersistedCollapsed(ns, "phone-header-collapsed", null, false, callsign);
+
   return {
     showSetupModal, setShowSetupModal,
     phoneMeterTab, setPhoneMeterTab,
@@ -74,5 +77,7 @@ export function usePanelState(callsign = "") {
     isCompactRFPowerCollapsed, setIsCompactRFPowerCollapsed,
     isPhoneMeterCollapsed, setIsPhoneMeterCollapsed,
     isPhoneQuickControlsCollapsed, setIsPhoneQuickControlsCollapsed,
+    isCompactHeaderCollapsed, setIsCompactHeaderCollapsed,
+    isPhoneHeaderCollapsed, setIsPhoneHeaderCollapsed,
   };
 }

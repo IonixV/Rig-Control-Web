@@ -11,6 +11,8 @@ import {
   X,
   LayoutGrid,
   LogOut,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { cn } from "./utils";
 import PhoneLayout from "./layouts/PhoneLayout";
@@ -211,6 +213,8 @@ export default function App() {
     isCompactRFPowerCollapsed, setIsCompactRFPowerCollapsed,
     isPhoneMeterCollapsed, setIsPhoneMeterCollapsed,
     isPhoneQuickControlsCollapsed, setIsPhoneQuickControlsCollapsed,
+    isCompactHeaderCollapsed, setIsCompactHeaderCollapsed,
+    isPhoneHeaderCollapsed, setIsPhoneHeaderCollapsed,
   } = usePanelState(currentUser?.callsign ?? "");
 
   const {
@@ -678,6 +682,14 @@ export default function App() {
     );
   }
 
+  const isHeaderCollapsed = isPhone ? isPhoneHeaderCollapsed : isCompactHeaderCollapsed;
+  const setHeaderCollapsed = isPhone ? setIsPhoneHeaderCollapsed : setIsCompactHeaderCollapsed;
+  const headerNotice = status?.powerState === 'off'
+    ? { tone: 'red' as const, text: 'Radio powered down — Power on to resume', shortText: 'Radio powered down' }
+    : cwSettings.enabled && connected && !['CW', 'CWR', 'CW-R'].includes(status?.mode || '')
+      ? { tone: 'amber' as const, text: 'Radio not in CW mode — Switch mode to key', shortText: 'Not in CW mode' }
+      : null;
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className={cn(
@@ -700,78 +712,150 @@ export default function App() {
         )}
       >
         {/* Header / Connection */}
-        <header className="bg-[#151619] rounded-xl border border-[#2a2b2e] shadow-2xl py-1.5 px-3 sm:p-4 flex items-center justify-between gap-2">
-          <div className="flex sm:hidden items-center gap-2 flex-shrink-0">
-            <div className={cn("w-2 h-2 rounded-full flex-shrink-0", uiConnected ? "bg-emerald-500" : "bg-red-500/70")} />
-            <span className="text-sm font-bold tracking-tight uppercase text-center">RigControl Web</span>
-          </div>
-          <div className="hidden sm:flex items-center gap-3 min-w-0">
-            <img src="/rcw-r-64.png" className="w-7 h-7 flex-shrink-0" alt="" />
-            <h1 className="text-xl font-bold tracking-tighter uppercase truncate">RigControl Web</h1>
-          </div>
-          {isCompact && (
-            status?.powerState === 'off' ? (
-              <div className="flex-1 flex justify-center px-2">
-                <span className="bg-red-900/40 border border-red-500/60 text-red-300 text-xs font-bold px-3 py-1 rounded-lg text-center">
-                  Radio powered down — Power on to resume
-                </span>
-              </div>
-            ) : cwSettings.enabled && connected && !['CW', 'CWR', 'CW-R'].includes(status?.mode || '') ? (
-              <div className="flex-1 flex justify-center px-2">
-                <span className="bg-amber-900/40 border border-amber-500/60 text-amber-300 text-xs font-bold px-3 py-1 rounded-lg text-center">
-                  Radio not in CW mode — Switch mode to key
-                </span>
-              </div>
+        {isHeaderCollapsed ? (
+          <header className="bg-[#151619] rounded-xl border border-[#2a2b2e] shadow-2xl py-1 px-2 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <img src="/rcw-r-64.png" className="w-5 h-5 flex-shrink-0" alt="" />
+            </div>
+            {headerNotice ? (
+              <span className={cn(
+                "flex-1 text-center truncate text-[10px] font-bold px-2 py-0.5 rounded border",
+                headerNotice.tone === 'red'
+                  ? "bg-red-900/40 border-red-500/60 text-red-300"
+                  : "bg-amber-900/40 border-amber-500/60 text-amber-300"
+              )}>
+                {headerNotice.shortText}
+              </span>
             ) : (
               <div className="flex-1" />
-            )
-          )}
-          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-            <button
-              onClick={handleConnect}
-              className={cn(
-                "p-1.5 sm:px-6 sm:py-2 rounded-lg font-bold uppercase text-sm transition-all flex items-center gap-2",
-                uiConnected
-                  ? "bg-red-500/20 text-red-500 border border-red-500/50 hover:bg-red-500 hover:text-white"
-                  : "bg-emerald-500/20 text-emerald-500 border border-emerald-500/50 hover:bg-emerald-500 hover:text-white"
-              )}
-            >
-              {uiConnected ? <Unplug size={16} className="flex-shrink-0" /> : <Plug size={16} className="flex-shrink-0" />}
-              <span className="hidden sm:inline">{uiConnected ? "Disconnect" : "Connect"}</span>
-            </button>
-            <button
-              onClick={() => setIsSettingsOpen(true)}
-              className={cn(
-                "p-1.5 sm:p-2 bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg transition-all flex-shrink-0",
-                rigctldProcessStatus === "running" ? "text-emerald-500 border-emerald-500/50" : "text-red-500 border-red-500/50"
-              )}
-              title="Rigctld Settings"
-            >
-              <Settings size={18} />
-            </button>
-            {(isCompact || isPhone) && (
-              <button
-                onClick={() => isCompact ? setIsCompactEditMode(v => !v) : setIsPhoneEditMode(v => !v)}
-                className={cn(
-                  "p-1.5 sm:p-2 bg-[#0a0a0a] border rounded-lg transition-all flex-shrink-0",
-                  (isCompact ? isCompactEditMode : isPhoneEditMode)
-                    ? "text-emerald-400 border-emerald-500/70 bg-emerald-500/10"
-                    : "text-[#8e9299] border-[#2a2b2e] hover:text-emerald-400"
-                )}
-                title={(isCompact ? isCompactEditMode : isPhoneEditMode) ? "Exit layout editor" : "Edit layout"}
-              >
-                <LayoutGrid size={18} />
-              </button>
             )}
-            <button
-              onClick={logout}
-              className="p-1.5 sm:p-2 bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg text-[#8e9299] hover:text-red-400 hover:border-red-500/50 transition-all flex-shrink-0"
-              title={`Sign out (${currentUser?.callsign ?? ''})`}
-            >
-              <LogOut size={18} />
-            </button>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <button
+                onClick={handleConnect}
+                className={cn(
+                  "p-1 rounded transition-all flex-shrink-0",
+                  uiConnected
+                    ? "text-red-500 hover:bg-red-500/10"
+                    : "text-emerald-500 hover:bg-emerald-500/10"
+                )}
+                title={uiConnected ? "Disconnect" : "Connect"}
+              >
+                {uiConnected ? <Unplug size={14} /> : <Plug size={14} />}
+              </button>
+              <button
+                onClick={() => setIsSettingsOpen(true)}
+                className={cn(
+                  "p-1 rounded transition-all flex-shrink-0",
+                  rigctldProcessStatus === "running" ? "text-emerald-500 hover:bg-emerald-500/10" : "text-red-500 hover:bg-red-500/10"
+                )}
+                title="Rigctld Settings"
+              >
+                <Settings size={14} />
+              </button>
+              {(isCompact || isPhone) && (
+                <button
+                  onClick={() => isCompact ? setIsCompactEditMode(v => !v) : setIsPhoneEditMode(v => !v)}
+                  className={cn(
+                    "p-1 rounded transition-all flex-shrink-0",
+                    (isCompact ? isCompactEditMode : isPhoneEditMode)
+                      ? "text-emerald-400 bg-emerald-500/10"
+                      : "text-[#8e9299] hover:text-emerald-400"
+                  )}
+                  title={(isCompact ? isCompactEditMode : isPhoneEditMode) ? "Exit layout editor" : "Edit layout"}
+                >
+                  <LayoutGrid size={14} />
+                </button>
+              )}
+              <button
+                onClick={logout}
+                className="p-1 rounded text-[#8e9299] hover:text-red-400 hover:bg-red-500/10 transition-all flex-shrink-0"
+                title={`Sign out (${currentUser?.callsign ?? ''})`}
+              >
+                <LogOut size={14} />
+              </button>
+              <button
+                onClick={() => setHeaderCollapsed(false)}
+                className="p-1 hover:bg-white/5 rounded text-[#8e9299] flex-shrink-0"
+                title="Expand header"
+              >
+                <ChevronDown size={14} />
+              </button>
+            </div>
+          </header>
+        ) : (
+          <header className="bg-[#151619] rounded-xl border border-[#2a2b2e] shadow-2xl py-1.5 px-3 sm:p-4 flex items-center justify-between gap-2">
+            <div className="flex sm:hidden items-center gap-2 flex-shrink-0">
+              <span className="text-sm font-bold tracking-tight uppercase text-center">RigControl Web</span>
+            </div>
+            <div className="hidden sm:flex items-center gap-3 min-w-0">
+              <img src="/rcw-r-64.png" className="w-7 h-7 flex-shrink-0" alt="" />
+              <h1 className="text-xl font-bold tracking-tighter uppercase truncate">RigControl Web</h1>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+              <button
+                onClick={handleConnect}
+                className={cn(
+                  "p-1.5 sm:px-6 sm:py-2 rounded-lg font-bold uppercase text-sm transition-all flex items-center gap-2",
+                  uiConnected
+                    ? "bg-red-500/20 text-red-500 border border-red-500/50 hover:bg-red-500 hover:text-white"
+                    : "bg-emerald-500/20 text-emerald-500 border border-emerald-500/50 hover:bg-emerald-500 hover:text-white"
+                )}
+              >
+                {uiConnected ? <Unplug size={16} className="flex-shrink-0" /> : <Plug size={16} className="flex-shrink-0" />}
+                <span className="hidden sm:inline">{uiConnected ? "Disconnect" : "Connect"}</span>
+              </button>
+              <button
+                onClick={() => setIsSettingsOpen(true)}
+                className={cn(
+                  "p-1.5 sm:p-2 bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg transition-all flex-shrink-0",
+                  rigctldProcessStatus === "running" ? "text-emerald-500 border-emerald-500/50" : "text-red-500 border-red-500/50"
+                )}
+                title="Rigctld Settings"
+              >
+                <Settings size={18} />
+              </button>
+              {(isCompact || isPhone) && (
+                <button
+                  onClick={() => isCompact ? setIsCompactEditMode(v => !v) : setIsPhoneEditMode(v => !v)}
+                  className={cn(
+                    "p-1.5 sm:p-2 bg-[#0a0a0a] border rounded-lg transition-all flex-shrink-0",
+                    (isCompact ? isCompactEditMode : isPhoneEditMode)
+                      ? "text-emerald-400 border-emerald-500/70 bg-emerald-500/10"
+                      : "text-[#8e9299] border-[#2a2b2e] hover:text-emerald-400"
+                  )}
+                  title={(isCompact ? isCompactEditMode : isPhoneEditMode) ? "Exit layout editor" : "Edit layout"}
+                >
+                  <LayoutGrid size={18} />
+                </button>
+              )}
+              <button
+                onClick={logout}
+                className="p-1.5 sm:p-2 bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg text-[#8e9299] hover:text-red-400 hover:border-red-500/50 transition-all flex-shrink-0"
+                title={`Sign out (${currentUser?.callsign ?? ''})`}
+              >
+                <LogOut size={18} />
+              </button>
+              <button
+                onClick={() => setHeaderCollapsed(true)}
+                className="p-1.5 sm:p-2 bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg text-[#8e9299] hover:text-white transition-all flex-shrink-0"
+                title="Collapse header"
+              >
+                <ChevronUp size={18} />
+              </button>
+            </div>
+          </header>
+        )}
+
+        {!isHeaderCollapsed && headerNotice && (
+          <div className={cn(
+            "text-xs font-bold px-3 py-2 rounded-xl text-center border",
+            headerNotice.tone === 'red'
+              ? "bg-red-900/40 border-red-500/60 text-red-300"
+              : "bg-amber-900/40 border-amber-500/60 text-amber-300"
+          )}>
+            {headerNotice.text}
           </div>
-        </header>
+        )}
 
         {rigConnecting && !rigConnecting.auto && !error && !rigConnecting.knownPoweredOff && (
           <div className="bg-blue-500/10 border border-blue-500/30 px-4 py-3 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4">

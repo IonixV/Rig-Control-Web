@@ -858,17 +858,6 @@ function PhoneLayout({
 
   return (
     <div className={cn("space-y-2 animate-in fade-in duration-300", isEditMode && "pb-16")}>
-      {/* Status banners — power-down takes priority over CW mode warning */}
-      {status?.powerState === 'off' ? (
-        <div className="bg-red-900/40 border border-red-500/60 text-red-300 text-xs font-bold px-3 py-2 rounded-xl text-center">
-          Radio powered down — Power on to resume
-        </div>
-      ) : cwSettings.enabled && connected && !["CW", "CWR", "CW-R"].includes(status?.mode || "") ? (
-        <div className="bg-amber-900/40 border border-amber-500/60 text-amber-300 text-xs font-bold px-3 py-2 rounded-xl text-center">
-          Radio not in CW mode — Switch mode to key
-        </div>
-      ) : null}
-
       {visibleItems.map((item, idx) => (
         <div key={item.i} className="relative">
           {renderPhonePanel(item)}
