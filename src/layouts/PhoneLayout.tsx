@@ -4,7 +4,6 @@ import { Radio, Monitor, Zap, MapPin, Settings, Map } from "lucide-react";
 import { cn } from "../utils";
 import type {
   RigStatus,
-  CwSettings,
   AudioSettings,
   NbCapabilities,
   NrCapabilities,
@@ -33,7 +32,7 @@ import SpotsPanel, { SpotSettingsGear } from "../panels/SpotsPanel";
 import SpotComboPanel from "../panels/SpotComboPanel";
 import SpotSettingsModal from "../modals/SpotSettingsModal";
 import ComboSpotSettingsModal from "../modals/ComboSpotSettingsModal";
-import ControlsPanel, { ControlsPanelHeaderAction } from "../panels/ControlsPanel";
+import ControlsPanel from "../panels/ControlsPanel";
 import TabbedMeterPanel, {
   TabbedMeterHeaderContent,
 } from "../panels/TabbedMeterPanel";
@@ -191,9 +190,6 @@ export interface PhoneLayoutProps {
   renderWwffSpotsTable: () => React.ReactElement;
 
   // CW
-  cwSettings: CwSettings;
-  cwKeyActive: boolean;
-  cwStuckAlert: boolean;
   cwDecodedText: string;
   setCwDecodedText: React.Dispatch<React.SetStateAction<string>>;
   cwStats: { pitch: number; speed: number };
@@ -383,9 +379,6 @@ function PhoneLayout({
   wwffBandFilter,
   setWwffBandFilter,
   renderWwffSpotsTable,
-  cwSettings,
-  cwKeyActive,
-  cwStuckAlert,
   cwDecodedText,
   setCwDecodedText,
   cwStats,
@@ -601,15 +594,6 @@ function PhoneLayout({
             setIsCollapsed={setIsPhoneQuickControlsCollapsed}
             bodyClassName="p-3 flex flex-col gap-4"
             headerSize="md"
-            headerActions={
-              <ControlsPanelHeaderAction
-                powerSupported={powerSupported}
-                powerState={status.powerState ?? 'unknown'}
-                poweringOn={poweringOn}
-                knownPoweredOff={knownPoweredOff}
-                handleSetPower={handleSetPower}
-              />
-            }
           >
             <ControlsPanel
               variant="phone"
@@ -617,15 +601,17 @@ function PhoneLayout({
               status={status}
               isTuning={isTuning}
               tuneJustFinished={tuneJustFinished}
-              cwSettings={cwSettings}
-              cwKeyActive={cwKeyActive}
-              cwStuckAlert={cwStuckAlert}
               attenuatorLevels={attenuatorLevels}
               preampLevels={preampLevels}
               agcLevels={agcLevels}
               nbCapabilities={nbCapabilities}
               nrCapabilities={nrCapabilities}
               anfCapabilities={anfCapabilities}
+              powerSupported={powerSupported}
+              powerState={status.powerState ?? 'unknown'}
+              poweringOn={poweringOn}
+              knownPoweredOff={knownPoweredOff}
+              handleSetPower={handleSetPower}
               handleSetPTT={handleSetPTT}
               handleSetFunc={handleSetFunc}
               handleVfoOp={handleVfoOp}

@@ -13,7 +13,6 @@ import {
 import { cn } from "../utils";
 import type {
   RigStatus,
-  CwSettings,
   AudioSettings,
   NbCapabilities,
   NrCapabilities,
@@ -38,7 +37,7 @@ import RfLevelsPanel from "../panels/RfLevelsPanel";
 import VfoPanel, { VfoCollapsedHeader } from "../panels/VfoPanel";
 import VideoFeedPanel, { VideoFeedHeaderActions } from "../panels/VideoFeedPanel";
 import { AudioFeedHeaderActions } from "../panels/AudioFeedPanel";
-import ControlsPanel, { ControlsPanelHeaderAction } from "../panels/ControlsPanel";
+import ControlsPanel from "../panels/ControlsPanel";
 import CwDecodePanel from "../panels/CwDecodePanel";
 import { SpotSettingsGear } from "../panels/SpotsPanel";
 import SpotComboPanel from "../panels/SpotComboPanel";
@@ -189,11 +188,6 @@ export interface CompactLayoutProps {
   getAttenuatorLabel: () => string;
   getPreampLabel: () => string;
   getAgcLabel: () => string;
-
-  // CW keyer
-  cwSettings: CwSettings;
-  cwKeyActive: boolean;
-  cwStuckAlert: boolean;
 
   // POTA/SOTA spots
   potaPollRate: number;
@@ -362,9 +356,6 @@ function CompactLayout({
   getAttenuatorLabel,
   getPreampLabel,
   getAgcLabel,
-  cwSettings,
-  cwKeyActive,
-  cwStuckAlert,
   potaPollRate,
   setPotaPollRate,
   potaMaxAge,
@@ -702,15 +693,6 @@ function CompactLayout({
             className="shadow-lg"
             bodyClassName="p-2"
             headerSize="sm"
-            headerActions={
-              <ControlsPanelHeaderAction
-                powerSupported={powerSupported}
-                powerState={status.powerState ?? 'unknown'}
-                poweringOn={poweringOn}
-                knownPoweredOff={knownPoweredOff}
-                handleSetPower={handleSetPower}
-              />
-            }
           >
             <ControlsPanel
               variant="compact"
@@ -718,15 +700,17 @@ function CompactLayout({
               status={status}
               isTuning={isTuning}
               tuneJustFinished={tuneJustFinished}
-              cwSettings={cwSettings}
-              cwKeyActive={cwKeyActive}
-              cwStuckAlert={cwStuckAlert}
               attenuatorLevels={attenuatorLevels}
               preampLevels={preampLevels}
               agcLevels={agcLevels}
               nbCapabilities={nbCapabilities}
               nrCapabilities={nrCapabilities}
               anfCapabilities={anfCapabilities}
+              powerSupported={powerSupported}
+              powerState={status.powerState ?? 'unknown'}
+              poweringOn={poweringOn}
+              knownPoweredOff={knownPoweredOff}
+              handleSetPower={handleSetPower}
               handleSetPTT={handleSetPTT}
               handleSetFunc={handleSetFunc}
               handleVfoOp={handleVfoOp}
@@ -1042,7 +1026,6 @@ function CompactLayout({
     isTuning, tuneJustFinished, attenuatorLevels, preampLevels, agcLevels,
     nbCapabilities, nrCapabilities, anfCapabilities,
     localRFPower, rfPowerCapabilities, rfLevelCapabilities, localRFLevel, localNRLevel, localNBLevel,
-    cwSettings, cwKeyActive, cwStuckAlert,
     potaPollRate, potaMaxAge, potaModeFilter, potaBandFilter,
     sotaPollRate, sotaMaxAge, sotaModeFilter, sotaBandFilter,
     wwffPollRate, wwffMaxAge, wwffModeFilter, wwffBandFilter,

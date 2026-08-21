@@ -1006,9 +1006,6 @@ export default function App() {
             wwffBandFilter={wwffBandFilter}
             setWwffBandFilter={setWwffBandFilter}
             renderWwffSpotsTable={renderWwffSpotsTable}
-            cwSettings={cwSettings}
-            cwKeyActive={cwKeyActive}
-            cwStuckAlert={cwStuckAlert}
             cwDecodedText={cwDecodedText}
             setCwDecodedText={setCwDecodedText}
             cwStats={cwStats}
@@ -1139,9 +1136,6 @@ export default function App() {
             getAttenuatorLabel={getAttenuatorLabel}
             getPreampLabel={getPreampLabel}
             getAgcLabel={getAgcLabel}
-            cwSettings={cwSettings}
-            cwKeyActive={cwKeyActive}
-            cwStuckAlert={cwStuckAlert}
             potaPollRate={potaPollRate}
             setPotaPollRate={setPotaPollRate}
             potaMaxAge={potaMaxAge}

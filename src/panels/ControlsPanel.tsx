@@ -1,7 +1,7 @@
 import React from "react";
 import { Mic, RefreshCw, Signal, Zap, Waves, Activity, Settings, Power, Loader2 } from "lucide-react";
 import { cn } from "../utils";
-import type { RigStatus, CwSettings, NbCapabilities, NrCapabilities, AnfCapabilities } from "../types";
+import type { RigStatus, NbCapabilities, NrCapabilities, AnfCapabilities } from "../types";
 
 export interface ControlsPanelProps {
   variant: "phone" | "compact";
@@ -9,15 +9,17 @@ export interface ControlsPanelProps {
   status: RigStatus;
   isTuning: boolean;
   tuneJustFinished: boolean;
-  cwSettings: CwSettings;
-  cwKeyActive: boolean;
-  cwStuckAlert: boolean;
   attenuatorLevels: string[];
   preampLevels: string[];
   agcLevels: string[];
   nbCapabilities: NbCapabilities;
   nrCapabilities: NrCapabilities;
   anfCapabilities: AnfCapabilities;
+  powerSupported: boolean;
+  powerState: 'on' | 'off' | 'unknown';
+  poweringOn: boolean;
+  knownPoweredOff: boolean;
+  handleSetPower: (state: boolean) => void;
   handleSetPTT: (state: boolean) => void;
   handleSetFunc: (func: string, state: boolean) => void;
   handleVfoOp: (op: string) => void;
@@ -35,15 +37,17 @@ export default function ControlsPanel({
   status,
   isTuning,
   tuneJustFinished,
-  cwSettings,
-  cwKeyActive,
-  cwStuckAlert,
   attenuatorLevels,
   preampLevels,
   agcLevels,
   nbCapabilities,
   nrCapabilities,
   anfCapabilities,
+  powerSupported,
+  powerState,
+  poweringOn,
+  knownPoweredOff,
+  handleSetPower,
   handleSetPTT,
   handleSetFunc,
   handleVfoOp,
@@ -180,26 +184,85 @@ export default function ControlsPanel({
     </button>
   );
 
-  const cwIndicator = (
-    <div className={cn(
-      isPhone ? btnBasePhone : btnBase,
-      cwStuckAlert ? "bg-red-900/30 border-red-500 text-red-400"
-        : cwKeyActive ? "bg-amber-500/20 border-amber-400 text-amber-300"
-        : "bg-[#0a0a0a] border-[#2a2b2e] text-[#8e9299]"
-    )}>
-      <>
-          <span className="text-[0.6rem] font-bold leading-none">CW</span>
-          <span className="text-[0.5rem] leading-none">{cwSettings.wpm}W</span>
-          <div className={cn("w-2 h-2 rounded-full mt-0.5", cwStuckAlert ? "bg-red-500" : cwKeyActive ? "bg-amber-400 animate-pulse" : "bg-[#2a2b2e]")} />
-        </>
-    </div>
-  );
+  const powerBtn = (extraClass = "") => {
+    if (!powerSupported) {
+      if (knownPoweredOff) {
+        return (
+          <button
+            disabled
+            data-testid="controls-power-indicator"
+            title="Radio was powered off last session — reconnecting…"
+            className={cn(
+              isPhone ? btnBasePhone : btnBase, extraClass,
+              "opacity-80 cursor-not-allowed bg-red-900/20 border-red-500/50 text-red-500"
+            )}
+          >
+            <Loader2 size={isPhone ? 18 : iconSizeLarge} className="animate-spin" />
+            <span className={cn(labelClass, "uppercase font-bold leading-none")}>Pwr</span>
+          </button>
+        );
+      }
+      return (
+        <button
+          disabled
+          data-testid="controls-power-indicator"
+          title="Radio does not support power control"
+          className={cn(
+            isPhone ? btnBasePhone : btnBase, extraClass,
+            "opacity-50 cursor-not-allowed bg-[#0a0a0a] border-[#2a2b2e]"
+          )}
+        >
+          <Power size={isPhone ? 18 : iconSizeLarge} />
+          <span className={cn(labelClass, "uppercase font-bold leading-none")}>Pwr</span>
+        </button>
+      );
+    }
+
+    if (poweringOn) {
+      return (
+        <button
+          disabled
+          data-testid="controls-power-indicator"
+          title="Waiting for radio to power on…"
+          className={cn(
+            isPhone ? btnBasePhone : btnBase, extraClass,
+            "opacity-80 cursor-not-allowed bg-amber-500/10 border-amber-400 text-amber-300"
+          )}
+        >
+          <Loader2 size={isPhone ? 18 : iconSizeLarge} className="animate-spin" />
+          <span className={cn(labelClass, "uppercase font-bold leading-none")}>Pwr</span>
+        </button>
+      );
+    }
+
+    return (
+      <button
+        onClick={() => handleSetPower(powerState !== 'on')}
+        data-testid="controls-power-indicator"
+        title={
+          powerState === 'on' ? 'Radio ON — click to power off' :
+          powerState === 'off' ? 'Radio OFF — click to power on' :
+          'Power state unknown'
+        }
+        className={cn(
+          isPhone ? btnBasePhone : btnBase, extraClass,
+          powerState === 'on' ? "bg-emerald-500/10 border-emerald-500 text-emerald-500"
+            : powerState === 'off' ? "bg-red-500/20 border-red-500 text-red-500"
+            : "bg-[#0a0a0a] border-[#2a2b2e] text-[#8e9299] hover:border-emerald-500"
+        )}
+      >
+        <Power size={isPhone ? 18 : iconSizeLarge} />
+        <span className={cn(labelClass, "uppercase font-bold leading-none")}>Pwr</span>
+      </button>
+    );
+  };
 
   // Phone: button grids only, no outer box
   if (isPhone) {
     return (
       <>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-4 gap-2">
+          {powerBtn()}
           {tuneBtn()}
           {attenBtn()}
           {preampBtn()}
@@ -207,8 +270,8 @@ export default function ControlsPanel({
         <div className="grid grid-cols-4 gap-2">
           {nbBtn()}
           {agcBtn()}
-          {nrBtn()}
           {anfBtn()}
+          {nrBtn()}
         </div>
       </>
     );
@@ -219,6 +282,7 @@ export default function ControlsPanel({
 
     return (
       <div className="grid grid-cols-3 gap-2 h-full content-start">
+        {powerBtn()}
         <button
           onClick={() => handleSetPTT(!status.ptt)}
           disabled={!connected}
@@ -232,7 +296,6 @@ export default function ControlsPanel({
           <Mic size={16} />
           <span className="text-xs uppercase font-bold leading-none">PTT</span>
         </button>
-        {cwSettings.enabled && cwIndicator}
         {tuneBtn()}
         {attenBtn()}
         {preampBtn()}
@@ -244,58 +307,4 @@ export default function ControlsPanel({
     );
   }
 
-}
-
-interface ControlsPanelHeaderActionProps {
-  powerSupported: boolean;
-  powerState: 'on' | 'off' | 'unknown';
-  poweringOn: boolean;
-  /** True while the server has told us (from a persisted record) that the radio was left
-   *  powered off, but we haven't yet actually reconnected to confirm it — powerSupported is
-   *  still false at this point since that only gets set once the connection succeeds. Shows a
-   *  red spinner in place of the power button instead of nothing, so the user isn't left
-   *  wondering where the button went while rigctld finishes starting up. */
-  knownPoweredOff: boolean;
-  handleSetPower: (state: boolean) => void;
-}
-
-export function ControlsPanelHeaderAction({ powerSupported, powerState, poweringOn, knownPoweredOff, handleSetPower }: ControlsPanelHeaderActionProps) {
-  if (!powerSupported) {
-    if (knownPoweredOff) {
-      return (
-        <span className="p-1 text-red-500" data-testid="controls-power-indicator" title="Radio was powered off last session — reconnecting…">
-          <Loader2 size={14} className="animate-spin" />
-        </span>
-      );
-    }
-    return null;
-  }
-
-  if (poweringOn) {
-    return (
-      <span className="p-1 text-amber-400" data-testid="controls-power-indicator" title="Waiting for radio to power on…">
-        <Loader2 size={14} className="animate-spin" />
-      </span>
-    );
-  }
-
-  return (
-    <button
-      onClick={() => handleSetPower(powerState !== 'on')}
-      data-testid="controls-power-indicator"
-      title={
-        powerState === 'on' ? 'Radio ON — click to power off' :
-        powerState === 'off' ? 'Radio OFF — click to power on' :
-        'Power state unknown'
-      }
-      className={cn(
-        "p-1 rounded transition-colors",
-        powerState === 'on' ? "text-emerald-500 hover:text-emerald-400" :
-        powerState === 'off' ? "text-red-500 hover:text-red-400" :
-        "text-[#8e9299] hover:text-white"
-      )}
-    >
-      <Power size={14} />
-    </button>
-  );
 }
