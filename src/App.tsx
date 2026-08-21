@@ -302,7 +302,7 @@ export default function App() {
     outboundMuted, setOutboundMuted,
     localAudioReady,
     audioWasRestarted, setAudioWasRestarted,
-    isBackendEngineCollapsed, setIsBackendEngineCollapsed,
+    isBackendEngineCollapsed, toggleBackendEngineCollapsed,
     audioContextRef,
     inboundGainRef,
     analyserNodeRef,
@@ -1348,7 +1348,7 @@ export default function App() {
           inboundGainRef={inboundGainRef}
           audioEngineState={audioEngineState}
           isBackendEngineCollapsed={isBackendEngineCollapsed}
-          setIsBackendEngineCollapsed={setIsBackendEngineCollapsed}
+          onToggleBackendEngineCollapsed={toggleBackendEngineCollapsed}
           handleStartAudio={handleStartAudio}
           startMicCapture={startMicCapture}
           stopMicCapture={stopMicCapture}

@@ -17,7 +17,7 @@ interface UseAudioOptions {
 
 export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, waterfallActiveRef }: UseAudioOptions) {
   const [activeMicClientId, setActiveMicClientId] = useState<string | null>(null);
-  const [audioStatus, setAudioStatus] = useState<"playing" | "stopped">("stopped");
+  const [audioStatus, setAudioStatus] = useState<"playing" | "stopped" | "cooldown">("stopped");
   const [audioEngineState, setAudioEngineState] = useState<{ isReady: boolean; error: string | null }>({ isReady: false, error: null });
   const [audioDevices, setAudioDevices] = useState<{ inputs: { name: string; altName: string; hostAPIName: string; defaultSampleRate: number }[]; outputs: { name: string; altName: string; hostAPIName: string; defaultSampleRate: number }[] }>({ inputs: [], outputs: [] });
   const [audioSettings, setAudioSettings] = useState({
@@ -42,6 +42,12 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, waterfallAc
   const [localAudioReady, setLocalAudioReady] = useState(false);
   const [audioWasRestarted, setAudioWasRestarted] = useState(false);
   const [isBackendEngineCollapsed, setIsBackendEngineCollapsed] = useState(false);
+  // Set once the user manually re-expands the Backend Audio Engine section
+  // (never reset until the next app start) — once true, the auto-collapse
+  // effect below stops forcing it shut on every device-change-triggered
+  // restart, so a user actively picking through devices doesn't have the
+  // section yanked closed out from under them after every selection.
+  const userExpandedBackendEngineRef = useRef(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const playbackNodeRef = useRef<AudioWorkletNode | null>(null);
@@ -85,8 +91,23 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, waterfallAc
     applyInboundMute();
   }, [inboundMuted, applyInboundMute]);
 
-  // Collapse backend engine panel when audio starts playing
-  useEffect(() => { if (audioStatus === "playing") setIsBackendEngineCollapsed(true); }, [audioStatus]);
+  // Collapse backend engine panel when audio starts playing — skipped once
+  // the user has manually re-expanded it (see userExpandedBackendEngineRef),
+  // so restarts triggered by the user's own device selection don't keep
+  // closing the section back up while they're actively using it.
+  useEffect(() => {
+    if (audioStatus === "playing" && !userExpandedBackendEngineRef.current) {
+      setIsBackendEngineCollapsed(true);
+    }
+  }, [audioStatus]);
+
+  const toggleBackendEngineCollapsed = useCallback(() => {
+    setIsBackendEngineCollapsed(prev => {
+      const next = !prev;
+      if (!next) userExpandedBackendEngineRef.current = true;
+      return next;
+    });
+  }, []);
 
   // Enumerate browser-side local audio devices
   useEffect(() => {
@@ -160,7 +181,7 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, waterfallAc
       }
     };
 
-    const onAudioStatus = (status: "playing" | "stopped") => {
+    const onAudioStatus = (status: "playing" | "stopped" | "cooldown") => {
       setAudioStatus(status);
       if (status === "stopped") {
         if (localAudioReadyRef.current) {
@@ -582,7 +603,7 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, waterfallAc
     outboundMuted, setOutboundMuted,
     localAudioReady,
     audioWasRestarted, setAudioWasRestarted,
-    isBackendEngineCollapsed, setIsBackendEngineCollapsed,
+    isBackendEngineCollapsed, setIsBackendEngineCollapsed, toggleBackendEngineCollapsed,
     audioContextRef,
     inboundGainRef,
     analyserNodeRef,

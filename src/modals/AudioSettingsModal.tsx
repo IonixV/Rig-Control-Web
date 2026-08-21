@@ -7,6 +7,7 @@ import {
   Headphones,
   Link,
   Link2Off,
+  Loader2,
   Power,
   Radio,
   X,
@@ -18,7 +19,7 @@ export interface AudioSettingsModalProps {
   onClose: () => void;
   socket: Socket | null;
 
-  audioStatus: "playing" | "stopped";
+  audioStatus: "playing" | "stopped" | "cooldown";
   audioSettings: {
     inputDevice: string;
     outputDevice: string;
@@ -48,7 +49,7 @@ export interface AudioSettingsModalProps {
   inboundGainRef: React.MutableRefObject<GainNode | null>;
   audioEngineState: { isReady: boolean; error: string | null };
   isBackendEngineCollapsed: boolean;
-  setIsBackendEngineCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  onToggleBackendEngineCollapsed: () => void;
   handleStartAudio: () => void;
   startMicCapture: () => void;
   stopMicCapture: () => void;
@@ -89,7 +90,7 @@ function AudioSettingsModal({
   inboundGainRef,
   audioEngineState,
   isBackendEngineCollapsed,
-  setIsBackendEngineCollapsed,
+  onToggleBackendEngineCollapsed,
   handleStartAudio,
   startMicCapture,
   stopMicCapture,
@@ -350,7 +351,7 @@ function AudioSettingsModal({
 
             <div className="pt-4 border-t border-[#2a2b2e]/50">
               <button
-                onClick={() => setIsBackendEngineCollapsed(!isBackendEngineCollapsed)}
+                onClick={onToggleBackendEngineCollapsed}
                 className="w-full flex items-center justify-between mb-3 group"
               >
                 <h4 className="text-[0.625rem] uppercase text-[#8e9299] font-bold group-hover:text-white transition-colors">Backend Audio Engine</h4>
@@ -363,9 +364,11 @@ function AudioSettingsModal({
                   </span>
                   <span className={cn(
                     "text-[0.5rem] uppercase font-bold px-1.5 py-0.5 rounded",
-                    audioStatus === "playing" ? "bg-blue-500/20 text-blue-400" : "bg-[#2a2b2e] text-[#4a4b4e]"
+                    audioStatus === "playing" ? "bg-blue-500/20 text-blue-400"
+                      : audioStatus === "cooldown" ? "bg-amber-500/20 text-amber-400"
+                      : "bg-[#2a2b2e] text-[#4a4b4e]"
                   )}>
-                    {audioStatus === "playing" ? "RUNNING" : "STOPPED"}
+                    {audioStatus === "playing" ? "RUNNING" : audioStatus === "cooldown" ? "COOLDOWN" : "STOPPED"}
                   </span>
                   {isBackendEngineCollapsed ? <ChevronDown size={12} className="text-[#8e9299]" /> : <ChevronUp size={12} className="text-[#8e9299]" />}
                 </div>
@@ -381,7 +384,7 @@ function AudioSettingsModal({
                 </div>
               )}
 
-              <div className={cn("space-y-4", !audioEngineState.isReady && "opacity-50 pointer-events-none")}>
+              <div className={cn("space-y-4", (!audioEngineState.isReady || audioStatus === "cooldown") && "opacity-50 pointer-events-none")}>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Backend Input (Mic/Line)</label>
@@ -482,23 +485,26 @@ function AudioSettingsModal({
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={handleStartAudio}
-                  disabled={(!audioSettings.inputDevice && !audioSettings.outputDevice) || audioStatus === "playing"}
+                  disabled={(!audioSettings.inputDevice && !audioSettings.outputDevice) || audioStatus === "playing" || audioStatus === "cooldown"}
+                  title={audioStatus === "cooldown" ? "Waiting for the previous audio device to finish closing…" : undefined}
                   className={cn(
                     "flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold uppercase text-xs transition-all",
-                    audioStatus === "playing"
+                    audioStatus === "cooldown"
+                      ? "bg-amber-500/10 text-amber-300 cursor-not-allowed"
+                      : audioStatus === "playing"
                       ? "bg-blue-500/20 text-blue-500 cursor-not-allowed"
                       : "bg-blue-500 hover:bg-blue-600 text-white shadow-lg shadow-blue-500/20"
                   )}
                 >
-                  <Power size={16} />
+                  {audioStatus === "cooldown" ? <Loader2 size={16} className="animate-spin" /> : <Power size={16} />}
                   Start Backend Audio
                 </button>
                 <button
                   onClick={() => socket?.emit("control-audio", "stop")}
-                  disabled={audioStatus === "stopped"}
+                  disabled={audioStatus === "stopped" || audioStatus === "cooldown"}
                   className={cn(
                     "flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold uppercase text-xs transition-all",
-                    audioStatus === "stopped"
+                    audioStatus === "stopped" || audioStatus === "cooldown"
                       ? "bg-red-500/20 text-red-500 cursor-not-allowed"
                       : "bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20"
                   )}
@@ -511,7 +517,9 @@ function AudioSettingsModal({
               <div className="flex items-center gap-2 p-3 bg-[#0a0a0a] border border-[#2a2b2e] rounded-xl">
                 <div className={cn(
                   "w-2 h-2 rounded-full",
-                  audioStatus === "playing" ? "bg-blue-500 animate-pulse" : "bg-[#2a2b2e]"
+                  audioStatus === "playing" ? "bg-blue-500 animate-pulse"
+                    : audioStatus === "cooldown" ? "bg-amber-500 animate-pulse"
+                    : "bg-[#2a2b2e]"
                 )} />
                 <span className="text-[0.625rem] uppercase font-bold text-[#8e9299]">
                   Backend Audio: {audioStatus.toUpperCase()}

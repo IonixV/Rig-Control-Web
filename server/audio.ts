@@ -7,6 +7,28 @@ const OUTBOUND_PRE_FILL = 3;
 const OUTBOUND_JITTER_MAX = 8;
 const CW_MODES = new Set(["CW", "CWR", "CW-R"]);
 
+// naudiodon-gcc15's AudioIO.quit() resolves as soon as its detached native
+// teardown thread (PaContext::stop) is launched, not when Pa_AbortStream/
+// Pa_CloseStream/Pa_Terminate actually finish — reopening the same physical
+// device before that thread completes races PortAudio's global ALSA state
+// and segfaults (issue #53). This cooldown is a JS-side mitigation: give the
+// detached thread a safe margin before the next device open is allowed.
+const DEVICE_TEARDOWN_COOLDOWN_MS = 1000;
+let lastDeviceTeardownAt = 0;
+
+// Serializes every start/stop lifecycle operation (from socket handlers here
+// and from rigComm.ts's power-off/power-on paths) so overlapping calls can
+// never run concurrently against the same ctx.audioInputProcess/
+// audioOutputProcess.
+let audioOpChain: Promise<void> = Promise.resolve();
+let restartSeq = 0;
+
+function queueAudioOp(op: () => Promise<void>): Promise<void> {
+  const result = audioOpChain.then(op, op);
+  audioOpChain = result.then(() => {}, () => {}); // keep the chain alive past a rejection
+  return result;
+}
+
 export async function initAudioEngine(ctx: ServerContext): Promise<void> {
   try {
     const dynamicImport = new Function('modulePath', 'return import(modulePath)');
@@ -147,27 +169,40 @@ export function resolveDeviceId(ctx: ServerContext, saved: string, label: "input
   return numeric;
 }
 
-export async function stopAudio(ctx: ServerContext): Promise<void> {
+async function stopAudioLocked(ctx: ServerContext): Promise<void> {
   vlog("[AUDIO] Stopping audio streaming...");
   if (ctx.outboundTimer) { clearInterval(ctx.outboundTimer); ctx.outboundTimer = null; }
   ctx.outboundJitterBuffer = [];
+  let torndownLive = false;
   if (ctx.audioInputProcess) {
     try { await ctx.audioInputProcess.quit(); } catch (e) {}
     ctx.audioInputProcess = null;
+    torndownLive = true;
   }
   if (ctx.audioOutputProcess) {
     try { await ctx.audioOutputProcess.quit(); } catch (e) {}
     ctx.audioOutputProcess = null;
+    torndownLive = true;
   }
+  if (torndownLive) lastDeviceTeardownAt = Date.now();
   ctx.opusEncoder = null;
   ctx.opusDecoder = null;
   ctx.audioStatus = "stopped";
   ctx.io.emit("audio-status", ctx.audioStatus);
 }
 
-export async function startAudio(ctx: ServerContext): Promise<void> {
+async function startAudioLocked(ctx: ServerContext): Promise<void> {
   vlog("[AUDIO] Starting audio streaming...");
-  await stopAudio(ctx);
+  await stopAudioLocked(ctx);
+
+  const elapsed = Date.now() - lastDeviceTeardownAt;
+  if (elapsed < DEVICE_TEARDOWN_COOLDOWN_MS) {
+    const wait = DEVICE_TEARDOWN_COOLDOWN_MS - elapsed;
+    vlog(`[AUDIO] Waiting ${wait}ms for prior device teardown before reopening`);
+    ctx.audioStatus = "cooldown";
+    ctx.io.emit("audio-status", ctx.audioStatus);
+    await new Promise<void>(resolve => setTimeout(resolve, wait));
+  }
 
   if (!ctx.isAudioEngineReady) {
     console.warn("[AUDIO] Cannot start audio: Audio engine is not ready.");
@@ -294,6 +329,26 @@ export async function startAudio(ctx: ServerContext): Promise<void> {
   ctx.io.emit("audio-status", ctx.audioStatus);
 }
 
+export function startAudio(ctx: ServerContext): Promise<void> {
+  return queueAudioOp(() => startAudioLocked(ctx));
+}
+
+export function stopAudio(ctx: ServerContext): Promise<void> {
+  return queueAudioOp(() => stopAudioLocked(ctx));
+}
+
+// Used only by update-audio-settings: coalesces rapid device-selection
+// changes so only the most recently requested settings actually trigger a
+// hardware restart, instead of stacking one full stop/cooldown/start cycle
+// per intermediate selection.
+function queueCoalescedRestart(ctx: ServerContext): Promise<void> {
+  const mySeq = ++restartSeq;
+  return queueAudioOp(async () => {
+    if (mySeq !== restartSeq) return; // superseded by a newer settings change
+    await startAudioLocked(ctx);
+  });
+}
+
 export function registerAudioHandlers(socket: Socket, ctx: ServerContext, clientId: string): void {
   socket.on("get-audio-devices", async () => {
     vlog("[AUDIO] Client requested audio devices list");
@@ -308,7 +363,7 @@ export function registerAudioHandlers(socket: Socket, ctx: ServerContext, client
     ctx.saveSettings();
     ctx.io.emit("settings-data", { audioSettings: ctx.audioSettings });
     if (wasPlaying) {
-      await startAudio(ctx);
+      await queueCoalescedRestart(ctx);
     }
   });
 

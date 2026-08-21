@@ -7,7 +7,7 @@ import type { AudioSettings } from "../types";
 export interface AudioFeedHeaderActionsProps {
   variant: "phone" | "compact";
   socket: Socket | null;
-  audioStatus: "playing" | "stopped";
+  audioStatus: "playing" | "stopped" | "cooldown";
   localAudioReady: boolean;
   audioWasRestarted: boolean;
   audioSettings: AudioSettings;

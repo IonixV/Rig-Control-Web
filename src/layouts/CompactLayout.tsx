@@ -135,7 +135,7 @@ export interface CompactLayoutProps {
   enumerateVideoDevices: () => Promise<void>;
 
   // Audio feed
-  audioStatus: "playing" | "stopped";
+  audioStatus: "playing" | "stopped" | "cooldown";
   isAudioFeedCollapsed: boolean;
   setIsAudioFeedCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
   setIsAudioSettingsOpen: React.Dispatch<React.SetStateAction<boolean>>;

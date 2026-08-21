@@ -216,7 +216,7 @@ export interface ServerContext {
   audioOutputProcess: any;
   opusEncoder: any;
   opusDecoder: any;
-  audioStatus: "playing" | "stopped";
+  audioStatus: "playing" | "stopped" | "cooldown";
   activeMicClientId: string | null;
   isAudioEngineReady: boolean;
   audioEngineError: string | null;

@@ -32,7 +32,7 @@ const BW_OPTIONS: { label: string; value: string }[] = [
 
 interface Props {
   analyserNodeRef: React.MutableRefObject<AnalyserNode | null>;
-  audioStatus: "playing" | "stopped";
+  audioStatus: "playing" | "stopped" | "cooldown";
   isCollapsed: boolean;
   setIsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
   heightPx?: number;
