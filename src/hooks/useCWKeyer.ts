@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type MutableRefObject } from "react";
 import { Socket } from "socket.io-client";
 import { CW_SETTINGS_DEFAULTS } from "../constants";
 import type { CwSettings } from "../types";
@@ -7,9 +7,10 @@ interface UseCWKeyerOptions {
   socket: Socket | null;
   connected: boolean;
   localAudioOutputDevice: string;
+  pttKeyRef: MutableRefObject<{ pttKey: string }>;
 }
 
-export function useCWKeyer({ socket, connected, localAudioOutputDevice }: UseCWKeyerOptions) {
+export function useCWKeyer({ socket, connected, localAudioOutputDevice, pttKeyRef }: UseCWKeyerOptions) {
   // ── State ─────────────────────────────────────────────────────────────────
   const [cwSettings, setCwSettings] = useState<CwSettings>(CW_SETTINGS_DEFAULTS);
   const cwSettingsRef = useRef<CwSettings>(CW_SETTINGS_DEFAULTS);
@@ -17,6 +18,8 @@ export function useCWKeyer({ socket, connected, localAudioOutputDevice }: UseCWK
   const [cwKeyActive, setCwKeyActive] = useState(false);
   const [cwStuckAlert, setCwStuckAlert] = useState(false);
   const [rebindTarget, setRebindTarget] = useState<'ditKey' | 'dahKey' | 'straightKey' | null>(null);
+  const [rebindError, setRebindError] = useState<string | null>(null);
+  const rebindErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Refs ──────────────────────────────────────────────────────────────────
   const cwStuckAlertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -265,11 +268,18 @@ export function useCWKeyer({ socket, connected, localAudioOutputDevice }: UseCWK
       if (isTypingTarget(document.activeElement as Element)) return;
       if (rebindTarget) {
         e.preventDefault();
+        if (e.code === pttKeyRef.current.pttKey) {
+          if (rebindErrorTimerRef.current) clearTimeout(rebindErrorTimerRef.current);
+          setRebindError("Already bound to PTT Hotkey");
+          rebindErrorTimerRef.current = setTimeout(() => setRebindError(null), 1600);
+          return;
+        }
         const next = { ...cwSettingsRef.current, [rebindTarget]: e.code };
         setCwSettings(next);
         cwSettingsRef.current = next;
         socket?.emit("update-cw-settings", { [rebindTarget]: e.code });
         setRebindTarget(null);
+        setRebindError(null);
         return;
       }
       const s = cwSettingsRef.current;
@@ -410,6 +420,7 @@ export function useCWKeyer({ socket, connected, localAudioOutputDevice }: UseCWK
     cwKeyActive,
     cwStuckAlert, setCwStuckAlert,
     rebindTarget, setRebindTarget,
+    rebindError,
     sidetoneOscRef,
     sidetoneCtxRef,
     emitCwPaddle,

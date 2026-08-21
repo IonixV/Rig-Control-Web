@@ -115,6 +115,7 @@ export interface RigctldSettings {
   rfPowerRange: { min: number; max: number; step: number };
   anfSupported: boolean;
   pttType: "rig" | "dtr" | "rts" | "none";
+  pttKey: string;
 }
 
 export interface ConsoleLog {

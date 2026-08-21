@@ -40,7 +40,12 @@ export function useRigctld({ socket }: UseRigctldOptions) {
     rfPowerRange: { min: 0, max: 1, step: 0.01 },
     anfSupported: false,
     pttType: "rig" as "rig" | "dtr" | "rts" | "none",
+    pttKey: "AltLeft",
   });
+  const rigctldSettingsRef = useRef(rigctldSettings);
+  useEffect(() => {
+    rigctldSettingsRef.current = rigctldSettings;
+  }, [rigctldSettings]);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [statusLoaded, setStatusLoaded] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -187,6 +192,7 @@ export function useRigctld({ socket }: UseRigctldOptions) {
   return {
     // Settings & process state
     rigctldSettings, setRigctldSettings,
+    rigctldSettingsRef,
     settingsLoaded, setSettingsLoaded,
     statusLoaded,
     isSettingsOpen, setIsSettingsOpen,

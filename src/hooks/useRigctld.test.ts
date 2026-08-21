@@ -23,6 +23,7 @@ function validSettings(overrides: Partial<RigctldSettings> = {}): RigctldSetting
     rfPowerRange: { min: 0, max: 1, step: 0.01 },
     anfSupported: false,
     pttType: 'rig',
+    pttKey: 'AltLeft',
     ...overrides,
   };
 }

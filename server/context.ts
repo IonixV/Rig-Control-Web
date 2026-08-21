@@ -85,6 +85,7 @@ export interface ServerContext {
     rfPowerRange: { min: number; max: number; step: number };
     anfSupported: boolean;
     pttType: "rig" | "dtr" | "rts" | "none";
+    pttKey: string;
   };
   audioSettings: {
     inputDevice: string;
@@ -313,6 +314,7 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
       rfPowerRange: { min: 0, max: 1, step: 0.01 },
       anfSupported: false,
       pttType: "rig",
+      pttKey: "AltLeft",
     },
     audioSettings: {
       inputDevice: "",

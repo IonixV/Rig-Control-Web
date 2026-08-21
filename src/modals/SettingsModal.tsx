@@ -53,7 +53,12 @@ export interface SettingsModalProps {
   setRebindTarget: React.Dispatch<
     React.SetStateAction<"ditKey" | "dahKey" | "straightKey" | null>
   >;
+  cwRebindError: string | null;
 
+  // PTT hotkey (RIGCTLD tab)
+  pttRebindActive: boolean;
+  setPttRebindActive: React.Dispatch<React.SetStateAction<boolean>>;
+  pttRebindError: string | null;
 }
 
 function SettingsModal({
@@ -86,6 +91,10 @@ function SettingsModal({
   sidetoneOscRef,
   rebindTarget,
   setRebindTarget,
+  cwRebindError,
+  pttRebindActive,
+  setPttRebindActive,
+  pttRebindError,
 }: SettingsModalProps) {
   if (!isOpen) return null;
   return (
@@ -241,27 +250,40 @@ function SettingsModal({
         </div>
 
         <div className="space-y-1">
-          <label className="text-[0.625rem] uppercase text-[#8e9299]">PTT Type</label>
-          <div className="flex gap-2 flex-wrap">
-            {([
-              { id: 'rig', label: 'CI-V / CAT' },
-              { id: 'dtr', label: 'DTR' },
-              { id: 'rts', label: 'RTS' },
-              { id: 'none', label: 'None' },
-            ] as const).map(({ id, label }) => (
-              <button
-                key={id}
-                onClick={() => setRigctldSettings(prev => ({ ...prev, pttType: id }))}
-                className={cn(
-                  "px-3 py-1 rounded text-xs font-bold border transition-colors",
-                  (rigctldSettings.pttType ?? 'rig') === id
-                    ? "bg-emerald-500/20 border-emerald-500 text-emerald-400"
-                    : "border-[#2a2b2e] text-[#8e9299] bg-[#1a1b1e]"
-                )}
-              >
-                {label}
-              </button>
-            ))}
+          <label className="text-[0.625rem] uppercase text-[#8e9299]">Listen Address</label>
+          <input
+            type="text"
+            value={rigctldSettings.ipAddress}
+            onChange={(e) => setRigctldSettings(prev => ({ ...prev, ipAddress: e.target.value }))}
+            placeholder="127.0.0.1"
+            className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 text-white"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <label className="text-[0.625rem] uppercase text-[#8e9299]">PTT Type</label>
+            <div className="flex gap-2 flex-wrap justify-end">
+              {([
+                { id: 'rig', label: 'CI-V / CAT' },
+                { id: 'dtr', label: 'DTR' },
+                { id: 'rts', label: 'RTS' },
+                { id: 'none', label: 'None' },
+              ] as const).map(({ id, label }) => (
+                <button
+                  key={id}
+                  onClick={() => setRigctldSettings(prev => ({ ...prev, pttType: id }))}
+                  className={cn(
+                    "px-3 py-1 rounded text-xs font-bold border transition-colors",
+                    (rigctldSettings.pttType ?? 'rig') === id
+                      ? "bg-emerald-500/20 border-emerald-500 text-emerald-400"
+                      : "border-[#2a2b2e] text-[#8e9299] bg-[#1a1b1e]"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
           {(rigctldSettings.pttType === 'dtr' || rigctldSettings.pttType === 'rts') && (
             <p className="text-[0.625rem] text-amber-400/80 mt-1">
@@ -271,14 +293,21 @@ function SettingsModal({
         </div>
 
         <div className="space-y-1">
-          <label className="text-[0.625rem] uppercase text-[#8e9299]">Listen Address</label>
-          <input
-            type="text"
-            value={rigctldSettings.ipAddress}
-            onChange={(e) => setRigctldSettings(prev => ({ ...prev, ipAddress: e.target.value }))}
-            placeholder="127.0.0.1"
-            className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 text-white"
-          />
+          <div className="flex items-center justify-between">
+            <label className="text-[0.625rem] uppercase text-[#8e9299]">PTT Hotkey</label>
+            <button
+              onClick={() => setPttRebindActive(active => !active)}
+              className={cn(
+                "px-3 py-1 rounded text-xs font-mono border transition-colors",
+                pttRebindActive ? "bg-amber-500/20 border-amber-400 text-amber-300 animate-pulse" : "bg-[#1a1b1e] border-[#2a2b2e] text-[#e0e0e0]"
+              )}
+            >
+              {pttRebindActive ? 'Press a key…' : (rigctldSettings.pttKey || 'Unbound')}
+            </button>
+          </div>
+          {pttRebindError && (
+            <p className="text-[0.625rem] text-red-400">{pttRebindError}</p>
+          )}
         </div>
       </div>
 
@@ -625,6 +654,9 @@ function SettingsModal({
             </button>
           </div>
         ))}
+        {cwRebindError && (
+          <p className="text-[0.625rem] text-red-400">{cwRebindError}</p>
+        )}
       </div>
 
     </div>

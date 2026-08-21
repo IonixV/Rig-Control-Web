@@ -28,6 +28,7 @@ import { usePotaSpots } from "./hooks/usePotaSpots";
 import { useSolarData } from "./hooks/useSolarData";
 import { useRigctld } from "./hooks/useRigctld";
 import { useCWKeyer } from "./hooks/useCWKeyer";
+import { usePttHotkey } from "./hooks/usePttHotkey";
 import { useVideoStream } from "./hooks/useVideoStream";
 import { useAudio } from "./hooks/useAudio";
 import { useRigControl } from "./hooks/useRigControl";
@@ -238,6 +239,7 @@ export default function App() {
 
   const {
     rigctldSettings, setRigctldSettings,
+    rigctldSettingsRef,
     settingsLoaded, setSettingsLoaded,
     statusLoaded,
     isSettingsOpen, setIsSettingsOpen,
@@ -381,12 +383,24 @@ export default function App() {
     cwKeyActive,
     cwStuckAlert, setCwStuckAlert,
     rebindTarget, setRebindTarget,
+    rebindError: cwRebindError,
     sidetoneOscRef,
     sidetoneCtxRef,
     emitCwPaddle,
     ditPressedRef,
     dahPressedRef,
-  } = useCWKeyer({ socket, connected, localAudioOutputDevice: localAudioSettings.outputDevice });
+  } = useCWKeyer({ socket, connected, localAudioOutputDevice: localAudioSettings.outputDevice, pttKeyRef: rigctldSettingsRef });
+
+  const {
+    pttRebindActive, setPttRebindActive,
+    pttRebindError,
+  } = usePttHotkey({
+    connected: effectivelyConnected,
+    rigctldSettings,
+    setRigctldSettings,
+    handleSetPTT,
+    cwSettingsRef,
+  });
 
   const {
     bridgeEnabled, setBridgeEnabled,
@@ -1385,6 +1399,10 @@ export default function App() {
           sidetoneOscRef={sidetoneOscRef}
           rebindTarget={rebindTarget}
           setRebindTarget={setRebindTarget}
+          cwRebindError={cwRebindError}
+          pttRebindActive={pttRebindActive}
+          setPttRebindActive={setPttRebindActive}
+          pttRebindError={pttRebindError}
         />
       </div>
 
