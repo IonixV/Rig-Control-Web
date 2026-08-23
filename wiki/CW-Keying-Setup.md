@@ -111,9 +111,19 @@ Plug a second USB-to-serial adapter (such as a Digirig, SignaLink USB, or a simp
 
 This gives `rigctld` and the keyer their own separate ports with no conflict.
 
-### Option B: Use a Virtual COM Port Pair
+### Option B: Use a Serial Port Splitter
 
-Software like [com0com](https://com0com.sourceforge.net/) creates a pair of virtual serial ports on your computer that are connected to each other. You can configure `rigctld` to use one side of the pair and point the CW keyer at the real port. This is a more advanced setup — Option A is simpler for most users.
+Splitter software lets both `rigctld` and the CW keyer talk to the radio's *one* real USB port at the same time by presenting each of them with their own virtual port and relaying the real port's traffic between all of them. Point `rigctld` at one virtual port and the CW keyer's Keyer Serial Port at the other; neither ever touches the real port directly.
+
+A plain [com0com](https://com0com.com/) pair is **not** enough by itself — a bare pair just connects two virtual ports to each other, with nothing relaying to the real radio port. You need an actual splitter/hub on top of it. A few options, roughly in order of "free and a bit more setup" to "paid and turnkey":
+
+| Tool | Cost | Notes |
+|------|------|-------|
+| **com0com + hub4com** | Free, open source | com0com creates the virtual port pairs; its bundled `hub4com` utility is the actual splitter that bridges the real port to them. Signed driver, works on Windows 10/11. Command-line `hub4com` config, so more setup than the others. |
+| **[VSPE (Virtual Serial Ports Emulator)](https://www.eterlogic.com/Products.VSPE.html)** | Free | Has a built-in **Splitter** device type in its GUI made for exactly this case — pick the real port as the source and add virtual ports as outputs, no separate hub tool needed. Simplest free option to configure. |
+| **[FabulaTech Serial Port Splitter](https://www.fabulatech.com/serial-port-splitter.html)** (or Eltima's equivalent) | Paid (~$40–70) | Polished GUI, official Windows 11 support and vendor support. Worth it if the free tools hit driver-signing issues or a less technical user needs a turnkey install. |
+
+Whichever tool you pick, remember the two virtual ports it creates go one to `rigctld`'s **RIGCTLD** tab Serial Port field, and the other to the **CW** tab's Keyer Serial Port field — never point either of them at the real port once the splitter owns it.
 
 > **Linux and macOS users:** This limitation does not apply to you. Both `rigctld` and the CW keyer can share the same USB port at the same time without any special configuration.
 
@@ -124,7 +134,7 @@ Software like [com0com](https://com0com.sourceforge.net/) creates a pair of virt
 | Symptom | Likely cause | Fix |
 |---------|-------------|-----|
 | Radio keys up (transmits) but no CW tone | **CAT PTT** is selected instead of DTR or RTS | Change Keying Method to **DTR** and set your radio's USB Keying (CW) menu to match |
-| Keyer Serial Port shows **ERROR** | Port path is wrong, radio is not plugged in, or (Windows only) the port is locked by `rigctld` | Double-check the port path. On Windows, use a separate adapter (see above) |
+| Keyer Serial Port shows **ERROR** | Port path is wrong, radio is not plugged in, or (Windows only) the port is locked by `rigctld` | Double-check the port path. On Windows, use a separate adapter or a serial port splitter (see above) |
 | Keyer Serial Port shows **ERROR** with "permission denied" | (Linux) Your user account does not have access to the serial port | Run `sudo usermod -aG dialout $USER` in a terminal, then log out and back in |
 | Port shows **OPEN** but nothing happens when keying | Radio's USB Keying (CW) menu is set to a different line than the app, or is turned OFF | Make sure both the radio menu and the app agree on DTR (or RTS) |
 | CW tone works but timing is erratic or characters are garbled | Network latency between browser and server | Make sure you are running the app on the same computer as the radio, or on the same local network. The keyer compensates for moderate latency but very high latency will affect timing |
