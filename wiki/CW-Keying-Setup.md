@@ -67,12 +67,12 @@ Under **Keying Method**, you will see three buttons: **DTR**, **RTS**, and **CAT
 
 ### Enter the Keyer Serial Port
 
-A text field labeled **Keyer Serial Port** appears when DTR or RTS is selected. Enter the path to your radio's USB serial port — the same port you use for rig control.
+A field labeled **Keyer Serial Port** appears when DTR or RTS is selected. Click it to see serial devices detected on the machine running RigControl Web, or type the path to your radio's USB serial port by hand — the same port you use for rig control.
 
 | Operating system | Example |
 |-----------------|---------|
 | Linux | `/dev/ttyUSB0` or `/dev/serial/by-id/usb-Silicon_Labs_...` |
-| macOS | `/dev/tty.SLAB_USBtoUART` or `/dev/tty.usbserial-...` |
+| macOS | `/dev/cu.SLAB_USBtoUART` or `/dev/cu.usbserial-...` |
 | Windows | See the Windows section below |
 
 > **Tip:** This is usually the same port listed in the **RIGCTLD** tab under Serial Port. On Linux and macOS, the app and `rigctld` can share the same port without any conflict.

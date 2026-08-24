@@ -44,12 +44,12 @@ These settings are passed directly to `rigctld` when the app starts it. You must
 | Field | What it does | Example |
 |-------|-------------|---------|
 | **Rig Model** | Your radio's Hamlib model number. Use the dropdown to search by manufacturer and model name. | `1049: Yaesu FT-710` |
-| **Serial Port** | The serial or USB port your radio's CAT cable is connected to. On Linux this looks like `/dev/ttyUSB0` or `/dev/serial/by-id/...`. On Windows it looks like `COM3`. | `/dev/ttyUSB0` |
+| **Serial Port** | The serial or USB port your radio's CAT cable is connected to. Click the field to see serial devices detected on the machine running RigControl Web, or type a path manually. On Linux this looks like `/dev/ttyUSB0` or `/dev/serial/by-id/...`. On Windows it looks like `COM3`. | `/dev/ttyUSB0` |
 | **Server Port** | The port `rigctld` will listen on. Should match the Port in Client Side Settings above. | `4532` |
 | **Serial Speed** | The baud rate (communication speed) for your radio's CAT connection. Check your radio's manual for the correct value. Common values are `9600`, `19200`, and `38400`. | `38400` |
 | **Listen Address** | The network address `rigctld` will accept connections from. Leave this at `127.0.0.1` for local use only. To accept connections from other computers on your network, change this to `0.0.0.0`. | `127.0.0.1` |
 
-> **Finding your serial port on Linux:** Open a terminal and run `ls /dev/serial/by-id/` after connecting your radio. The full path shown there can be pasted directly into the Serial Port field — it is more reliable than `/dev/ttyUSB0` because it stays consistent even if you have other USB devices connected.
+> **Serial Port is an autocomplete field, not a strict dropdown.** Clicking it queries the RigControl Web *server* (not your browser) for currently-attached serial devices and lists them as suggestions — on Linux it prefers the stable `/dev/serial/by-id/...` name over `/dev/ttyUSB0`, since the latter can shift if you have other USB devices connected. You can still type any path by hand; this matters if you're running the browser on a different computer than the server (see [Headless Deployment](Headless-Deployment)) or if your device isn't detected for some reason.
 
 > **Linux: permission denied / error opening port?** Serial devices (`/dev/ttyUSB*`, `/dev/ttyACM*`) are owned by the `dialout` group on most distributions. If `rigctld` fails to open the port, add your user to that group:
 >
@@ -59,7 +59,7 @@ These settings are passed directly to `rigctld` when the app starts it. You must
 >
 > Log out and back in (or reboot) for the new group membership to take effect. This same permission is also required for the CW keyer's DTR/RTS line if you use it.
 
-> **Finding your serial port on Windows:** Open Device Manager and look under "Ports (COM & LPT)" with your radio connected.
+> **Can't find your port in the list, or want to double-check on Windows?** Open Device Manager and look under "Ports (COM & LPT)" with your radio connected.
 
 ---
 
