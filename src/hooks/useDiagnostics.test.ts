@@ -46,6 +46,7 @@ describe('useDiagnostics', () => {
       infra: false,
       spectrum: false,
       spots: false,
+      dxcluster: false,
       wsjtx: false,
     });
   });

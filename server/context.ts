@@ -37,6 +37,15 @@ export interface SolarData {
   fetchedAt: number;
 }
 
+export interface DxSpot {
+  id: string;
+  spotTime: number;
+  spotter: string;
+  dxCall: string;
+  frequency: number;
+  comment: string;
+}
+
 export interface CwPaddleEvent {
   t: number;
   dit: boolean;
@@ -116,6 +125,16 @@ export interface ServerContext {
   potaSettings: { enabled: boolean; pollRate: number; maxAge: number };
   sotaSettings: { enabled: boolean; pollRate: number; maxAge: number };
   wwffSettings: { enabled: boolean; pollRate: number; maxAge: number };
+  dxClusterSettings: {
+    enabled: boolean;
+    host: string;
+    port: number;
+    loginCallsign: string;
+    maxAge: number;
+    callsignFilter: string[];
+    keywordFilter: string[];
+    bandFilter: string[];
+  };
   solarData: SolarData | null;
 
   // General settings
@@ -279,6 +298,22 @@ export interface ServerContext {
   iqScopeRunning: boolean;
   iqScopeError: string | null;
 
+  // DX cluster (telnet feed of manually-spotted DX stations — server-owned,
+  // login-identified TCP connection, unlike the browser-polled POTA/SOTA/WWFF
+  // HTTP APIs; see server/dxCluster.ts)
+  dxSpotBuffer: DxSpot[];
+  dxClusterSocket: net.Socket | null;
+  dxClusterConnected: boolean;
+  dxClusterError: string | null;
+  dxClusterRestartTimer: NodeJS.Timeout | null;
+  /** Start of the current 60s connection-attempt budget window (see
+   *  DX_CLUSTER_MAX_ATTEMPTS in dxCluster.ts) — not a per-attempt timestamp. */
+  dxClusterRetryStartedAt: number | null;
+  /** Connection attempts made within the current window. Reset on a
+   *  successful login and on explicit stop (user disables/re-enables). */
+  dxClusterAttemptCount: number;
+  dxClusterLoggedIn: boolean;
+
   // Cross-module callbacks (wired in orchestrator after modules init)
   saveSettings: () => void;
   sendToRig: (cmd: string, useExtended?: boolean, priority?: boolean) => Promise<string>;
@@ -345,6 +380,16 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
     potaSettings: { enabled: false, pollRate: 5, maxAge: 15 },
     sotaSettings: { enabled: false, pollRate: 5, maxAge: 15 },
     wwffSettings: { enabled: false, pollRate: 5, maxAge: 15 },
+    dxClusterSettings: {
+      enabled: false,
+      host: "w3lpl.net",
+      port: 7373,
+      loginCallsign: "",
+      maxAge: 30,
+      callsignFilter: [],
+      keywordFilter: [],
+      bandFilter: [],
+    },
     solarData: null,
 
     pollRate: 2000,
@@ -471,6 +516,15 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
     iqCaptureProcess: null,
     iqScopeRunning: false,
     iqScopeError: null,
+
+    dxSpotBuffer: [],
+    dxClusterSocket: null,
+    dxClusterConnected: false,
+    dxClusterError: null,
+    dxClusterRestartTimer: null,
+    dxClusterRetryStartedAt: null,
+    dxClusterAttemptCount: 0,
+    dxClusterLoggedIn: false,
 
     saveSettings: () => {},
     sendToRig: () => Promise.reject("sendToRig not yet initialized"),

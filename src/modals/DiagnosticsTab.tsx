@@ -17,6 +17,7 @@ const FLAG_LABELS: { key: keyof DebugFlags; label: string }[] = [
   { key: "infra", label: "Infra" },
   { key: "spectrum", label: "Spectrum" },
   { key: "spots", label: "Spots" },
+  { key: "dxcluster", label: "DX Cluster" },
   { key: "wsjtx", label: "WSJTX" },
 ];
 

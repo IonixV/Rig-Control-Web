@@ -25,6 +25,7 @@ import LoginScreen from "./components/LoginScreen";
 import ChangePasswordModal from "./components/ChangePasswordModal";
 import { useAuth } from "./hooks/useAuth";
 import { usePotaSpots } from "./hooks/usePotaSpots";
+import { useDxSpots } from "./hooks/useDxSpots";
 import { useSolarData } from "./hooks/useSolarData";
 import { useRigctld } from "./hooks/useRigctld";
 import { useCWKeyer } from "./hooks/useCWKeyer";
@@ -469,6 +470,34 @@ export default function App() {
     potaEnabled,
     sotaEnabled,
     wwffEnabled,
+    callsign: currentUser?.callsign ?? "",
+  });
+
+  const {
+    dxClusterEnabled, setDxClusterEnabled,
+    dxHost, setDxHost,
+    dxPort, setDxPort,
+    dxLoginCallsign, setDxLoginCallsign,
+    dxMaxAge, setDxMaxAge,
+    dxCallsignFilter, setDxCallsignFilter,
+    dxKeywordFilter, setDxKeywordFilter,
+    dxBandFilter, setDxBandFilter,
+    dxConnected,
+    dxError,
+    isCompactDxSpotsCollapsed, setIsCompactDxSpotsCollapsed,
+    isPhoneDxSpotsCollapsed, setIsPhoneDxSpotsCollapsed,
+    filteredDxSpots,
+    renderDxSpotsTable,
+  } = useDxSpots({
+    socket,
+    connected,
+    status,
+    inputVfoA,
+    inputVfoB,
+    availableModes,
+    skipPollsCount,
+    setStatus,
+    settingsLoaded,
     callsign: currentUser?.callsign ?? "",
   });
 
@@ -1020,6 +1049,28 @@ export default function App() {
             wwffBandFilter={wwffBandFilter}
             setWwffBandFilter={setWwffBandFilter}
             renderWwffSpotsTable={renderWwffSpotsTable}
+            dxSpotsCollapsed={isPhoneDxSpotsCollapsed}
+            filteredDxSpots={filteredDxSpots}
+            setDxSpotsCollapsed={setIsPhoneDxSpotsCollapsed}
+            dxClusterEnabled={dxClusterEnabled}
+            setDxClusterEnabled={setDxClusterEnabled}
+            dxHost={dxHost}
+            setDxHost={setDxHost}
+            dxPort={dxPort}
+            setDxPort={setDxPort}
+            dxLoginCallsign={dxLoginCallsign}
+            setDxLoginCallsign={setDxLoginCallsign}
+            dxMaxAge={dxMaxAge}
+            setDxMaxAge={setDxMaxAge}
+            dxCallsignFilter={dxCallsignFilter}
+            setDxCallsignFilter={setDxCallsignFilter}
+            dxKeywordFilter={dxKeywordFilter}
+            setDxKeywordFilter={setDxKeywordFilter}
+            dxBandFilter={dxBandFilter}
+            setDxBandFilter={setDxBandFilter}
+            dxConnected={dxConnected}
+            dxError={dxError}
+            renderDxSpotsTable={renderDxSpotsTable}
             cwDecodedText={cwDecodedText}
             setCwDecodedText={setCwDecodedText}
             cwStats={cwStats}
@@ -1177,6 +1228,27 @@ export default function App() {
             wwffBandFilter={wwffBandFilter}
             setWwffBandFilter={setWwffBandFilter}
             renderWwffSpotsTable={renderWwffSpotsTable}
+            dxClusterEnabled={dxClusterEnabled}
+            setDxClusterEnabled={setDxClusterEnabled}
+            dxHost={dxHost}
+            setDxHost={setDxHost}
+            dxPort={dxPort}
+            setDxPort={setDxPort}
+            dxLoginCallsign={dxLoginCallsign}
+            setDxLoginCallsign={setDxLoginCallsign}
+            dxMaxAge={dxMaxAge}
+            setDxMaxAge={setDxMaxAge}
+            dxCallsignFilter={dxCallsignFilter}
+            setDxCallsignFilter={setDxCallsignFilter}
+            dxKeywordFilter={dxKeywordFilter}
+            setDxKeywordFilter={setDxKeywordFilter}
+            dxBandFilter={dxBandFilter}
+            setDxBandFilter={setDxBandFilter}
+            dxConnected={dxConnected}
+            dxError={dxError}
+            renderDxSpotsTable={renderDxSpotsTable}
+            dxSpotsCollapsed={isCompactDxSpotsCollapsed}
+            setDxSpotsCollapsed={setIsCompactDxSpotsCollapsed}
             potaSpotsCollapsed={isCompactPotaSpotsCollapsed}
             setPotaSpotsCollapsed={setIsCompactPotaSpotsCollapsed}
             sotaSpotsCollapsed={isCompactSotaSpotsCollapsed}

@@ -1,17 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { MapPin, X } from "lucide-react";
 import { cn } from "../utils";
 import { POTA_BANDS } from "../constants";
+import { parseFilterTerms } from "./DxSpotSettingsModal";
 
 const SPOT_MODES = ['SSB', 'CW', 'FT8', 'FT4'] as const;
 const ALL_BAND_LABELS = POTA_BANDS.map(b => b.label);
 
-type Tab = 'pota' | 'sota' | 'wwff';
+type Tab = 'pota' | 'sota' | 'wwff' | 'dx';
 
 const TABS: { key: Tab; label: string; ac: ReturnType<typeof acFor> }[] = [
   { key: 'pota', label: 'POTA', ac: acFor('pota') },
   { key: 'sota', label: 'SOTA', ac: acFor('sota') },
   { key: 'wwff', label: 'WWFF', ac: acFor('wwff') },
+  { key: 'dx', label: 'DX', ac: acFor('dx') },
 ];
 
 function acFor(type: Tab) {
@@ -28,6 +30,13 @@ function acFor(type: Tab) {
     check: 'accent-sky-500',
     focus: 'focus:border-sky-500',
     activeTab: 'text-sky-400 border-sky-500',
+  };
+  if (type === 'dx') return {
+    iconBg: 'bg-rose-500/10 text-rose-500',
+    pill: 'bg-rose-500/10 border-rose-500/60 text-rose-400',
+    check: 'accent-rose-500',
+    focus: 'focus:border-rose-500',
+    activeTab: 'text-rose-400 border-rose-500',
   };
   return {
     iconBg: 'bg-amber-500/10 text-amber-500',
@@ -53,59 +62,80 @@ export interface ComboSpotSettingsModalProps {
   wwffMaxAge: number; setWwffMaxAge: (v: number) => void;
   wwffModeFilter: string[]; setWwffModeFilter: (v: string[]) => void;
   wwffBandFilter: string[]; setWwffBandFilter: (v: string[]) => void;
+  dxClusterEnabled: boolean; setDxClusterEnabled: (v: boolean) => void;
+  dxHost: string; setDxHost: (v: string) => void;
+  dxPort: number; setDxPort: (v: number) => void;
+  dxLoginCallsign: string; setDxLoginCallsign: (v: string) => void;
+  dxMaxAge: number; setDxMaxAge: (v: number) => void;
+  dxCallsignFilter: string[]; setDxCallsignFilter: (v: string[]) => void;
+  dxKeywordFilter: string[]; setDxKeywordFilter: (v: string[]) => void;
+  dxBandFilter: string[]; setDxBandFilter: (v: string[]) => void;
+  dxConnected: boolean;
+  dxError: string | null;
 }
 
 export default function ComboSpotSettingsModal(props: ComboSpotSettingsModalProps) {
   const { isOpen, onClose } = props;
   const [activeTab, setActiveTab] = useState<Tab>('pota');
+  const [callsignRaw, setCallsignRaw] = useState(props.dxCallsignFilter.join(", "));
+  const [keywordRaw, setKeywordRaw] = useState(props.dxKeywordFilter.join(", "));
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'dx') {
+      setCallsignRaw(props.dxCallsignFilter.join(", "));
+      setKeywordRaw(props.dxKeywordFilter.join(", "));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, activeTab]);
 
   if (!isOpen) return null;
 
-  const config = {
-    pota: {
-      pollRate: props.potaPollRate, setPollRate: props.setPotaPollRate,
-      maxAge: props.potaMaxAge, setMaxAge: props.setPotaMaxAge,
-      modeFilter: props.potaModeFilter, setModeFilter: props.setPotaModeFilter,
-      bandFilter: props.potaBandFilter, setBandFilter: props.setPotaBandFilter,
-    },
-    sota: {
-      pollRate: props.sotaPollRate, setPollRate: props.setSotaPollRate,
-      maxAge: props.sotaMaxAge, setMaxAge: props.setSotaMaxAge,
-      modeFilter: props.sotaModeFilter, setModeFilter: props.setSotaModeFilter,
-      bandFilter: props.sotaBandFilter, setBandFilter: props.setSotaBandFilter,
-    },
-    wwff: {
-      pollRate: props.wwffPollRate, setPollRate: props.setWwffPollRate,
-      maxAge: props.wwffMaxAge, setMaxAge: props.setWwffMaxAge,
-      modeFilter: props.wwffModeFilter, setModeFilter: props.setWwffModeFilter,
-      bandFilter: props.wwffBandFilter, setBandFilter: props.setWwffBandFilter,
-    },
-  };
-
   const ac = acFor(activeTab);
-  const { pollRate, setPollRate, maxAge, setMaxAge, modeFilter, setModeFilter, bandFilter, setBandFilter } = config[activeTab];
+  const inputClass = cn("w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 text-sm text-white focus:outline-none", ac.focus);
 
-  const allModesChecked = SPOT_MODES.every(m => modeFilter.includes(m));
-  const noModesChecked = modeFilter.length === 0;
+  const nonDxConfig = activeTab === 'pota' ? {
+    pollRate: props.potaPollRate, setPollRate: props.setPotaPollRate,
+    maxAge: props.potaMaxAge, setMaxAge: props.setPotaMaxAge,
+    modeFilter: props.potaModeFilter, setModeFilter: props.setPotaModeFilter,
+    bandFilter: props.potaBandFilter, setBandFilter: props.setPotaBandFilter,
+  } : activeTab === 'sota' ? {
+    pollRate: props.sotaPollRate, setPollRate: props.setSotaPollRate,
+    maxAge: props.sotaMaxAge, setMaxAge: props.setSotaMaxAge,
+    modeFilter: props.sotaModeFilter, setModeFilter: props.setSotaModeFilter,
+    bandFilter: props.sotaBandFilter, setBandFilter: props.setSotaBandFilter,
+  } : activeTab === 'wwff' ? {
+    pollRate: props.wwffPollRate, setPollRate: props.setWwffPollRate,
+    maxAge: props.wwffMaxAge, setMaxAge: props.setWwffMaxAge,
+    modeFilter: props.wwffModeFilter, setModeFilter: props.setWwffModeFilter,
+    bandFilter: props.wwffBandFilter, setBandFilter: props.setWwffBandFilter,
+  } : null;
+
+  const allModesChecked = nonDxConfig ? SPOT_MODES.every(m => nonDxConfig.modeFilter.includes(m)) : false;
+  const noModesChecked = nonDxConfig ? nonDxConfig.modeFilter.length === 0 : false;
   const modesIndeterminate = !allModesChecked && !noModesChecked;
-  const allBandsChecked = ALL_BAND_LABELS.every(b => bandFilter.includes(b));
-  const noBandsChecked = bandFilter.length === 0;
+
+  const activeBandFilter = activeTab === 'dx' ? props.dxBandFilter : (nonDxConfig?.bandFilter ?? []);
+  const setActiveBandFilter = activeTab === 'dx' ? props.setDxBandFilter : (nonDxConfig?.setBandFilter ?? (() => {}));
+  const allBandsChecked = ALL_BAND_LABELS.every(b => activeBandFilter.includes(b));
+  const noBandsChecked = activeBandFilter.length === 0;
   const bandsIndeterminate = !allBandsChecked && !noBandsChecked;
 
   const toggleMode = (m: string) => {
-    setModeFilter(modeFilter.includes(m) ? modeFilter.filter(x => x !== m) : [...modeFilter, m]);
+    if (!nonDxConfig) return;
+    nonDxConfig.setModeFilter(nonDxConfig.modeFilter.includes(m) ? nonDxConfig.modeFilter.filter(x => x !== m) : [...nonDxConfig.modeFilter, m]);
   };
 
   const toggleBand = (label: string) => {
-    setBandFilter(bandFilter.includes(label) ? bandFilter.filter(b => b !== label) : [...bandFilter, label]);
+    setActiveBandFilter(activeBandFilter.includes(label) ? activeBandFilter.filter(b => b !== label) : [...activeBandFilter, label]);
   };
 
   const toggleAllModes = () => {
-    setModeFilter(noModesChecked ? [...SPOT_MODES] : []);
+    if (!nonDxConfig) return;
+    nonDxConfig.setModeFilter(noModesChecked ? [...SPOT_MODES] : []);
   };
 
   const toggleAllBands = () => {
-    setBandFilter(noBandsChecked ? ALL_BAND_LABELS : []);
+    setActiveBandFilter(noBandsChecked ? ALL_BAND_LABELS : []);
   };
 
   const pillClass = (active: boolean) => cn(
@@ -156,55 +186,129 @@ export default function ComboSpotSettingsModal(props: ComboSpotSettingsModalProp
         </div>
 
         <div className="p-6 space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-[0.625rem] uppercase text-[#8e9299]">Poll Frequency</label>
-              <select
-                value={pollRate}
-                onChange={e => setPollRate(Number(e.target.value))}
-                className={cn("w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 text-sm text-white appearance-none cursor-pointer focus:outline-none", ac.focus)}
-              >
-                {[1, 2, 3, 4, 5].map(m => <option key={m} value={m}>{m} min</option>)}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[0.625rem] uppercase text-[#8e9299]">Max Spot Age</label>
-              <select
-                value={maxAge}
-                onChange={e => setMaxAge(Number(e.target.value))}
-                className={cn("w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 text-sm text-white appearance-none cursor-pointer focus:outline-none", ac.focus)}
-              >
-                {[1, 3, 5, 10, 15].map(m => <option key={m} value={m}>{m} min</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[0.625rem] uppercase text-[#8e9299]">Mode Filter</label>
-            <div className="flex gap-2 flex-wrap">
-              <label className={allPillClass(allModesChecked, modesIndeterminate)}>
+          {activeTab === 'dx' && (
+            <>
+              <label className="flex items-center justify-between cursor-pointer select-none">
+                <span className="text-[0.625rem] uppercase tracking-widest font-bold text-[#8e9299]">
+                  Enable DX Cluster
+                  <span className="block normal-case tracking-normal font-normal text-[0.625rem] text-[#5a5b5e] mt-0.5">
+                    {props.dxClusterEnabled ? (props.dxConnected ? 'Connected' : (props.dxError ?? 'Connecting…')) : 'Disabled'}
+                  </span>
+                </span>
                 <input
                   type="checkbox"
-                  checked={allModesChecked}
-                  ref={el => { if (el) el.indeterminate = modesIndeterminate; }}
-                  onChange={toggleAllModes}
-                  className={cn("w-3 h-3 cursor-pointer flex-shrink-0", ac.check)}
+                  checked={props.dxClusterEnabled}
+                  onChange={e => props.setDxClusterEnabled(e.target.checked)}
+                  className={cn("w-4 h-4 cursor-pointer flex-shrink-0", ac.check)}
                 />
-                <span className="text-[0.5625rem] font-bold uppercase">All</span>
               </label>
-              {SPOT_MODES.map(m => (
-                <label key={m} className={pillClass(modeFilter.includes(m))}>
-                  <input
-                    type="checkbox"
-                    checked={modeFilter.includes(m)}
-                    onChange={() => toggleMode(m)}
-                    className={cn("w-3 h-3 cursor-pointer flex-shrink-0", ac.check)}
-                  />
-                  <span className="text-[0.5625rem] font-bold uppercase">{m}</span>
-                </label>
-              ))}
-            </div>
-          </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[0.625rem] uppercase text-[#8e9299]">Cluster Host</label>
+                  <input type="text" value={props.dxHost} onChange={e => props.setDxHost(e.target.value)} className={inputClass} placeholder="w3lpl.net" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[0.625rem] uppercase text-[#8e9299]">Port</label>
+                  <input type="number" value={props.dxPort} onChange={e => props.setDxPort(Number(e.target.value))} className={inputClass} placeholder="7373" />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[0.625rem] uppercase text-[#8e9299]">Login Callsign</label>
+                <input type="text" value={props.dxLoginCallsign} onChange={e => props.setDxLoginCallsign(e.target.value.toUpperCase())} className={inputClass} placeholder="Your callsign" />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[0.625rem] uppercase text-[#8e9299]">Max Spot Age</label>
+                <select
+                  value={props.dxMaxAge}
+                  onChange={e => props.setDxMaxAge(Number(e.target.value))}
+                  className={cn(inputClass, "appearance-none cursor-pointer")}
+                >
+                  {[5, 10, 15, 30, 60].map(m => <option key={m} value={m}>{m} min</option>)}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[0.625rem] uppercase text-[#8e9299]">Callsign / Prefix Filter</label>
+                <input
+                  type="text"
+                  value={callsignRaw}
+                  onChange={e => setCallsignRaw(e.target.value)}
+                  onBlur={() => props.setDxCallsignFilter(parseFilterTerms(callsignRaw))}
+                  className={inputClass}
+                  placeholder="e.g. VP8, FT5, JA1ABC (comma-separated, empty = show all)"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[0.625rem] uppercase text-[#8e9299]">Keyword Filter</label>
+                <input
+                  type="text"
+                  value={keywordRaw}
+                  onChange={e => setKeywordRaw(e.target.value)}
+                  onBlur={() => props.setDxKeywordFilter(parseFilterTerms(keywordRaw))}
+                  className={inputClass}
+                  placeholder="e.g. FT8, CONTEST (matches the spot comment)"
+                />
+              </div>
+            </>
+          )}
+
+          {nonDxConfig && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[0.625rem] uppercase text-[#8e9299]">Poll Frequency</label>
+                  <select
+                    value={nonDxConfig.pollRate}
+                    onChange={e => nonDxConfig.setPollRate(Number(e.target.value))}
+                    className={cn("w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 text-sm text-white appearance-none cursor-pointer focus:outline-none", ac.focus)}
+                  >
+                    {[1, 2, 3, 4, 5].map(m => <option key={m} value={m}>{m} min</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[0.625rem] uppercase text-[#8e9299]">Max Spot Age</label>
+                  <select
+                    value={nonDxConfig.maxAge}
+                    onChange={e => nonDxConfig.setMaxAge(Number(e.target.value))}
+                    className={cn("w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 text-sm text-white appearance-none cursor-pointer focus:outline-none", ac.focus)}
+                  >
+                    {[1, 3, 5, 10, 15].map(m => <option key={m} value={m}>{m} min</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[0.625rem] uppercase text-[#8e9299]">Mode Filter</label>
+                <div className="flex gap-2 flex-wrap">
+                  <label className={allPillClass(allModesChecked, modesIndeterminate)}>
+                    <input
+                      type="checkbox"
+                      checked={allModesChecked}
+                      ref={el => { if (el) el.indeterminate = modesIndeterminate; }}
+                      onChange={toggleAllModes}
+                      className={cn("w-3 h-3 cursor-pointer flex-shrink-0", ac.check)}
+                    />
+                    <span className="text-[0.5625rem] font-bold uppercase">All</span>
+                  </label>
+                  {SPOT_MODES.map(m => (
+                    <label key={m} className={pillClass(nonDxConfig.modeFilter.includes(m))}>
+                      <input
+                        type="checkbox"
+                        checked={nonDxConfig.modeFilter.includes(m)}
+                        onChange={() => toggleMode(m)}
+                        className={cn("w-3 h-3 cursor-pointer flex-shrink-0", ac.check)}
+                      />
+                      <span className="text-[0.5625rem] font-bold uppercase">{m}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
 
           <div className="space-y-2">
             <label className="text-[0.625rem] uppercase text-[#8e9299]">Band Filter</label>
@@ -220,10 +324,10 @@ export default function ComboSpotSettingsModal(props: ComboSpotSettingsModalProp
                 <span className="text-[0.5625rem] font-bold uppercase">All</span>
               </label>
               {POTA_BANDS.map(({ label }) => (
-                <label key={label} className={pillClass(bandFilter.includes(label))}>
+                <label key={label} className={pillClass(activeBandFilter.includes(label))}>
                   <input
                     type="checkbox"
-                    checked={bandFilter.includes(label)}
+                    checked={activeBandFilter.includes(label)}
                     onChange={() => toggleBand(label)}
                     className={cn("w-3 h-3 cursor-pointer flex-shrink-0", ac.check)}
                   />

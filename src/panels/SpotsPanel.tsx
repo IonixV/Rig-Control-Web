@@ -3,12 +3,12 @@ import { Settings } from "lucide-react";
 import { cn } from "../utils";
 
 interface SpotSettingsGearProps {
-  accent: 'emerald' | 'amber' | 'sky';
+  accent: 'emerald' | 'amber' | 'sky' | 'rose';
   onClick: () => void;
 }
 
 export function SpotSettingsGear({ accent, onClick }: SpotSettingsGearProps) {
-  const hoverClass = accent === 'emerald' ? 'hover:text-emerald-400' : accent === 'sky' ? 'hover:text-sky-400' : 'hover:text-amber-400';
+  const hoverClass = accent === 'emerald' ? 'hover:text-emerald-400' : accent === 'sky' ? 'hover:text-sky-400' : accent === 'rose' ? 'hover:text-rose-400' : 'hover:text-amber-400';
   return (
     <button
       onClick={onClick}
@@ -21,7 +21,7 @@ export function SpotSettingsGear({ accent, onClick }: SpotSettingsGearProps) {
 }
 
 export interface SpotsPanelProps {
-  type: "pota" | "sota" | "wwff";
+  type: "pota" | "sota" | "wwff" | "dx";
   renderTable: () => React.ReactElement;
 }
 

@@ -1,7 +1,7 @@
 import fs from "fs";
 import { Socket } from "socket.io";
 import type { ServerContext } from "./context.ts";
-import { vlogInfra as vlog, debugFlags, setDebugFlag, type DebugFlags } from "./vlog.ts";
+import { vlogInfra as vlog, vlogDx, debugFlags, setDebugFlag, type DebugFlags } from "./vlog.ts";
 
 export function loadSettings(ctx: ServerContext, settingsFile: string): void {
   if (!fs.existsSync(settingsFile)) return;
@@ -34,6 +34,9 @@ export function loadSettings(ctx: ServerContext, settingsFile: string): void {
     }
     if (data.wwffSettings) {
       ctx.wwffSettings = { ...ctx.wwffSettings, ...data.wwffSettings };
+    }
+    if (data.dxClusterSettings) {
+      ctx.dxClusterSettings = { ...ctx.dxClusterSettings, ...data.dxClusterSettings };
     }
     if (data.cwSettings) {
       ctx.cwSettings = { ...ctx.cwSettings, ...data.cwSettings };
@@ -70,6 +73,7 @@ export function saveSettings(ctx: ServerContext, settingsFile: string): void {
       potaSettings: ctx.potaSettings,
       sotaSettings: ctx.sotaSettings,
       wwffSettings: ctx.wwffSettings,
+      dxClusterSettings: ctx.dxClusterSettings,
       cwSettings: ctx.cwSettings,
       spectrumSettings: ctx.spectrumSettings,
       debugFlags,
@@ -86,6 +90,7 @@ export function registerSettingsHandlers(
   startPolling: () => void,
   syncKeyerPort: (forceReopen?: boolean) => Promise<void>,
   onSpectrumEnabledChanged?: (enabled: boolean) => void,
+  onDxClusterEnabledChanged?: (enabled: boolean) => void,
 ): void {
   socket.on("save-settings", (data) => {
     const oldRigNumber = ctx.rigctldSettings.rigNumber;
@@ -104,6 +109,24 @@ export function registerSettingsHandlers(
     if (data.potaSettings !== undefined) ctx.potaSettings = { ...ctx.potaSettings, ...data.potaSettings };
     if (data.sotaSettings !== undefined) ctx.sotaSettings = { ...ctx.sotaSettings, ...data.sotaSettings };
     if (data.wwffSettings !== undefined) ctx.wwffSettings = { ...ctx.wwffSettings, ...data.wwffSettings };
+    if (data.dxClusterSettings !== undefined) {
+      const prevDx = ctx.dxClusterSettings;
+      ctx.dxClusterSettings = { ...prevDx, ...data.dxClusterSettings };
+      // Only restart the live telnet connection when something that actually
+      // affects it changed — maxAge/callsignFilter/keywordFilter/bandFilter
+      // are applied client-side and must NOT bounce the connection on every
+      // edit (each restart is a fresh login against a shared public node).
+      const connectionRelevantChanged =
+        prevDx.enabled !== ctx.dxClusterSettings.enabled ||
+        prevDx.host !== ctx.dxClusterSettings.host ||
+        prevDx.port !== ctx.dxClusterSettings.port ||
+        prevDx.loginCallsign !== ctx.dxClusterSettings.loginCallsign;
+      if (connectionRelevantChanged && onDxClusterEnabledChanged) {
+        vlogDx(`[DXCLUSTER] Settings changed (enabled ${prevDx.enabled}->${ctx.dxClusterSettings.enabled}, host ${prevDx.host}->${ctx.dxClusterSettings.host}, port ${prevDx.port}->${ctx.dxClusterSettings.port}) — restarting connection`);
+        onDxClusterEnabledChanged(ctx.dxClusterSettings.enabled);
+      }
+      socket.emit("settings-data", { dxClusterSettings: ctx.dxClusterSettings });
+    }
     if (data.cwSettings !== undefined) {
       const oldPolarity = ctx.cwSettings.serialKeyPolarity;
       ctx.cwSettings = { ...ctx.cwSettings, ...data.cwSettings };

@@ -19,6 +19,7 @@ Debug options:
   --debug-infra      Infrastructure (TLS, settings, Socket.io lifecycle)
   --debug-spectrum   Spectrum scope (Hamlib UDP multicast, FT4222 SPI frames)
   --debug-spots      Spot integration (POTA/SOTA/WWFF fetch lifecycle)
+  --debug-dxcluster  DX cluster (telnet connection, login, spot line parsing)
   --debug-wsjtx      WSJTX bridge (WebSocket lifecycle, rig command relay)
   --debug-all        Enable all debug flags
   --help             Show this help message
@@ -39,6 +40,7 @@ export type DebugFlags = {
   infra: boolean;
   spectrum: boolean;
   spots: boolean;
+  dxcluster: boolean;
   wsjtx: boolean;
 };
 
@@ -53,6 +55,7 @@ export const debugFlags: DebugFlags = {
   infra: flag('infra', 'DEBUG_INFRA'),
   spectrum: flag('spectrum', 'DEBUG_SPECTRUM'),
   spots: flag('spots', 'DEBUG_SPOTS'),
+  dxcluster: flag('dxcluster', 'DEBUG_DXCLUSTER'),
   wsjtx: flag('wsjtx', 'DEBUG_WSJTX'),
 };
 
@@ -67,4 +70,5 @@ export const vlogCw       = (...args: any[]) => { if (debugFlags.cw)       conso
 export const vlogInfra    = (...args: any[]) => { if (debugFlags.infra)    console.log(`[${ts()}]`, ...args); };
 export const vlogSpectrum = (...args: any[]) => { if (debugFlags.spectrum) console.log(`[${ts()}]`, ...args); };
 export const vlogSpots    = (...args: any[]) => { if (debugFlags.spots)    console.log(`[${ts()}]`, ...args); };
+export const vlogDx       = (...args: any[]) => { if (debugFlags.dxcluster) console.log(`[${ts()}]`, ...args); };
 export const vlogWsjtx   = (...args: any[]) => { if (debugFlags.wsjtx)    console.log(`[${ts()}]`, ...args); };

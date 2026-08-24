@@ -2,18 +2,20 @@ import React, { useState } from "react";
 import { cn } from "../utils";
 import { SpotSettingsGear } from "./SpotsPanel";
 
-type Tab = 'pota' | 'sota' | 'wwff';
+type Tab = 'pota' | 'sota' | 'wwff' | 'dx';
 
 const TABS: { key: Tab; label: string; activeClass: string }[] = [
   { key: 'pota', label: 'POTA', activeClass: 'bg-emerald-600 text-white' },
   { key: 'sota', label: 'SOTA', activeClass: 'bg-amber-600 text-white' },
   { key: 'wwff', label: 'WWFF', activeClass: 'bg-sky-600 text-white' },
+  { key: 'dx', label: 'DX', activeClass: 'bg-rose-600 text-white' },
 ];
 
 export interface SpotComboPanelProps {
   renderPotaTable: (showFullLocation: boolean) => React.ReactElement;
   renderSotaTable: () => React.ReactElement;
   renderWwffTable: () => React.ReactElement;
+  renderDxTable: () => React.ReactElement;
   onOpenSettings: () => void;
   maxHeightClass?: string;
   callsign?: string;
@@ -23,6 +25,7 @@ export default function SpotComboPanel({
   renderPotaTable,
   renderSotaTable,
   renderWwffTable,
+  renderDxTable,
   onOpenSettings,
   maxHeightClass = 'max-h-64',
   callsign = '',
@@ -58,7 +61,7 @@ export default function SpotComboPanel({
         ))}
         <div className="ml-auto">
           <SpotSettingsGear
-            accent={activeTab === 'pota' ? 'emerald' : activeTab === 'sota' ? 'amber' : 'sky'}
+            accent={activeTab === 'pota' ? 'emerald' : activeTab === 'sota' ? 'amber' : activeTab === 'wwff' ? 'sky' : 'rose'}
             onClick={onOpenSettings}
           />
         </div>
@@ -67,6 +70,7 @@ export default function SpotComboPanel({
         {activeTab === 'pota' && renderPotaTable(false)}
         {activeTab === 'sota' && renderSotaTable()}
         {activeTab === 'wwff' && renderWwffTable()}
+        {activeTab === 'dx' && renderDxTable()}
       </div>
     </>
   );

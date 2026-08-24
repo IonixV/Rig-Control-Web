@@ -37,6 +37,15 @@ export interface WwffSpot {
   spot_time_formatted: string;
 }
 
+export interface DxSpot {
+  id: string;
+  spotTime: number; // epoch ms
+  spotter: string;
+  dxCall: string;
+  frequency: number; // kHz
+  comment: string;
+}
+
 export interface RigStatus {
   frequency: string;
   mode: string;
@@ -189,5 +198,6 @@ export interface DebugFlags {
   infra: boolean;
   spectrum: boolean;
   spots: boolean;
+  dxcluster: boolean;
   wsjtx: boolean;
 }

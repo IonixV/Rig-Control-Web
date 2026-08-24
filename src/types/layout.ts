@@ -56,6 +56,7 @@ export type PanelType =
   | 'spots_pota'
   | 'spots_sota'
   | 'spots_wwff'
+  | 'spots_dx'
   | 'spots_combo'
   | 'solar'
   | 'mufmap'
@@ -107,6 +108,7 @@ export const PANEL_LABELS: Record<PanelType, string> = {
   spots_pota: 'POTA Spots',
   spots_sota: 'SOTA Spots',
   spots_wwff: 'WWFF Spots',
+  spots_dx: 'DX Cluster',
   spots_combo: 'All Spots',
   solar: 'Solar Conditions',
   mufmap: 'MUF Map',

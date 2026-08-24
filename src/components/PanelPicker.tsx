@@ -18,6 +18,8 @@ const PANEL_ORDER: PanelType[] = [
   "commandconsole",
   "spots_pota",
   "spots_sota",
+  "spots_wwff",
+  "spots_dx",
   "solar",
   "mufmap",
 ];

@@ -43,12 +43,13 @@ import { SpotSettingsGear } from "../panels/SpotsPanel";
 import SpotComboPanel from "../panels/SpotComboPanel";
 import SpotSettingsModal from "../modals/SpotSettingsModal";
 import ComboSpotSettingsModal from "../modals/ComboSpotSettingsModal";
+import DxSpotSettingsModal from "../modals/DxSpotSettingsModal";
 
 export type { GridLayoutCallbacks };
 
 const COMPACT_PANEL_TYPES: PanelType[] = [
   'vfo', 'smeter', 'video_feed', 'audio_feed', 'controls', 'rflevels',
-  'cwdecode', 'commandconsole', 'spots_pota', 'spots_sota', 'spots_wwff', 'spots_combo', 'solar', 'mufmap',
+  'cwdecode', 'commandconsole', 'spots_pota', 'spots_sota', 'spots_wwff', 'spots_dx', 'spots_combo', 'solar', 'mufmap',
   'spectrum_hamlib', 'spectrum_audio',
 ];
 
@@ -217,12 +218,33 @@ export interface CompactLayoutProps {
   wwffBandFilter: string[];
   setWwffBandFilter: (v: string[]) => void;
   renderWwffSpotsTable: () => React.ReactElement;
+  dxClusterEnabled: boolean;
+  setDxClusterEnabled: (v: boolean) => void;
+  dxHost: string;
+  setDxHost: (v: string) => void;
+  dxPort: number;
+  setDxPort: (v: number) => void;
+  dxLoginCallsign: string;
+  setDxLoginCallsign: (v: string) => void;
+  dxMaxAge: number;
+  setDxMaxAge: (v: number) => void;
+  dxCallsignFilter: string[];
+  setDxCallsignFilter: (v: string[]) => void;
+  dxKeywordFilter: string[];
+  setDxKeywordFilter: (v: string[]) => void;
+  dxBandFilter: string[];
+  setDxBandFilter: (v: string[]) => void;
+  dxConnected: boolean;
+  dxError: string | null;
+  renderDxSpotsTable: () => React.ReactElement;
   potaSpotsCollapsed: boolean;
   setPotaSpotsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
   sotaSpotsCollapsed: boolean;
   setSotaSpotsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
   wwffSpotsCollapsed: boolean;
   setWwffSpotsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  dxSpotsCollapsed: boolean;
+  setDxSpotsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
   isComboSpotsCollapsed: boolean;
   setIsComboSpotsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
   isCwDecodeCollapsed: boolean;
@@ -383,12 +405,33 @@ function CompactLayout({
   wwffBandFilter,
   setWwffBandFilter,
   renderWwffSpotsTable,
+  dxClusterEnabled,
+  setDxClusterEnabled,
+  dxHost,
+  setDxHost,
+  dxPort,
+  setDxPort,
+  dxLoginCallsign,
+  setDxLoginCallsign,
+  dxMaxAge,
+  setDxMaxAge,
+  dxCallsignFilter,
+  setDxCallsignFilter,
+  dxKeywordFilter,
+  setDxKeywordFilter,
+  dxBandFilter,
+  setDxBandFilter,
+  dxConnected,
+  dxError,
+  renderDxSpotsTable,
   potaSpotsCollapsed,
   setPotaSpotsCollapsed,
   sotaSpotsCollapsed,
   setSotaSpotsCollapsed,
   wwffSpotsCollapsed,
   setWwffSpotsCollapsed,
+  dxSpotsCollapsed,
+  setDxSpotsCollapsed,
   isComboSpotsCollapsed,
   setIsComboSpotsCollapsed,
   isCwDecodeCollapsed,
@@ -428,6 +471,7 @@ function CompactLayout({
   const [showPotaSettings, setShowPotaSettings] = useState(false);
   const [showSotaSettings, setShowSotaSettings] = useState(false);
   const [showWwffSettings, setShowWwffSettings] = useState(false);
+  const [showDxSettings, setShowDxSettings] = useState(false);
   const [showComboSettings, setShowComboSettings] = useState(false);
 
   const existingPanelTypes = useMemo(() => {
@@ -852,6 +896,24 @@ function CompactLayout({
           </PanelChrome>
         );
 
+      case 'spots_dx':
+        return (
+          <PanelChrome
+            title="DX Cluster"
+            icon={<MapPin size={12} />}
+            isCollapsed={dxSpotsCollapsed}
+            setIsCollapsed={setDxSpotsCollapsed}
+            headerActions={<SpotSettingsGear accent="rose" onClick={() => setShowDxSettings(true)} />}
+            className="shadow-lg"
+            bodyClassName="p-0"
+            headerSize="sm"
+          >
+            <div className="max-h-64 overflow-y-auto overflow-x-hidden custom-scrollbar">
+              {renderDxSpotsTable()}
+            </div>
+          </PanelChrome>
+        );
+
       case 'spots_combo':
         return (
           <PanelChrome
@@ -867,6 +929,7 @@ function CompactLayout({
               renderPotaTable={renderSpotsTable}
               renderSotaTable={renderSotaSpotsTable}
               renderWwffTable={renderWwffSpotsTable}
+              renderDxTable={renderDxSpotsTable}
               onOpenSettings={() => setShowComboSettings(true)}
               callsign={callsign}
             />
@@ -1198,6 +1261,20 @@ function CompactLayout({
         modeFilter={wwffModeFilter} setModeFilter={setWwffModeFilter}
         bandFilter={wwffBandFilter} setBandFilter={setWwffBandFilter}
       />
+      <DxSpotSettingsModal
+        isOpen={showDxSettings}
+        onClose={() => setShowDxSettings(false)}
+        dxClusterEnabled={dxClusterEnabled} setDxClusterEnabled={setDxClusterEnabled}
+        dxHost={dxHost} setDxHost={setDxHost}
+        dxPort={dxPort} setDxPort={setDxPort}
+        dxLoginCallsign={dxLoginCallsign} setDxLoginCallsign={setDxLoginCallsign}
+        dxMaxAge={dxMaxAge} setDxMaxAge={setDxMaxAge}
+        dxCallsignFilter={dxCallsignFilter} setDxCallsignFilter={setDxCallsignFilter}
+        dxKeywordFilter={dxKeywordFilter} setDxKeywordFilter={setDxKeywordFilter}
+        dxBandFilter={dxBandFilter} setDxBandFilter={setDxBandFilter}
+        dxConnected={dxConnected}
+        dxError={dxError}
+      />
       <ComboSpotSettingsModal
         isOpen={showComboSettings}
         onClose={() => setShowComboSettings(false)}
@@ -1213,6 +1290,16 @@ function CompactLayout({
         wwffMaxAge={wwffMaxAge} setWwffMaxAge={setWwffMaxAge}
         wwffModeFilter={wwffModeFilter} setWwffModeFilter={setWwffModeFilter}
         wwffBandFilter={wwffBandFilter} setWwffBandFilter={setWwffBandFilter}
+        dxClusterEnabled={dxClusterEnabled} setDxClusterEnabled={setDxClusterEnabled}
+        dxHost={dxHost} setDxHost={setDxHost}
+        dxPort={dxPort} setDxPort={setDxPort}
+        dxLoginCallsign={dxLoginCallsign} setDxLoginCallsign={setDxLoginCallsign}
+        dxMaxAge={dxMaxAge} setDxMaxAge={setDxMaxAge}
+        dxCallsignFilter={dxCallsignFilter} setDxCallsignFilter={setDxCallsignFilter}
+        dxKeywordFilter={dxKeywordFilter} setDxKeywordFilter={setDxKeywordFilter}
+        dxBandFilter={dxBandFilter} setDxBandFilter={setDxBandFilter}
+        dxConnected={dxConnected}
+        dxError={dxError}
       />
     </div>
   );

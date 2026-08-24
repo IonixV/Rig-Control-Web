@@ -18,6 +18,7 @@ import { registerSolarHandlers, pushSolarData } from "./server/solar.ts";
 import { startSpectrumListener, stopSpectrumListener } from "./server/spectrum.ts";
 import { startYaesuScope, stopYaesuScope } from "./server/yaesuScope.ts";
 import { startIqScope, stopIqScope } from "./server/iqScope.ts";
+import { startDxCluster, stopDxCluster } from "./server/dxCluster.ts";
 import {
   initAuth,
   issueToken,
@@ -103,6 +104,11 @@ export async function startServer(appPath?: string, userDataPath?: string) {
     }
   }
 
+  // Start DX cluster telnet connection if enabled
+  if (ctx.dxClusterSettings.enabled) {
+    startDxCluster(ctx);
+  }
+
   // Open CW keyer serial port if needed
   await syncKeyerPort(ctx);
 
@@ -139,6 +145,7 @@ export async function startServer(appPath?: string, userDataPath?: string) {
       potaSettings: ctx.potaSettings,
       sotaSettings: ctx.sotaSettings,
       wwffSettings: ctx.wwffSettings,
+      dxClusterSettings: ctx.dxClusterSettings,
       cwSettings: ctx.cwSettings,
       cwPortStatus: (ctx.cwKeyerProcess && !ctx.cwKeyerProcess.killed)
         ? { open: true, port: ctx.cwSettings.keyerPort }
@@ -148,6 +155,8 @@ export async function startServer(appPath?: string, userDataPath?: string) {
     socket.emit("spectrum-supported", ctx.spectrumSupported);
     socket.emit("yaesu-scope-status", { running: ctx.yaesuScopeRunning, error: ctx.yaesuScopeError });
     socket.emit("iq-scope-status", { running: ctx.iqScopeRunning, error: ctx.iqScopeError });
+    socket.emit("dx-cluster-status", { connected: ctx.dxClusterConnected, error: ctx.dxClusterError });
+    socket.emit("dx-spots-backlog", ctx.dxSpotBuffer);
     socket.emit("rigctld-status", {
       status: ctx.rigctldStatus,
       logs: ctx.rigctldLogs,
@@ -235,6 +244,12 @@ export async function startServer(appPath?: string, userDataPath?: string) {
           } else {
             startSpectrumListener(ctx);
           }
+        }
+      },
+      (enabled) => {
+        stopDxCluster(ctx, "settings changed");
+        if (enabled) {
+          startDxCluster(ctx);
         }
       },
     );
@@ -417,6 +432,10 @@ export async function startServer(appPath?: string, userDataPath?: string) {
 
     done = step("stopYaesuScope");
     stopYaesuScope(ctx);
+    done();
+
+    done = step("stopDxCluster");
+    stopDxCluster(ctx, "server shutdown");
     done();
 
     // stopIqScope awaits naudiodon's async quit(); cap it like stopAudio so shutdown always proceeds.
