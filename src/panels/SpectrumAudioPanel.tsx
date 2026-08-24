@@ -3,6 +3,7 @@ import { RefreshCw, Settings, Waves, X } from "lucide-react";
 import PanelChrome from "../components/PanelChrome";
 import { COLORMAPS, COLORMAP_NAMES, amplitudeToPixel } from "../utils/spectrumColors";
 import { useAutoLevel } from "../hooks/useAutoLevel";
+import type { AutoLevelOptions } from "../utils/autoLevel";
 
 const DEFAULT_HEIGHT = 200;
 const SPECTRUM_RATIO = 0.3;
@@ -10,6 +11,22 @@ const FLOOR_DEFAULT = -55;
 const CEILING_DEFAULT = 0;
 const WATERFALL_MAX_LINES = 300;
 const LS_PREFIX = "spectrum-audio-";
+
+// autoLevel.ts's default floorMarginDb (5) renders the noise floor 5dB
+// *above* the bottom edge — appropriate when the goal is "don't clip the
+// noise off-screen." For this panel's AnalyserNode-fed waterfall, visual
+// tuning against real audio found the opposite goal reads better: the
+// default committed floor sits ~15dB lower than looks right (e.g. -85dBFS
+// vs. an optimal ~-70dBFS), spending most of the color gradient on noise
+// texture instead of real signal. A negative margin renders the floor
+// *above* the measured p10 trend by the same amount, intentionally
+// clipping the deepest noise to the bottom color band for more contrast on
+// real signals. Empirically derived; audio-source-only (see
+// SOURCE_ALGORITHM_OPTIONS in SpectrumHamlibPanel.tsx for the analogous
+// per-source override on the other spectrum sources).
+const AUDIO_ALGORITHM_OPTIONS: Partial<AutoLevelOptions> = {
+  floorMarginDb: -10,
+};
 
 const BW_OPTIONS: { label: string; value: string }[] = [
   { label: "Automatic", value: "auto" },
@@ -87,6 +104,7 @@ export default function SpectrumAudioPanel({
     manualCeilingDefault: CEILING_DEFAULT,
     autoFloorDefault: true,
     autoCeilingDefault: true,
+    algorithmOptions: AUDIO_ALGORITHM_OPTIONS,
   });
   // See SpectrumHamlibPanel.tsx for why the draw loop reads through a ref
   // rather than depending on floor/ceiling/auto-toggle state directly.
