@@ -93,6 +93,15 @@ Run all of these before tagging a release:
 
    **If this host has real ALSA hardware** (`/dev/snd` + an `audio` group — true of essentially any machine with a sound card, not just a dedicated radio controller), the same script also runs an audio device-enumeration check under the exact `--device`/`security_opt` flags `docker-compose.yml` ships — the regression test for [issue #55](https://github.com/jbdubbs/Rig-Control-Web/issues/55) (Docker/Podman mask `/proc/asound` by default, which broke `naudiodon`'s ALSA card enumeration even with `/dev/snd` correctly passed through). Auto-skipped, not failed, if neither is present. This can't be a GitHub-hosted CI gate: hosted runners can't `modprobe snd-dummy`/`snd-aloop` to fake a card even for this check alone — a long-standing, unresolved upstream limitation (`actions/runner-images#8295`) — so like `npm run test:hardware`, this stays manual/local only. The script's `/proc/asound` visibility check is the authoritative regression test; a `naudiodon.getDevices()` WARN (vs FAIL) alongside it is informational only — a single ALSA device the test host can't probe at PortAudio's default rate can abort the whole scan (confirmed during #55's investigation, e.g. a USB HDMI-capture dongle), which is a separate `naudiodon`/PortAudio robustness gap, not a masking regression.
 
+5. **Headless x64 Bare-Metal Tarball Smoke Test**: verifies the prebuilt headless bare-metal tarball (`scripts/build-headless-x64.sh` — see [issue #57](https://github.com/jbdubbs/Rig-Control-Web/issues/57)) extracts and runs on a fresh Ubuntu 24.04 host with no compiler/build tools, and resolves shared libraries against the same glibc-2.39 floor:
+
+   ```bash
+   bash scripts/test-headless-x64.sh                         # build the tarball + test (slow)
+   bash scripts/test-headless-x64.sh path/*.tar.gz            # test a pre-built tarball (fast)
+   ```
+
+   Requires `docker` or `podman` (auto-detected, same override as item 4). Unlike the Docker image test, this one extracts into a throwaway container standing in for a bare-metal target host, then checks: `node server.ts` boots and serves HTTPS with no `npm ci`/compile step, `ldd` finds all shared libraries for every bundled binary and native addon, and the bundled `rigctld` responds against Hamlib's Dummy backend. A similar tarball exists for arm64 (`scripts/build-headless-arm64.sh`, `scripts/Containerfile.arm64-builder`) but remains a testing build pending real Raspberry Pi hardware verification (issue #54) — the x64 tarball is fully supported since it targets this project's already-CI-tested floor.
+
 `.github/workflows/docker-publish.yml` (triggered on `v*` tag push or manual dispatch) builds/pushes the image to Docker Hub (`jbdubbs/rigcontrol-web`, tags `latest` + the version) and then syncs `DOCKERHUB.md` to the Docker Hub repo page's description via `peter-evans/dockerhub-description`. **`DOCKERHUB.md`'s "Latest release" line must be updated by hand as part of cutting each release** — it doesn't auto-generate from the GitHub Release body.
 
 ## Architecture

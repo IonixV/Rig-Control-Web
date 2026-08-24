@@ -3,6 +3,7 @@ build/
 dist/
 dist-electron/
 dist-headless-arm64/
+dist-headless-x64/
 coverage/
 .DS_Store
 *.log

@@ -254,12 +254,54 @@ docker run -d \
 `-v /proc/asound:/proc/asound:ro` bind mount looks more targeted but is
 rejected outright by current Docker).
 
-## Option 3: systemd (no container runtime)
+## Option 3: systemd (no container runtime, no build tools)
 
-For a box where you'd rather not run Docker at all:
+For a box where you'd rather not run Docker at all. Download the prebuilt
+x86-64 tarball from the
+[latest release](https://github.com/jbdubbs/Rig-Control-Web/releases/latest)
+(`rigcontrol-web-<version>-linux-x64.tar.gz`) — it ships `node_modules`
+already compiled against this project's Ubuntu 24.04 / glibc 2.39 floor
+(see `scripts/build-headless-x64.sh`), so **no compiler or build tools are
+needed on the target machine** (this replaces the old `git clone && npm
+ci` flow — see [issue #57](https://github.com/jbdubbs/Rig-Control-Web/issues/57)):
 
 ```bash
-# One-time setup
+# Node.js 24 runtime (Debian/Ubuntu)
+curl -fsSL https://deb.nodesource.com/setup_24.x | sudo bash - && sudo apt-get install -y nodejs
+# Node.js 24 runtime (Fedora/RHEL-family) — instead of the line above:
+#   sudo dnf module install -y nodejs:24
+
+# Runtime shared libraries naudiodon/rigctld/the FT4222 reader need
+# (Debian/Ubuntu; see "Image runtime dependencies" above for why each one
+# is needed — this is the same list, minus the GUI-only packages):
+sudo apt-get install -y --no-install-recommends \
+  ca-certificates libasound2t64 libpulse0 libusb-1.0-0 libreadline8t64 libportaudio2 libuuid1
+# Fedora/RHEL-family equivalent instead of the line above:
+#   sudo dnf install -y ca-certificates alsa-lib pulseaudio-libs libusb1 readline libuuid
+
+sudo useradd --system --home /opt/rigcontrol-web --shell /usr/sbin/nologin \
+  --groups dialout,audio rigcontrol-web
+sudo tar xzf rigcontrol-web-<version>-linux-x64.tar.gz -C /opt --strip-components=1 --one-top-level=rigcontrol-web
+sudo chown -R rigcontrol-web:rigcontrol-web /opt/rigcontrol-web
+sudo mkdir -p /var/lib/rigcontrol-web
+sudo chown rigcontrol-web:rigcontrol-web /var/lib/rigcontrol-web
+sudo cp /opt/rigcontrol-web/rigcontrol-web.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now rigcontrol-web
+```
+
+Check status/logs with `systemctl status rigcontrol-web` /
+`journalctl -u rigcontrol-web -f`.
+
+A similar prebuilt tarball for arm64 (Raspberry Pi 3/4/5) exists too, but
+is still a testing build pending real-hardware verification — see
+[issue #54](https://github.com/jbdubbs/Rig-Control-Web/issues/54).
+
+### Building from source instead
+
+If you'd rather build it yourself (e.g. to run off a modified checkout):
+
+```bash
 sudo useradd --system --home /opt/rigcontrol-web --shell /usr/sbin/nologin \
   --groups dialout,audio rigcontrol-web
 sudo git clone https://github.com/jbdubbs/Rig-Control-Web.git /opt/rigcontrol-web
@@ -279,17 +321,12 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now rigcontrol-web
 ```
 
-Requires Node 24+ (e.g. via NodeSource:
-`curl -fsSL https://deb.nodesource.com/setup_24.x | bash - && sudo apt-get install -y nodejs`
-on Debian/Ubuntu, or `sudo dnf module install -y nodejs:24` on Fedora/RHEL)
-and the same system packages as building from source on Linux
+Requires Node 24+ (same NodeSource/`dnf module install` commands as
+above) and the same system packages as building from source on Linux
 (`libasound2-dev libopus-dev build-essential`, plus `gcc` to compile
 `cw-key-helper`/`ft4222-scope-reader` if you need them —
 `bin/linux/rigctld` and the other helpers are already committed in the
 repo for x64, so this is usually just `npm ci && npm run build`).
-
-Check status/logs with `systemctl status rigcontrol-web` /
-`journalctl -u rigcontrol-web -f`.
 
 ---
 

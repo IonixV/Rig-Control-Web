@@ -1,0 +1,24 @@
+# Reusable x86-64 (Ubuntu 24.04 / glibc 2.39 floor) build environment for
+# scripts/build-headless-x64.sh. Matches ./Dockerfile's builder stage's
+# apt list exactly — that's the project's existing, CI-exercised x64 glibc
+# floor (see scripts/build-rigctld.mjs and .github/workflows/build.yml's
+# "Verify bin/linux/rigctld's glibc floor" step), so there's no reason to
+# diverge here.
+#
+# Unlike scripts/Containerfile.arm64-builder, this doesn't need autotools/
+# glib/readline/git — this script reuses the already-committed
+# bin/linux/* binaries (built by CI on ubuntu-24.04) instead of rebuilding
+# rigctld from source, so no hamlib-RCW clone/autoreconf/configure step
+# happens here. Only what `npm ci` needs to compile naudiodon/libopus-node
+# natively (node-gyp + ALSA/Opus headers) is required.
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates curl gnupg \
+      build-essential python3 \
+      libasound2-dev libopus-dev \
+    && curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
