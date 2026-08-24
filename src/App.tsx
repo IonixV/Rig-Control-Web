@@ -246,6 +246,7 @@ export default function App() {
     isSettingsOpen, setIsSettingsOpen,
     activeSettingsTab, setActiveSettingsTab,
     radios,
+    serialPorts,
     rigctldProcessStatus,
     preampLevels,
     attenuatorLevels,
@@ -1456,6 +1457,7 @@ export default function App() {
           setRigctldLogs={setRigctldLogs}
           testResult={testResult}
           radios={radios}
+          serialPorts={serialPorts}
           host={host}
           setHost={setHost}
           port={port}

@@ -51,6 +51,7 @@ export function useRigctld({ socket }: UseRigctldOptions) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activeSettingsTab, setActiveSettingsTab] = useState<'rigctld' | 'cw' | 'admin' | 'diagnostics'>('rigctld');
   const [radios, setRadios] = useState<{ id: string; mfg: string; model: string }[]>([]);
+  const [serialPorts, setSerialPorts] = useState<{ path: string; label: string }[]>([]);
   const [rigctldProcessStatus, setRigctldProcessStatus] = useState<"running" | "stopped" | "error" | "already_running">("stopped");
   const [preampLevels, setPreampLevels] = useState<string[]>([]);
   const [attenuatorLevels, setAttenuatorLevels] = useState<string[]>([]);
@@ -86,6 +87,10 @@ export function useRigctld({ socket }: UseRigctldOptions) {
 
     const onRadiosList = (list: any) => {
       setRadios(dedupeRadiosById(list));
+    };
+
+    const onSerialPortsList = (list: { path: string; label: string }[]) => {
+      setSerialPorts(list);
     };
 
     const onRigctldStatus = (data: any) => {
@@ -150,6 +155,7 @@ export function useRigctld({ socket }: UseRigctldOptions) {
 
     socket.on("settings-data", onSettingsData);
     socket.on("radios-list", onRadiosList);
+    socket.on("serial-ports-list", onSerialPortsList);
     socket.on("rigctld-status", onRigctldStatus);
     socket.on("rigctld-log", onRigctldLog);
     socket.on("test-result", onTestResult);
@@ -165,6 +171,7 @@ export function useRigctld({ socket }: UseRigctldOptions) {
     return () => {
       socket.off("settings-data", onSettingsData);
       socket.off("radios-list", onRadiosList);
+      socket.off("serial-ports-list", onSerialPortsList);
       socket.off("rigctld-status", onRigctldStatus);
       socket.off("rigctld-log", onRigctldLog);
       socket.off("test-result", onTestResult);
@@ -198,6 +205,7 @@ export function useRigctld({ socket }: UseRigctldOptions) {
     isSettingsOpen, setIsSettingsOpen,
     activeSettingsTab, setActiveSettingsTab,
     radios,
+    serialPorts,
     rigctldProcessStatus,
     preampLevels,
     attenuatorLevels,

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { cn } from "../utils";
 import { SearchableSelect } from "../components/SearchableSelect";
+import { SerialPortInput } from "../components/SerialPortInput";
 import type { CwSettings, RigctldSettings } from "../types";
 
 const AdminTab = lazy(() => import("./AdminTab"));
@@ -35,6 +36,7 @@ export interface SettingsModalProps {
   setRigctldLogs: React.Dispatch<React.SetStateAction<string[]>>;
   testResult: { success: boolean; message: string } | null;
   radios: { id: string; mfg: string; model: string }[];
+  serialPorts: { path: string; label: string }[];
   host: string;
   setHost: React.Dispatch<React.SetStateAction<string>>;
   port: number;
@@ -77,6 +79,7 @@ function SettingsModal({
   setRigctldLogs,
   testResult,
   radios,
+  serialPorts,
   host,
   setHost,
   port,
@@ -105,6 +108,11 @@ function SettingsModal({
         searchText: `${r.mfg} ${r.model} ${r.id}`,
       })),
     [radios]
+  );
+
+  const serialPortOptions = useMemo(
+    () => serialPorts.map((p) => ({ value: p.path, label: p.label })),
+    [serialPorts]
   );
 
   if (!isOpen) return null;
@@ -223,12 +231,13 @@ function SettingsModal({
 
         <div className="space-y-1">
           <label className="text-[0.625rem] uppercase text-[#8e9299]">Serial Port (e.g. /dev/serial/by-id/radio-device or COM3)</label>
-          <input
-            type="text"
+          <SerialPortInput
+            id="rigctld-serial-port"
+            options={serialPortOptions}
             value={rigctldSettings.serialPort}
-            onChange={(e) => setRigctldSettings(prev => ({ ...prev, serialPort: e.target.value }))}
+            onChange={(val) => setRigctldSettings(prev => ({ ...prev, serialPort: val }))}
+            onFocus={() => socket?.emit("get-serial-ports")}
             placeholder="/dev/serial/by-id/radio-device"
-            className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 text-white"
           />
         </div>
 
@@ -495,17 +504,19 @@ function SettingsModal({
                   : 'RTS line on this port keys the radio (e.g. /dev/ttyUSB1, COM4)'}
               </div>
               <div className="flex gap-2 items-center">
-                <input
-                  type="text"
+                <SerialPortInput
+                  id="cw-keyer-serial-port"
+                  className="flex-1 bg-[#1a1b1e] font-mono"
+                  options={serialPortOptions}
                   value={cwSettings.keyerPort}
-                  onChange={(e) => setCwSettings(prev => ({ ...prev, keyerPort: e.target.value }))}
-                  onBlur={(e) => {
-                    const next = { ...cwSettings, keyerPort: e.target.value };
+                  onChange={(val) => setCwSettings(prev => ({ ...prev, keyerPort: val }))}
+                  onFocus={() => socket?.emit("get-serial-ports")}
+                  onCommit={(val) => {
+                    const next = { ...cwSettings, keyerPort: val };
                     cwSettingsRef.current = next;
-                    socket?.emit("update-cw-settings", { keyerPort: e.target.value });
+                    socket?.emit("update-cw-settings", { keyerPort: val });
                   }}
                   placeholder="/dev/ttyUSB1"
-                  className="flex-1 bg-[#1a1b1e] border border-[#2a2b2e] rounded px-2 py-1 text-sm text-[#e0e0e0] font-mono"
                 />
                 <div className={cn("text-[0.625rem] font-bold px-2 py-0.5 rounded", cwPortStatus.open ? "text-emerald-400 bg-emerald-400/10" : "text-[#8e9299] bg-[#2a2b2e]")}>
                   {cwPortStatus.open ? "OPEN" : cwPortStatus.error ? "ERROR" : "CLOSED"}
