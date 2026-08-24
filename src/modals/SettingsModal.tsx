@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from "react";
+import React, { lazy, Suspense, useMemo } from "react";
 import type { Socket } from "socket.io-client";
 import {
   AlertCircle,
@@ -8,6 +8,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "../utils";
+import { SearchableSelect } from "../components/SearchableSelect";
 import type { CwSettings, RigctldSettings } from "../types";
 
 const AdminTab = lazy(() => import("./AdminTab"));
@@ -96,6 +97,16 @@ function SettingsModal({
   setPttRebindActive,
   pttRebindError,
 }: SettingsModalProps) {
+  const radioOptions = useMemo(
+    () =>
+      radios.map((r) => ({
+        value: r.id,
+        label: `${r.id}: ${r.mfg} ${r.model}`,
+        searchText: `${r.mfg} ${r.model} ${r.id}`,
+      })),
+    [radios]
+  );
+
   if (!isOpen) return null;
   return (
 <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
@@ -200,19 +211,14 @@ function SettingsModal({
           </div>
         )}
         <div className="space-y-1">
-          <label className="text-[0.625rem] uppercase text-[#8e9299]">Rig Model (Hamlib Rig #)</label>
-          <select 
+          <label htmlFor="rig-model-select" className="text-[0.625rem] uppercase text-[#8e9299]">Rig Model (Hamlib Rig #)</label>
+          <SearchableSelect
+            id="rig-model-select"
+            options={radioOptions}
             value={rigctldSettings.rigNumber}
-            onChange={(e) => setRigctldSettings(prev => ({ ...prev, rigNumber: e.target.value }))}
-            className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 text-white"
-          >
-            <option value="">Select a Radio...</option>
-            {radios.map(r => (
-              <option key={`${r.id}-${r.mfg}-${r.model}`} value={r.id}>
-                {r.id}: {r.mfg} {r.model}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => setRigctldSettings(prev => ({ ...prev, rigNumber: val }))}
+            placeholder="Select a Radio..."
+          />
         </div>
 
         <div className="space-y-1">
