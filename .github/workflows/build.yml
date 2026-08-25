@@ -224,12 +224,16 @@ jobs:
           fi
           ls -lh build/artifacts/
 
-      # Upload as a workflow artifact (useful for inspecting builds without a release)
+      # Upload as a workflow artifact (useful for inspecting builds without a release).
+      # Short retention: the real permanent copy is the GitHub Release asset uploaded
+      # below — keeping the workflow-artifact copy around for 90 days is pure duplicate
+      # storage (see the Actions storage cleanup in 2026-08).
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: rigcontrol-web-${{ matrix.platform }}
           path: build/artifacts/*
+          retention-days: 1
 
       # Stage the standalone WSJTX bridge helper with a platform-specific name
       # so all three can be downloaded from the GitHub Pages /downloads/ page.
@@ -245,11 +249,15 @@ jobs:
             cp bin/windows/wsjtx-bridge.exe build/wsjtx-bridge/wsjtx-bridge.exe
           fi
 
+      # Short retention: consumed by the docs-downloads job later in this same run,
+      # then permanently distributed via docs/downloads/ (committed to git) and
+      # GitHub Pages — the workflow-artifact copy is transient plumbing only.
       - name: Upload WSJTX bridge helper
         uses: actions/upload-artifact@v7
         with:
           name: wsjtx-bridge-${{ matrix.platform }}
           path: build/wsjtx-bridge/*
+          retention-days: 1
 
       # Attach the installer to the GitHub Release — only runs on tag pushes, not manual dispatches
       - name: Attach to GitHub Release

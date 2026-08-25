@@ -54,11 +54,15 @@ jobs:
             cp bin/windows/wsjtx-bridge.exe build/wsjtx-bridge/wsjtx-bridge.exe
           fi
 
+      # Short retention: consumed by publish-helper later in this same run, then
+      # permanently distributed via docs/downloads/ (committed to git) and GitHub
+      # Pages — the workflow-artifact copy is transient plumbing only.
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: wsjtx-bridge-${{ matrix.platform }}
           path: build/wsjtx-bridge/*
+          retention-days: 1
 
   publish-helper:
     needs: build
