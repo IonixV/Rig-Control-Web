@@ -100,7 +100,16 @@ Run all of these before tagging a release:
    bash scripts/test-headless-x64.sh path/*.tar.gz            # test a pre-built tarball (fast)
    ```
 
-   Requires `docker` or `podman` (auto-detected, same override as item 4). Unlike the Docker image test, this one extracts into a throwaway container standing in for a bare-metal target host, then checks: `node server.ts` boots and serves HTTPS with no `npm ci`/compile step, `ldd` finds all shared libraries for every bundled binary and native addon, and the bundled `rigctld` responds against Hamlib's Dummy backend. A similar tarball exists for arm64 (`scripts/build-headless-arm64.sh`, `scripts/Containerfile.arm64-builder`) but remains a testing build pending real Raspberry Pi hardware verification (issue #54) — the x64 tarball is fully supported since it targets this project's already-CI-tested floor.
+   Requires `docker` or `podman` (auto-detected, same override as item 4). Unlike the Docker image test, this one extracts into a throwaway container standing in for a bare-metal target host, then checks: `node server.ts` boots and serves HTTPS with no `npm ci`/compile step, `ldd` finds all shared libraries for every bundled binary and native addon, and the bundled `rigctld` responds against Hamlib's Dummy backend. A similar tarball exists for arm64 (item 6) but remains a testing build pending real Raspberry Pi hardware verification (issue #54) — the x64 tarball is fully supported since it targets this project's already-CI-tested floor.
+
+6. **Headless arm64 Bare-Metal Tarball Smoke Test** (testing build, issue #54): same idea as item 5, but for the arm64 testing tarball (`scripts/build-headless-arm64.sh`, `scripts/Containerfile.arm64-builder`), extracting into an **emulated arm64 `debian:12`** container (QEMU user-mode, `podman run --arch=arm64` — matches `Containerfile.arm64-builder`'s own base/floor, the actual documented target: Raspberry Pi OS Bookworm/Debian 13) rather than `ubuntu:24.04`:
+
+   ```bash
+   bash scripts/test-headless-arm64.sh                        # build the tarball + test (slow — QEMU emulation)
+   bash scripts/test-headless-arm64.sh path/*.tar.gz           # test a pre-built tarball (still slow)
+   ```
+
+   Podman only (same `--arch` vs `--platform` reason as `build-headless-arm64.sh`), and requires `qemu-user-static` (see that script's header for one-time host setup). Debian 12 predates the 64-bit `time_t` package-renaming transition, so this test installs the plain (non-`t64`-suffixed) runtime library names, unlike item 5's Ubuntu 24.04 names.
 
 `.github/workflows/docker-publish.yml` (triggered on `v*` tag push or manual dispatch) builds/pushes the image to Docker Hub (`jbdubbs/rigcontrol-web`, tags `latest` + the version) and then syncs `DOCKERHUB.md` to the Docker Hub repo page's description via `peter-evans/dockerhub-description`. **`DOCKERHUB.md`'s "Latest release" line must be updated by hand as part of cutting each release** — it doesn't auto-generate from the GitHub Release body.
 
