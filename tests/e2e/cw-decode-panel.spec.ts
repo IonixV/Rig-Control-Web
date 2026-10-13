@@ -52,6 +52,11 @@ const layoutWithCwDecode = {
 // section was collapsed.
 async function ensureBackendEngineExpanded(page: Page) {
   const inputLabel = page.locator('label:text-is("Backend Input (Mic/Line)")');
+  // AudioSettingsModal is React.lazy()-loaded (#109), so right after opening
+  // it isVisible() is false only because the chunk hasn't rendered yet. Wait
+  // for the header first, or the click below toggles an already-expanded
+  // section shut (#115).
+  await page.getByText('Backend Audio Engine', { exact: true }).waitFor();
   if (await inputLabel.isVisible().catch(() => false)) return;
   await page.getByText('Backend Audio Engine', { exact: true }).click();
   await expect(inputLabel).toBeVisible({ timeout: 5_000 });
