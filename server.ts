@@ -277,9 +277,18 @@ export async function startServer(appPath?: string, userDataPath?: string) {
     ctx.socketConnectTimes.set(socket.id, Date.now());
 
     // Ensure functional handlers are only registered once per socket
+    // On re-login over the same socket (logout does not disconnect), handlers
+    // stay registered but the client needs its initial state pushed again.
     let functionalHandlersRegistered = false;
     const registerFunctionalOnce = () => {
-      if (functionalHandlersRegistered) return;
+      socket.join("authenticated");
+      if (functionalHandlersRegistered) {
+        socket.emit("audio-engine-state", { isReady: ctx.isAudioEngineReady, error: ctx.audioEngineError });
+        socket.emit("debug-flags", debugFlags);
+        pushSolarData(socket, ctx);
+        pushInitialState(socket).catch(e => console.error("[INIT] pushInitialState error:", e));
+        return;
+      }
       functionalHandlersRegistered = true;
       registerFunctionalHandlers(socket, clientId);
     };

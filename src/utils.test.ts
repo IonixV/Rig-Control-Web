@@ -115,6 +115,7 @@ describe('shouldAttemptAutoJoin', () => {
 
   it('does not fire before the page has seen a gesture', () => {
     expect(shouldAttemptAutoJoin('playing', false, false)).toBe(false);
+    expect(shouldAttemptAutoJoin('playing', false, true, false)).toBe(false);
   });
 
   it('does not fire once already ready', () => {

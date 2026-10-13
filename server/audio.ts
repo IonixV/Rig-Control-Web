@@ -331,7 +331,7 @@ async function startAudioLocked(ctx: ServerContext): Promise<void> {
           pcmAccumulator.push(data, (frame) => {
             try {
               const encodedPacket = ctx.opusEncoder.encode(frame);
-              ctx.io.emit("audio-inbound", encodedPacket);
+              ctx.io.to("authenticated").emit("audio-inbound", encodedPacket);
             } catch (err) {
               console.error("[AUDIO] Opus encode error:", err);
             }

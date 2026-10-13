@@ -336,7 +336,7 @@ export default function App() {
     startMicCapture,
     stopMicCapture,
     updateWsjtxOutput,
-  } = useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, ft8DecodeEnabledRef, ft8DecoderRef, waterfallActiveRef });
+  } = useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, ft8DecodeEnabledRef, ft8DecoderRef, waterfallActiveRef, authenticated: authState === "authenticated" });
 
   const { isActive: isFullscreenWakeLockActive, toggle: toggleFullscreenWakeLock } = useFullscreenWakeLock();
 

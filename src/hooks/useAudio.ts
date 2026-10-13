@@ -16,9 +16,10 @@ interface UseAudioOptions {
   ft8DecodeEnabledRef: MutableRefObject<boolean>;
   ft8DecoderRef: MutableRefObject<Ft8Decoder | null>;
   waterfallActiveRef: MutableRefObject<boolean>;
+  authenticated: boolean;
 }
 
-export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, ft8DecodeEnabledRef, ft8DecoderRef, waterfallActiveRef }: UseAudioOptions) {
+export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, ft8DecodeEnabledRef, ft8DecoderRef, waterfallActiveRef, authenticated }: UseAudioOptions) {
   const [activeMicClientId, setActiveMicClientId] = useState<string | null>(null);
   const [audioStatus, setAudioStatus] = useState<"playing" | "stopped" | "cooldown">("stopped");
   const [audioEngineState, setAudioEngineState] = useState<{ isReady: boolean; error: string | null }>({ isReady: false, error: null });
@@ -68,6 +69,8 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, ft8DecodeEn
   // Tracks whether the page has ever seen a user gesture this session —
   // used to auto-join local audio without requiring a click on "Join Audio".
   const hasGesturedRef = useRef(false);
+  const authenticatedRef = useRef(authenticated);
+  authenticatedRef.current = authenticated;
   const localAudioInitInFlightRef = useRef(false);
 
   // Internal refs kept in sync for use in stale closures
@@ -173,6 +176,7 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, ft8DecodeEn
   useEffect(() => {
     if (!socket) return;
     const handler = (data: ArrayBuffer | Uint8Array) => {
+      if (!authenticatedRef.current) return;
       if (!audioSettingsRef.current.inboundEnabled || audioStatusRef.current !== "playing" || !localAudioReadyRef.current) {
         return;
       }
@@ -291,6 +295,24 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, ft8DecodeEn
       captureNodeRef.current = null;
     }
   }, []);
+
+  // Closes every client-side audio node and the AudioContext. Used on logout
+  // (the socket and this hook outlive the session) and shared by the
+  // server-"stopped" path.
+  const teardownLocalAudio = useCallback(() => {
+    stopMicCapture();
+    if (opusEncoderRef.current) { try { opusEncoderRef.current.close(); } catch (_) {} opusEncoderRef.current = null; }
+    if (opusDecoderRef.current) { try { opusDecoderRef.current.close(); } catch (_) {} opusDecoderRef.current = null; }
+    if (playbackNodeRef.current) { playbackNodeRef.current.disconnect(); playbackNodeRef.current = null; }
+    if (analyserNodeRef.current) { analyserNodeRef.current.disconnect(); analyserNodeRef.current = null; }
+    if (inboundGainRef.current) { inboundGainRef.current.disconnect(); inboundGainRef.current = null; }
+    if (audioContextRef.current) { audioContextRef.current.close().catch(() => {}); audioContextRef.current = null; }
+    setLocalAudioReady(false);
+  }, [stopMicCapture]);
+
+  useEffect(() => {
+    if (!authenticated) teardownLocalAudio();
+  }, [authenticated, teardownLocalAudio]);
 
   const initLocalAudioPipeline = useCallback(async () => {
     if (localAudioInitInFlightRef.current) {
@@ -476,7 +498,7 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, ft8DecodeEn
   }, [stopMicCapture, applyInboundMute]);
 
   const attemptAutoJoin = useCallback(() => {
-    if (shouldAttemptAutoJoin(audioStatusRef.current, localAudioReadyRef.current, hasGesturedRef.current)) {
+    if (shouldAttemptAutoJoin(audioStatusRef.current, localAudioReadyRef.current, hasGesturedRef.current, authenticatedRef.current)) {
       initLocalAudioPipeline();
     }
   }, [initLocalAudioPipeline]);
@@ -499,7 +521,7 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, ft8DecodeEn
   //    activation, no fresh gesture required.
   useEffect(() => {
     attemptAutoJoin();
-  }, [audioStatus, localAudioReady, attemptAutoJoin]);
+  }, [audioStatus, localAudioReady, authenticated, attemptAutoJoin]);
 
   useEffect(() => {
     const onGesture = () => {

@@ -49,8 +49,9 @@ export function shouldAttemptAutoJoin(
   audioStatus: "playing" | "stopped" | "cooldown",
   localAudioReady: boolean,
   hasGestured: boolean,
+  authenticated: boolean = true,
 ): boolean {
-  return hasGestured && audioStatus === "playing" && !localAudioReady;
+  return authenticated && hasGestured && audioStatus === "playing" && !localAudioReady;
 }
 
 // Pure go/no-go check for re-requesting the Screen Wake Lock (issue #61):

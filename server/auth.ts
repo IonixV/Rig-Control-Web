@@ -403,6 +403,7 @@ export function registerAuthHandlers(
       });
       ctx.authenticatedSockets.delete(socket.id);
     }
+    socket.leave("authenticated");
     socket.emit("auth:kicked", { reason: "logout" });
   });
 
@@ -718,6 +719,7 @@ export function registerAdminHandlers(
           detail: `${target.callsign} (${socketId})`,
         });
         ctx.io.to(socketId).emit("auth:kicked", { reason: "force_logout" });
+        ctx.io.in(socketId).socketsLeave("authenticated");
         ctx.authenticatedSockets.delete(socketId);
         socket.emit("admin:op-result", { ok: true });
       });
@@ -816,6 +818,7 @@ export function registerAdminHandlers(
       ctx.authenticatedSockets.forEach((_, socketId) => {
         if (socketId !== socket.id) {
           ctx.io.to(socketId).emit("auth:kicked", { reason: "factory_reset" });
+          ctx.io.in(socketId).socketsLeave("authenticated");
           ctx.authenticatedSockets.delete(socketId);
         }
       });
@@ -830,6 +833,7 @@ export function registerAdminHandlers(
         socket.emit("admin:op-result", { ok: true });
         // Kick the requesting admin too — they re-login with default credentials
         socket.emit("auth:kicked", { reason: "factory_reset" });
+        socket.leave("authenticated");
         ctx.authenticatedSockets.delete(socket.id);
       });
     });
@@ -867,6 +871,7 @@ function kickUserSockets(
   });
   for (const socketId of toKick) {
     ctx.io.to(socketId).emit("auth:kicked", { reason });
+    ctx.io.in(socketId).socketsLeave("authenticated");
     ctx.authenticatedSockets.delete(socketId);
   }
 }

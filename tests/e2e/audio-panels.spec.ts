@@ -217,4 +217,82 @@ test.describe('AudioFeedPanel + SpectrumAudioPanel via a PipeWire loopback', () 
 
     await disconnectFromDummy(page);
   });
+
+  // Issue #119: logout must tear down the client's audio pipeline, and a
+  // re-login on the same socket must restore audio settings + playback
+  // without a manual backend stop/start.
+  test('logout tears down local audio; re-login restores settings and playback (#119)', async ({ page }) => {
+    await page.addInitScript((cfg) => {
+      localStorage.setItem('grid-layout-v1', JSON.stringify(cfg));
+      localStorage.setItem('ADMIN:grid-layout-v1', JSON.stringify(cfg));
+      localStorage.setItem('local-audio-input', 'default');
+      localStorage.setItem('local-audio-output', 'default');
+      localStorage.setItem('local-audio-enhancements', 'false');
+      // Track the audio pipeline's AudioContexts (created with an explicit
+      // 48 kHz rate in useAudio.ts) — not useCWKeyer's sidetone context,
+      // which earlier specs can leave enabled via persisted keyer settings.
+      const created: AudioContext[] = [];
+      (window as any).__audioContexts = created;
+      const Orig = window.AudioContext;
+      (window as any).AudioContext = class extends Orig {
+        constructor(opts?: AudioContextOptions) { super(opts); if (opts?.sampleRate === 48000) created.push(this); }
+      };
+    }, layoutWithSpectrumAudio);
+
+    await page.goto('/');
+    await connectToDummy(page, dummy);
+
+    const modeSelect = page.getByTestId('modebw-mode-select-compact');
+    await modeSelect.selectOption('CW');
+    await expect(modeSelect).toHaveValue('CW', { timeout: 10_000 });
+    const ptt = page.getByTestId('controls-ptt-button');
+    await ptt.click();
+    await expect(ptt).toHaveClass(/border-red-500/, { timeout: 10_000 });
+
+    await page.getByTitle('Audio Settings').click();
+    await selectDeviceByName(page, 'Backend Input (Mic/Line)', LOOPBACK_INPUT_NAME);
+    await selectDeviceByName(page, 'Backend Output (Speakers)', LOOPBACK_OUTPUT_NAME);
+    await ensureBackendEngineExpanded(page);
+    await page.getByRole('button', { name: 'Start Backend Audio', exact: true }).click();
+    await page.locator('button:has(svg.lucide-x)').first().click();
+
+    const joinAudioButton = page.getByTitle('Join the active audio session');
+    if (await joinAudioButton.isVisible().catch(() => false)) await joinAudioButton.click();
+    await expect(page.getByTitle('Mute Inbound Audio')).toBeEnabled({ timeout: 15_000 });
+
+    const runningContexts = () => page.evaluate(
+      () => ((window as any).__audioContexts as AudioContext[]).filter(c => c.state === 'running').length,
+    );
+    await expect.poll(runningContexts, { timeout: 10_000 }).toBeGreaterThan(0);
+
+    // --- Logout ---
+    await page.getByTitle(/^Sign out/).click();
+    await expect(page.getByPlaceholder('W1ABC')).toBeVisible({ timeout: 10_000 });
+    // No AudioContext may remain running (and none may be rebuilt) on the login screen.
+    await expect.poll(runningContexts, { timeout: 5_000 }).toBe(0);
+    await page.waitForTimeout(1500);
+    expect(await runningContexts()).toBe(0);
+
+    // --- Re-login (same socket, no reload) ---
+    await page.getByPlaceholder('W1ABC').fill('ADMIN');
+    await page.locator('input[type="password"]').fill('TestHarness123!');
+    await page.getByRole('button', { name: /sign in/i }).click();
+
+    // Audio auto-resumes (Sign In click is the user gesture).
+    await expect.poll(runningContexts, { timeout: 15_000 }).toBeGreaterThan(0);
+    await expect(page.getByTitle('Mute Inbound Audio')).toBeEnabled({ timeout: 15_000 });
+
+    // Device selections were restored, not empty.
+    await page.getByTitle('Audio Settings').click();
+    await ensureBackendEngineExpanded(page);
+    const inSel = page.locator('label:text-is("Backend Input (Mic/Line)")').locator('xpath=../following-sibling::select[1]');
+    const outSel = page.locator('label:text-is("Backend Output (Speakers)")').locator('xpath=../following-sibling::select[1]');
+    await expect(inSel).not.toHaveValue('');
+    await expect(outSel).not.toHaveValue('');
+
+    await page.getByRole('button', { name: 'Stop Backend Audio', exact: true }).click();
+    await page.locator('button:has(svg.lucide-x)').first().click();
+    await ptt.click();
+    await disconnectFromDummy(page);
+  });
 });
