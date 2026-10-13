@@ -7,6 +7,7 @@ import type { DebugFlags } from "../types";
 
 interface Props {
   socket: Socket | null;
+  appVersion: string | null;
 }
 
 const FLAG_LABELS: { key: keyof DebugFlags; label: string }[] = [
@@ -28,9 +29,10 @@ export function buildFilename(): string {
   return `rigcontrol-web-diagnostics-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.txt`;
 }
 
-export function buildLogContent(logs: string[]): string {
+export function buildLogContent(logs: string[], appVersion?: string | null): string {
   const header = [
     "RigControl Web Diagnostics",
+    ...(appVersion ? [`App Version: v${appVersion}`] : []),
     `Saved: ${new Date().toISOString()}`,
     `Origin: ${window.electron?.isElectron ? "electron" : "browser"} (${navigator.userAgent})`,
     "",
@@ -38,7 +40,7 @@ export function buildLogContent(logs: string[]): string {
   return header + logs.join("\n") + "\n";
 }
 
-export default function DiagnosticsTab({ socket }: Props) {
+export default function DiagnosticsTab({ socket, appVersion }: Props) {
   const { logs, flags, logEndRef, requestSnapshot, toggleFlag, enableAll, clearView } = useDiagnostics(socket);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
@@ -50,7 +52,7 @@ export default function DiagnosticsTab({ socket }: Props) {
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(buildLogContent(logs));
+      await navigator.clipboard.writeText(buildLogContent(logs, appVersion));
       setCopyStatus("copied");
     } catch {
       setCopyStatus("error");
@@ -59,7 +61,7 @@ export default function DiagnosticsTab({ socket }: Props) {
   };
 
   const handleSave = async () => {
-    const content = buildLogContent(logs);
+    const content = buildLogContent(logs, appVersion);
     const filename = buildFilename();
     try {
       if (window.electron?.isElectron && window.electron.saveTextFile) {
