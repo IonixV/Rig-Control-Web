@@ -95,6 +95,7 @@ A timestamped log of authentication events (newest first). Events recorded:
 | `preferences_cleared` | Admin cleared a user's stored preferences |
 | `lockout_cleared` | Admin manually unlocked a locked-out callsign |
 | `factory_reset` | Factory reset executed |
+| `port_changed` | Server port changed (`old -> new`) |
 
 Each entry shows its full date and time. The audit log is capped at the most recent 1000 entries. The log defaults to showing the 50 most recent; use the limit input to request more.
 
@@ -107,6 +108,10 @@ Displays callsigns that are currently locked out due to repeated failed login or
 ### System Info
 
 Shows the application version, server uptime, Node.js version, and TLS certificate expiry date.
+
+### Change Server Port
+
+The Danger Zone's **Change Server Port** moves the HTTPS server off the default 3000 (range 1024-65535). The server re-binds immediately, saves the choice to `server-config.json` in its data directory, and drops existing connections. The Electron app follows to the new port automatically. Browsers treat the new port as a new site: reload at the new address, accept the certificate warning again, and sign in again (saved layouts are stored per address). The TLS certificate needs no change since it covers IPs, not ports. You must open the new port in your firewall (the Windows installer only adds a rule for 3000) and, for Docker with `-p` mappings, update the mapping. If the `RCW_PORT` environment variable is set it takes precedence and the control is locked.
 
 ### Factory Reset
 

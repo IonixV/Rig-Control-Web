@@ -31,6 +31,8 @@ interface SystemInfo {
   uptime: number;
   nodeVersion: string;
   certExpiry: string;
+  port: number;
+  portSource: "env" | "config" | "default";
 }
 
 interface LockoutEntry {
@@ -118,6 +120,11 @@ export default function AdminTab({ socket, callsign }: Props) {
   // Clear prefs
   const [clearPrefsTarget, setClearPrefsTarget] = useState("");
 
+  // Change port
+  const [portInput, setPortInput] = useState("");
+  const [showPortConfirm, setShowPortConfirm] = useState(false);
+  const [newPortUrl, setNewPortUrl] = useState<string | null>(null);
+
   const showOp = (msg: string, isError: boolean) => {
     if (isError) { setOpError(msg); setOpSuccess(""); }
     else { setOpSuccess(msg); setOpError(""); }
@@ -152,7 +159,11 @@ export default function AdminTab({ socket, callsign }: Props) {
     const onLockouts = ({ lockouts }: { lockouts: LockoutEntry[] }) => setLockouts(lockouts);
     const onAudit = ({ entries }: { entries: AuditEntry[] }) => setAuditLog(entries);
     const onSystemInfo = (info: SystemInfo) => setSystemInfo(info);
-    const onOpResult = ({ ok, error }: { ok: boolean; error?: string }) => {
+    const onOpResult = ({ ok, error, port }: { ok: boolean; error?: string; port?: number }) => {
+      if (ok && port) {
+        setNewPortUrl(`${window.location.protocol}//${window.location.hostname}:${port}`);
+        setShowPortConfirm(false);
+      }
       if (opPendingTimerRef.current) { clearTimeout(opPendingTimerRef.current); opPendingTimerRef.current = null; }
       setOpPending(false);
       showOp(ok ? "Done" : (error ?? "Error"), !ok);
@@ -572,6 +583,63 @@ export default function AdminTab({ socket, callsign }: Props) {
                   </button>
                 </div>
               </div>
+            )}
+          </div>
+
+          {/* Change port */}
+          <div className="space-y-2 border-t border-red-500/20 pt-4">
+            <p className="text-xs font-bold text-red-400">Change Server Port</p>
+            <p className="text-[0.625rem] text-[#8e9299]">
+              Currently <span className="font-mono text-white">{systemInfo?.port ?? "…"}</span> (default 3000). The server re-binds immediately and
+              existing connections are dropped. Browsers treat the new port as a new site, so you must reload at the new
+              address, accept the certificate warning again, and sign in again; saved layouts and preferences are stored per address. Open the new port in your
+              firewall (Windows, Docker and bare-metal hosts), and update bookmarks. The Electron app follows automatically.
+            </p>
+            {systemInfo?.portSource === "env" ? (
+              <p className="text-[0.625rem] text-amber-400">
+                Locked: the port is set by the RCW_PORT environment variable. Change or remove it to configure the port here.
+              </p>
+            ) : newPortUrl ? (
+              <p className="text-[0.625rem] text-green-400">
+                Port changed. Continue at <a href={newPortUrl} className="underline font-mono">{newPortUrl}</a>
+              </p>
+            ) : (
+              <>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min={1024}
+                    max={65535}
+                    value={portInput}
+                    onChange={(e) => { setPortInput(e.target.value); setShowPortConfirm(false); }}
+                    placeholder="1024–65535"
+                    className="flex-1 bg-[#0a0a0a] border border-[#2a2b2e] rounded px-2 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-red-500/50 transition-colors"
+                  />
+                  {!showPortConfirm && (
+                    <button
+                      onClick={() => setShowPortConfirm(true)}
+                      disabled={!/^\d+$/.test(portInput) || Number(portInput) < 1024 || Number(portInput) > 65535 || Number(portInput) === systemInfo?.port || opPending}
+                      className={cn(btnClass, "bg-red-500/10 text-red-400 hover:bg-red-500/30 border border-red-500/40 disabled:opacity-30 disabled:cursor-not-allowed")}
+                    >
+                      Change…
+                    </button>
+                  )}
+                </div>
+                {showPortConfirm && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { beginOp(); socket?.emit("admin:set-port", { port: Number(portInput) }); }}
+                      disabled={opPending}
+                      className={cn(btnClass, "bg-red-500/20 text-red-300 hover:bg-red-500/40 border border-red-500/50 disabled:opacity-30")}
+                    >
+                      Confirm: move to port {portInput}
+                    </button>
+                    <button onClick={() => setShowPortConfirm(false)} className={cn(btnClass, "bg-[#1a1b1e] text-[#8e9299] border border-[#2a2b2e]")}>
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

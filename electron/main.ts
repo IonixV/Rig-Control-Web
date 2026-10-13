@@ -24,6 +24,7 @@ const windowStatePath = path.join(app.getPath('userData'), 'window-state.json');
 // close, since window-all-closed deliberately doesn't quit there) — these
 // track what must only ever happen once.
 let serverStarted = false;
+let serverPort = 3000;
 let mainWindow: BrowserWindow | null = null;
 
 function loadWindowState() {
@@ -169,7 +170,7 @@ async function createWindow() {
   const userDataPath = isDev ? process.cwd() : app.getPath('userData');
   if (!serverStarted) {
     serverStarted = true;
-    await startServer(appPath, userDataPath);
+    serverPort = await startServer(appPath, userDataPath);
   }
 
   const savedState = loadWindowState();
@@ -255,12 +256,9 @@ async function createWindow() {
     }
   });
 
-  if (isDev) {
-    win.loadURL('https://localhost:3000');
-    // win.webContents.openDevTools();
-  } else {
-    win.loadURL('https://localhost:3000');
-  }
+  // The port is admin-configurable (server-config.json) and may change while running;
+  // server.ts re-points the window itself via setElectronWindow() on a live change.
+  win.loadURL(`https://localhost:${serverPort}`);
 }
 
 // Registered once at module scope — ipcMain.handle throws if called twice

@@ -331,8 +331,14 @@ export interface ServerContext {
   dxClusterAttemptCount: number;
   dxClusterLoggedIn: boolean;
 
+  /** Port the HTTPS server is currently listening on, and where it came from. */
+  port: number;
+  portSource: "env" | "config" | "default";
+
   // Cross-module callbacks (wired in orchestrator after modules init)
   saveSettings: () => void;
+  /** Re-binds the HTTPS server to a new port. Resolves with an error message, or null on success. */
+  changePort: (port: number) => Promise<string | null>;
   sendToRig: (cmd: string, useExtended?: boolean, priority?: boolean) => Promise<string>;
 }
 
@@ -547,7 +553,11 @@ export function createInitialContext(io: Server, baseDir: string, dataDir: strin
     dxClusterAttemptCount: 0,
     dxClusterLoggedIn: false,
 
+    port: 3000,
+    portSource: "default",
+
     saveSettings: () => {},
+    changePort: () => Promise.resolve("changePort not yet initialized"),
     sendToRig: () => Promise.reject("sendToRig not yet initialized"),
   };
 }

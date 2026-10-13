@@ -20,6 +20,7 @@ import { startSpectrumListener, stopSpectrumListener } from "./server/spectrum.t
 import { startYaesuScope, stopYaesuScope } from "./server/yaesuScope.ts";
 import { startIqScope, stopIqScope } from "./server/iqScope.ts";
 import { startDxCluster, stopDxCluster } from "./server/dxCluster.ts";
+import { resolvePort, probePort, saveConfiguredPort } from "./server/serverConfig.ts";
 import {
   initAuth,
   issueToken,
@@ -40,10 +41,11 @@ export async function shutdown(): Promise<void> {
 
 export async function startServer(appPath?: string, userDataPath?: string) {
   const app = express();
-  const PORT = Number(process.env.RCW_PORT) || 3000;
 
   const baseDir = appPath || process.cwd();
   const dataDir = userDataPath || process.env.RCW_DATA_DIR || (process.env.NODE_ENV === "production" ? "/tmp" : process.cwd());
+
+  const { port: initialPort, source: portSource } = resolvePort(dataDir);
 
   const SETTINGS_FILE = path.join(dataDir, "settings.json");
   const RADIOS_FILE = path.join(baseDir, "radios.json");
@@ -66,6 +68,8 @@ export async function startServer(appPath?: string, userDataPath?: string) {
   });
 
   const ctx = createInitialContext(io, baseDir, dataDir);
+  ctx.port = initialPort;
+  ctx.portSource = portSource;
 
   // Capture all console output (vlog* subsystem lines + plain console.*)
   // into ctx.diagnosticsLog as early as possible, for the Diagnostics tab.
@@ -81,6 +85,45 @@ export async function startServer(appPath?: string, userDataPath?: string) {
 
   // Wire cross-module callbacks
   ctx.saveSettings = () => saveSettings(ctx, SETTINGS_FILE);
+  ctx.changePort = async (newPort) => {
+    const oldPort = ctx.port;
+    const probeError = await probePort(newPort);
+    if (probeError) {
+      return probeError === "EADDRINUSE" ? `Port ${newPort} is already in use` : `Cannot bind port ${newPort} (${probeError})`;
+    }
+    const staleSockets = new Set(openSockets);
+    // close() stops accepting new connections but leaves existing ones open, so the
+    // admin's own socket survives long enough to receive the result. engine.io
+    // registers a "close" listener on the server that tears down every client
+    // (engine.io/build/server.js, attach()), which is wrong for a re-listen, so
+    // drop it first. Its only "close" listener on this server.
+    httpServer.removeAllListeners("close");
+    // Don't await its callback: that only fires once every open connection ends,
+    // including the admin's own. The listening handle itself closes immediately.
+    httpServer.close();
+    const listenOn = (p: number) => new Promise<string | null>((resolve) => {
+      httpServer.once("error", (err: NodeJS.ErrnoException) => resolve(err.code ?? "UNKNOWN"));
+      httpServer.listen(p, "0.0.0.0", () => { httpServer.removeAllListeners("error"); resolve(null); });
+    });
+    const err = await listenOn(newPort);
+    if (err) {
+      await listenOn(oldPort);
+      return `Failed to bind port ${newPort} (${err}); still on ${oldPort}`;
+    }
+    try {
+      saveConfiguredPort(dataDir, newPort);
+    } catch (e: any) {
+      console.warn(`[PORT] Could not persist port to server-config.json: ${e?.message}`);
+    }
+    ctx.port = newPort;
+    console.log(`Server now running on https://localhost:${newPort}`);
+    // Move the Electron window to the new origin, and drop old-port connections after a grace period.
+    setTimeout(() => {
+      electronWin?.loadURL?.(`https://localhost:${newPort}`);
+      staleSockets.forEach((s) => s.destroy());
+    }, 1500);
+    return null;
+  };
   ctx.sendToRig = (cmd, ext, pri) => sendToRig(ctx, cmd, ext, pri);
 
   // Load persisted settings
@@ -490,10 +533,10 @@ export async function startServer(appPath?: string, userDataPath?: string) {
     vlogInfra("[SHUTDOWN] Sequence complete");
   };
 
-  return new Promise<void>((resolve) => {
-    httpServer.listen(PORT, "0.0.0.0", () => {
-      console.log(`Server running on https://localhost:${PORT}`);
-      resolve();
+  return new Promise<number>((resolve) => {
+    httpServer.listen(ctx.port, "0.0.0.0", () => {
+      console.log(`Server running on https://localhost:${ctx.port}`);
+      resolve(ctx.port);
     });
   });
 }

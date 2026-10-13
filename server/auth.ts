@@ -7,6 +7,7 @@ import jwt from "jsonwebtoken";
 import type { Socket } from "socket.io";
 import { getAppVersion } from "./context.ts";
 import type { ServerContext } from "./context.ts";
+import { parsePort } from "./serverConfig.ts";
 import type {
   AuthenticatedSocket,
   UserRecord,
@@ -758,6 +759,8 @@ export function registerAdminHandlers(
         uptime: Date.now() - ctx.serverStartTime,
         nodeVersion: process.version,
         certExpiry,
+        port: ctx.port,
+        portSource: ctx.portSource,
       });
     });
   });
@@ -793,6 +796,43 @@ export function registerAdminHandlers(
         detail: normalizedCallsign,
       });
       socket.emit("admin:op-result", { ok: true });
+    });
+  }));
+
+  socket.on("admin:set-port", withErrorGuard(socket, "admin:op-result", ({ port }: { port: unknown }) => {
+    requireAdmin(socket, ctx, async (authInfo) => {
+      if (ctx.portSource === "env") {
+        socket.emit("admin:op-result", { ok: false, error: "Port is fixed by the RCW_PORT environment variable" });
+        return;
+      }
+      const parsed = parsePort(port);
+      if (parsed === null) {
+        socket.emit("admin:op-result", { ok: false, error: "Port must be a whole number from 1024 to 65535" });
+        return;
+      }
+      if (parsed === ctx.port) {
+        socket.emit("admin:op-result", { ok: false, error: "Server is already using that port" });
+        return;
+      }
+      const oldPort = ctx.port;
+      let error: string | null;
+      try {
+        error = await ctx.changePort(parsed);
+      } catch (e: any) {
+        error = e?.message ?? "Port change failed";
+      }
+      if (error) {
+        socket.emit("admin:op-result", { ok: false, error });
+        return;
+      }
+      appendAudit(ctx, {
+        ts: new Date().toISOString(),
+        event: "port_changed",
+        callsign: authInfo.callsign,
+        ip: socket.handshake.address,
+        detail: `${oldPort} -> ${parsed}`,
+      });
+      socket.emit("admin:op-result", { ok: true, port: parsed });
     });
   }));
 
