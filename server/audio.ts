@@ -324,6 +324,8 @@ async function startAudioLocked(ctx: ServerContext): Promise<void> {
 
       const FRAME_SIZE_BYTES = 960 * 2;
       const pcmAccumulator = new PcmFrameAccumulator(FRAME_SIZE_BYTES);
+      let inboundSentCount = 0;
+      let inboundLastLogMs = Date.now();
 
       ctx.audioInputProcess.on('data', (data: Buffer) => {
         try {
@@ -332,6 +334,14 @@ async function startAudioLocked(ctx: ServerContext): Promise<void> {
             try {
               const encodedPacket = ctx.opusEncoder.encode(frame);
               ctx.io.to("authenticated").emit("audio-inbound", encodedPacket);
+              inboundSentCount++;
+              const nowMs = Date.now();
+              if (nowMs - inboundLastLogMs >= 5000) {
+                const room = ctx.io.sockets.adapter.rooms.get("authenticated")?.size ?? 0;
+                vlog(`[AUDIO-RELAY] ${inboundSentCount} inbound packets in ${((nowMs - inboundLastLogMs) / 1000).toFixed(1)}s, "authenticated" room size=${room}, connected sockets=${ctx.io.engine.clientsCount}`);
+                inboundSentCount = 0;
+                inboundLastLogMs = nowMs;
+              }
             } catch (err) {
               console.error("[AUDIO] Opus encode error:", err);
             }

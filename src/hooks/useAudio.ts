@@ -175,18 +175,34 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, ft8DecodeEn
   // audio-inbound socket handler
   useEffect(() => {
     if (!socket) return;
+    // Debug-only (Diagnostics > Audio): per-reason drop counters, summarized
+    // every 5 s, to show where inbound audio stops (issue #119 follow-up).
+    const stats = { received: 0, played: 0, notAuth: 0, disabled: 0, notPlaying: 0, notReady: 0, mutedNoTap: 0, noDecoder: 0 };
+    let lastLogMs = Date.now();
+    const logStats = () => {
+      const now = Date.now();
+      vlog(`[AUDIO-INBOUND] last ${((now - lastLogMs) / 1000).toFixed(1)}s: received=${stats.received} played=${stats.played} dropped{notAuthenticated=${stats.notAuth} inboundDisabled=${stats.disabled} statusNotPlaying=${stats.notPlaying} localNotReady=${stats.notReady} mutedNoConsumer=${stats.mutedNoTap} decoderNotConfigured=${stats.noDecoder}} | ctx=${audioContextRef.current?.state ?? "none"} decoder=${opusDecoderRef.current?.state ?? "none"} playbackNode=${!!playbackNodeRef.current}`);
+      for (const k of Object.keys(stats) as (keyof typeof stats)[]) stats[k] = 0;
+      lastLogMs = now;
+    };
     const handler = (data: ArrayBuffer | Uint8Array) => {
-      if (!authenticatedRef.current) return;
-      if (!audioSettingsRef.current.inboundEnabled || audioStatusRef.current !== "playing" || !localAudioReadyRef.current) {
-        return;
-      }
+      stats.received++;
+      if (!authenticatedRef.current) { stats.notAuth++; return; }
+      if (!audioSettingsRef.current.inboundEnabled) { stats.disabled++; return; }
+      if (audioStatusRef.current !== "playing") { stats.notPlaying++; return; }
+      if (!localAudioReadyRef.current) { stats.notReady++; return; }
       if (inboundMutedRef.current && !cwDecodeEnabledRef.current && !ft8DecodeEnabledRef.current && !waterfallActiveRef.current && !wsjtxStreamDestRef.current) {
+        stats.mutedNoTap++;
         return;
       }
+      if (!opusDecoderRef.current || opusDecoderRef.current.state !== 'configured') { stats.noDecoder++; return; }
+      stats.played++;
       playInboundAudio(data);
     };
     socket.on("audio-inbound", handler);
-    return () => { socket.off("audio-inbound", handler); };
+    // Timer (not per-packet) so a total silence (received=0) is logged too.
+    const statsTimer = setInterval(() => { if (audioVerbose) logStats(); }, 5000);
+    return () => { socket.off("audio-inbound", handler); clearInterval(statsTimer); };
   }, [socket]);
 
   // Mic capture lifecycle
@@ -311,6 +327,7 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, ft8DecodeEn
   }, [stopMicCapture]);
 
   useEffect(() => {
+    vlog(`[AUDIO-AUTH] authenticated=${authenticated} audioStatus=${audioStatusRef.current} localAudioReady=${localAudioReadyRef.current}`);
     if (!authenticated) teardownLocalAudio();
   }, [authenticated, teardownLocalAudio]);
 
@@ -487,6 +504,7 @@ export function useAudio({ socket, cwDecodeEnabledRef, cwDecoderRef, ft8DecodeEn
         // (AudioWorklet unsupported, module load failure, decoder
         // unsupported) would still flip localAudioReady true and hide the
         // fallback "Join Audio" button behind a false "ready" state.
+        vlog(`[AUDIO-INIT] Local pipeline ready: ctx=${ctx.state} decoder=${opusDecoderRef.current?.state ?? "none"} audioStatus=${audioStatusRef.current}`);
         setLocalAudioReady(true);
         setAudioWasRestarted(false);
       } catch (e) {

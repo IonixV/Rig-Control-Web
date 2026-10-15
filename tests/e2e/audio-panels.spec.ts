@@ -264,6 +264,21 @@ test.describe('AudioFeedPanel + SpectrumAudioPanel via a PipeWire loopback', () 
       () => ((window as any).__audioContexts as AudioContext[]).filter(c => c.state === 'running').length,
     );
     await expect.poll(runningContexts, { timeout: 10_000 }).toBeGreaterThan(0);
+    await page.getByTitle('Unmute Outbound Audio').click();
+
+    // Fingerprint of the Audio Waterfall canvas: proves real inbound samples
+    // reach the AnalyserNode (a running AudioContext alone doesn't).
+    const canvas = page.locator(
+      'xpath=//span[normalize-space(text())="Audio Waterfall"]/ancestor::div[contains(@class,"rounded-xl")][1]',
+    ).locator('canvas').first();
+    const canvasFingerprint = () => canvas.evaluate((el: HTMLCanvasElement) => {
+      const { data } = el.getContext('2d')!.getImageData(0, 0, el.width, el.height);
+      let sum = 0;
+      for (let i = 0; i < data.length; i++) sum += data[i];
+      return sum;
+    });
+    const before = await canvasFingerprint();
+    await expect.poll(canvasFingerprint, { timeout: 15_000 }).not.toBe(before);
 
     // --- Logout ---
     await page.getByTitle(/^Sign out/).click();
@@ -281,6 +296,10 @@ test.describe('AudioFeedPanel + SpectrumAudioPanel via a PipeWire loopback', () 
     // Audio auto-resumes (Sign In click is the user gesture).
     await expect.poll(runningContexts, { timeout: 15_000 }).toBeGreaterThan(0);
     await expect(page.getByTitle('Mute Inbound Audio')).toBeEnabled({ timeout: 15_000 });
+
+    // Inbound audio actually flows again (not just a running context).
+    const afterRelogin = await canvasFingerprint();
+    await expect.poll(canvasFingerprint, { timeout: 15_000 }).not.toBe(afterRelogin);
 
     // Device selections were restored, not empty.
     await page.getByTitle('Audio Settings').click();
