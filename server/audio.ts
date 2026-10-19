@@ -252,14 +252,43 @@ export function resolveDeviceId(ctx: ServerContext, saved: string, label: "input
   return numeric;
 }
 
+// Capture must NOT use closeOnError: a transient "input overflow" (e.g. the
+// event loop stalling briefly during a login) would otherwise permanently
+// close the stream while audioStatus still reads "playing" (issue #119).
+export function buildCaptureOptions(portAudio: any, deviceId: number) {
+  return {
+    channelCount: 1,
+    sampleFormat: portAudio.SampleFormat16Bit,
+    sampleRate: 48000,
+    deviceId,
+    closeOnError: false,
+    framesPerBuffer: 0,
+    maxQueue: 10,
+    highwaterMark: 256,
+  };
+}
+
+// Safety net: if the capture stream closes without stopAudioLocked having
+// asked for it, status "playing" is a lie, so rebuild the pipeline.
+export function handleCaptureClosed(ctx: ServerContext, stream: any): boolean {
+  if (ctx.audioInputProcess !== stream || ctx.audioStatus !== "playing") return false;
+  console.error("[AUDIO-IN] Capture stream closed unexpectedly; restarting backend audio.");
+  startAudio(ctx).catch((err) => console.error("[AUDIO-IN] Restart after unexpected close failed:", err));
+  return true;
+}
+
 async function stopAudioLocked(ctx: ServerContext): Promise<void> {
   vlog("[AUDIO] Stopping audio streaming...");
   if (ctx.outboundTimer) { clearInterval(ctx.outboundTimer); ctx.outboundTimer = null; }
   ctx.outboundJitterBuffer = [];
   let torndownLive = false;
   if (ctx.audioInputProcess) {
-    try { await ctx.audioInputProcess.quit(); } catch (e) {}
+    // Clear the ref first so the stream's 'close' handler (see
+    // handleCaptureClosed) can tell this deliberate teardown apart from a
+    // stream that died on its own.
+    const input = ctx.audioInputProcess;
     ctx.audioInputProcess = null;
+    try { await input.quit(); } catch (e) {}
     torndownLive = true;
   }
   if (ctx.audioOutputProcess) {
@@ -310,17 +339,9 @@ async function startAudioLocked(ctx: ServerContext): Promise<void> {
     try {
       const deviceId = resolveDeviceId(ctx, ctx.audioSettings.inputDevice, "input");
       ctx.audioInputProcess = new ctx.portAudio.AudioIO({
-        inOptions: {
-          channelCount: 1,
-          sampleFormat: ctx.portAudio.SampleFormat16Bit,
-          sampleRate: 48000,
-          deviceId,
-          closeOnError: true,
-          framesPerBuffer: 0,
-          maxQueue: 10,
-          highwaterMark: 256,
-        },
+        inOptions: buildCaptureOptions(ctx.portAudio, deviceId),
       });
+      const inputStream = ctx.audioInputProcess;
 
       const FRAME_SIZE_BYTES = 960 * 2;
       const pcmAccumulator = new PcmFrameAccumulator(FRAME_SIZE_BYTES);
@@ -354,6 +375,8 @@ async function startAudioLocked(ctx: ServerContext): Promise<void> {
       ctx.audioInputProcess.on('error', (err: any) => {
         console.error("[AUDIO-IN] naudiodon error:", err);
       });
+
+      ctx.audioInputProcess.on('close', () => { handleCaptureClosed(ctx, inputStream); });
 
       ctx.audioInputProcess.start();
       vlog(`[AUDIO-IN] Started capture from device ${ctx.audioSettings.inputDevice}`);

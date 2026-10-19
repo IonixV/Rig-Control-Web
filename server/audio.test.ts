@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { isAudioSettingsChangeAllowed, isControlAudioActionAllowed, sanitizeAudioSettingsUpdate, PcmFrameAccumulator } from './audio.ts';
+import { isAudioSettingsChangeAllowed, isControlAudioActionAllowed, sanitizeAudioSettingsUpdate, PcmFrameAccumulator, buildCaptureOptions, handleCaptureClosed } from './audio.ts';
+import { vi } from 'vitest';
 
 describe('isAudioSettingsChangeAllowed', () => {
   it('allows an admin to change backend keys while locked', () => {
@@ -131,5 +132,27 @@ describe('PcmFrameAccumulator', () => {
     acc.push(big, (f) => frames.push(Buffer.from(f)));
     expect(frames.length).toBe(25);
     expect(Buffer.concat(frames)).toEqual(big);
+  });
+});
+
+describe('capture stream resilience (#119)', () => {
+  it('does not close the capture stream on a transient portAudio error', () => {
+    const opts = buildCaptureOptions({ SampleFormat16Bit: 8 }, 5);
+    expect(opts.closeOnError).toBe(false);
+    expect(opts.deviceId).toBe(5);
+  });
+
+  it('restarts audio when the active capture stream closes unexpectedly', () => {
+    const stream = {};
+    const ctx: any = { audioInputProcess: stream, audioStatus: 'playing' };
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(handleCaptureClosed(ctx, stream)).toBe(true);
+  });
+
+  it('ignores the close of a stream that was deliberately torn down or replaced', () => {
+    const stream = {};
+    expect(handleCaptureClosed({ audioInputProcess: null, audioStatus: 'playing' } as any, stream)).toBe(false);
+    expect(handleCaptureClosed({ audioInputProcess: {}, audioStatus: 'playing' } as any, stream)).toBe(false);
+    expect(handleCaptureClosed({ audioInputProcess: stream, audioStatus: 'stopped' } as any, stream)).toBe(false);
   });
 });
