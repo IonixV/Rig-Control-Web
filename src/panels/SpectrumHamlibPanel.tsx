@@ -762,7 +762,7 @@ function SpectrumHamlibPanel({
         />
         {tooltip && (
           <div
-            className="pointer-events-none absolute z-10 px-1.5 py-0.5 rounded bg-black/80 text-[0.6rem] text-emerald-300 whitespace-nowrap"
+            className="pointer-events-none absolute z-10 px-1.5 py-0.5 rounded border border-line bg-panel/90 text-[0.6rem] text-emerald-300 whitespace-nowrap"
             style={{ left: tooltip.x + 8, top: tooltip.y - 18 }}
           >
             {tooltip.label}
