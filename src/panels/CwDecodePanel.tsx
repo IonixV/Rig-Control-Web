@@ -22,7 +22,7 @@ function CwDecodePanel({
   setIsCollapsed,
 }: CwDecodePanelProps) {
   const statsSpan = cwStats.pitch > 0 ? (
-    <span className="text-[0.625rem] text-[#8e9299]">
+    <span className="text-[0.625rem] text-muted">
       {Math.round(cwStats.pitch)}Hz&nbsp;{Math.round(cwStats.speed)}wpm
     </span>
   ) : null;
@@ -30,7 +30,7 @@ function CwDecodePanel({
   const clearBtn = (
     <button
       onClick={() => setCwDecodedText('')}
-      className="px-1.5 py-0.5 hover:bg-white/5 rounded text-[0.5rem] uppercase tracking-wider text-[#8e9299] hover:text-white/60"
+      className="px-1.5 py-0.5 hover:bg-ink/5 rounded text-[0.5rem] uppercase tracking-wider text-muted hover:text-ink/60"
     >
       Clear
     </button>
@@ -38,8 +38,8 @@ function CwDecodePanel({
 
   if (variant === "compact-embedded") {
     return (
-      <div className="flex flex-col h-[80px] border-t border-[#2a2b2e] overflow-hidden">
-        <div className="px-2 py-1 flex items-center justify-between border-b border-[#2a2b2e]">
+      <div className="flex flex-col h-[80px] border-t border-line overflow-hidden">
+        <div className="px-2 py-1 flex items-center justify-between border-b border-line">
           <div className="flex items-center gap-2">
             <span className="text-[0.625rem] uppercase text-emerald-500 font-bold tracking-wider">CW Decode</span>
             {statsSpan}
@@ -47,7 +47,7 @@ function CwDecodePanel({
           {clearBtn}
         </div>
         <div ref={cwScrollContainerRef} className="flex-1 overflow-y-auto cw-scroll p-2 font-mono text-[0.625rem] text-emerald-400 leading-relaxed break-all">
-          {cwDecodedText || <span className="text-[#4a4b4e]">waiting for CW…</span>}
+          {cwDecodedText || <span className="text-faint">waiting for CW…</span>}
         </div>
       </div>
     );
@@ -63,8 +63,8 @@ function CwDecodePanel({
           </div>
           {clearBtn}
         </div>
-        <div ref={cwScrollContainerRef} className="bg-[#0a0a0a] rounded-lg border border-[#2a2b2e] p-2 h-14 overflow-y-auto cw-scroll font-mono text-[0.625rem] text-emerald-400 leading-relaxed break-all">
-          {cwDecodedText || <span className="text-[#4a4b4e]">waiting for CW…</span>}
+        <div ref={cwScrollContainerRef} className="bg-app rounded-lg border border-line p-2 h-14 overflow-y-auto cw-scroll font-mono text-[0.625rem] text-emerald-400 leading-relaxed break-all">
+          {cwDecodedText || <span className="text-faint">waiting for CW…</span>}
         </div>
       </div>
     );
@@ -87,7 +87,7 @@ function CwDecodePanel({
       bodyClassName="p-3"
     >
       <div ref={cwScrollContainerRef} className="font-mono text-[0.625rem] text-emerald-400 leading-relaxed break-all h-20 overflow-y-auto cw-scroll">
-        {cwDecodedText || <span className="text-[#4a4b4e]">waiting for CW…</span>}
+        {cwDecodedText || <span className="text-faint">waiting for CW…</span>}
       </div>
     </PanelChrome>
   );

@@ -5,7 +5,7 @@ import PanelChrome from "../components/PanelChrome";
 import type { SpectrumData, SpectrumSettings } from "../types";
 import { COLORMAPS, COLORMAP_NAMES } from "../utils/spectrumColors";
 import { scrollCanvasDown } from "../utils";
-import { lsGet, lsSet, drawDbGridLines, drawFilledSpectrumLine, paintWaterfallRow } from "../utils/spectrumCanvas";
+import { lsGet, lsSet, drawDbGridLines, themeInkRgba, drawFilledSpectrumLine, paintWaterfallRow } from "../utils/spectrumCanvas";
 import { useAutoLevel } from "../hooks/useAutoLevel";
 import type { AutoLevelOptions } from "../utils/autoLevel";
 
@@ -267,7 +267,7 @@ function SpectrumHamlibPanel({
 
         // Center frequency marker line
         sCtx.save();
-        sCtx.strokeStyle = "rgba(255,255,255,0.45)";
+        sCtx.strokeStyle = themeInkRgba(0.45);
         sCtx.lineWidth = 1;
         sCtx.setLineDash([4, 4]);
         sCtx.beginPath();
@@ -348,7 +348,7 @@ function SpectrumHamlibPanel({
   const headerActions = (
     <button
       onClick={e => { e.stopPropagation(); setIsSettingsOpen(true); }}
-      className="p-1 rounded hover:bg-white/10 text-gray-400 hover:text-gray-200 transition-colors mr-1"
+      className="p-1 rounded hover:bg-ink/10 text-gray-400 hover:text-gray-200 transition-colors mr-1"
       title="Spectrum scope settings"
     >
       <Settings size={13} />
@@ -361,10 +361,10 @@ function SpectrumHamlibPanel({
       onClick={() => setIsSettingsOpen(false)}
     >
       <div
-        className="bg-[#151619] w-full max-w-sm rounded-2xl border border-[#2a2b2e] shadow-2xl overflow-hidden mt-16"
+        className="bg-panel w-full max-w-sm rounded-2xl border border-line shadow-2xl overflow-hidden mt-16"
         onClick={e => e.stopPropagation()}
       >
-        <div className="p-5 border-b border-[#2a2b2e] flex items-center justify-between bg-[#1a1b1e]">
+        <div className="p-5 border-b border-line flex items-center justify-between bg-panel-2">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400">
               <Activity size={18} />
@@ -373,7 +373,7 @@ function SpectrumHamlibPanel({
           </div>
           <button
             onClick={() => setIsSettingsOpen(false)}
-            className="p-2 hover:bg-[#2a2b2e] rounded-xl text-[#8e9299] transition-all"
+            className="p-2 hover:bg-line rounded-xl text-muted transition-all"
           >
             <X size={18} />
           </button>
@@ -382,8 +382,8 @@ function SpectrumHamlibPanel({
         <div className="p-5 space-y-5">
           {/* Source selector */}
           <div className="space-y-2">
-            <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Spectrum Source</label>
-            <div className="grid grid-cols-3 gap-1 bg-[#0a0a0a] rounded-lg p-1 border border-[#2a2b2e]">
+            <label className="text-[0.625rem] uppercase text-muted font-bold">Spectrum Source</label>
+            <div className="grid grid-cols-3 gap-1 bg-app rounded-lg p-1 border border-line">
               {(["hamlib", "ft4222", "iq"] as const).map(src => (
                 <button
                   key={src}
@@ -395,7 +395,7 @@ function SpectrumHamlibPanel({
                   className={`py-1.5 px-2 rounded text-[0.625rem] font-semibold transition-colors ${
                     spectrumSettings.source === src
                       ? "bg-emerald-600 text-white"
-                      : "text-[#8e9299] hover:text-[#e0e0e0]"
+                      : "text-muted hover:text-ink"
                   }`}
                 >
                   {src === "hamlib" ? "Hamlib UDP" : src === "ft4222" ? "FT-710 via USB" : "Audio I/Q"}
@@ -407,8 +407,8 @@ function SpectrumHamlibPanel({
           {/* Enable / disable */}
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-xs font-semibold text-[#e0e0e0]">Enable Spectrum Scope</div>
-              <div className="text-[0.625rem] text-[#8e9299] mt-0.5">
+              <div className="text-xs font-semibold text-ink">Enable Spectrum Scope</div>
+              <div className="text-[0.625rem] text-muted mt-0.5">
                 {spectrumSettings.source === "hamlib"
                   ? "Receives spectrum data via rigctld UDP multicast"
                   : spectrumSettings.source === "ft4222"
@@ -422,7 +422,7 @@ function SpectrumHamlibPanel({
                 setSpectrumSettings(next);
                 socket?.emit("save-settings", { spectrumSettings: next });
               }}
-              className={`w-10 h-5 rounded-full transition-colors relative ${spectrumSettings.enabled ? "bg-emerald-500" : "bg-[#2a2b2e]"}`}
+              className={`w-10 h-5 rounded-full transition-colors relative ${spectrumSettings.enabled ? "bg-emerald-500" : "bg-line"}`}
             >
               <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${spectrumSettings.enabled ? "left-5.5" : "left-0.5"}`} />
             </button>
@@ -432,23 +432,23 @@ function SpectrumHamlibPanel({
           {spectrumSettings.source === "hamlib" && spectrumSettings.enabled && (
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
-                <label className="text-xs text-[#e0e0e0] shrink-0">Multicast Address</label>
+                <label className="text-xs text-ink shrink-0">Multicast Address</label>
                 <input
                   type="text"
                   value={spectrumSettings.multicastAddr}
                   onChange={e => setSpectrumSettings(prev => ({ ...prev, multicastAddr: e.target.value }))}
                   onBlur={() => socket?.emit("save-settings", { spectrumSettings })}
-                  className="bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-3 py-2 text-xs text-[#e0e0e0] w-36 focus:outline-none focus:border-emerald-500 transition-all"
+                  className="bg-app border border-line rounded-lg px-3 py-2 text-xs text-ink w-36 focus:outline-none focus:border-emerald-500 transition-all"
                 />
               </div>
               <div className="flex items-center justify-between gap-3">
-                <label className="text-xs text-[#e0e0e0] shrink-0">Multicast Port</label>
+                <label className="text-xs text-ink shrink-0">Multicast Port</label>
                 <input
                   type="number"
                   value={spectrumSettings.multicastPort}
                   onChange={e => setSpectrumSettings(prev => ({ ...prev, multicastPort: Number(e.target.value) }))}
                   onBlur={() => socket?.emit("save-settings", { spectrumSettings })}
-                  className="bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-3 py-2 text-xs text-[#e0e0e0] w-24 focus:outline-none focus:border-emerald-500 transition-all"
+                  className="bg-app border border-line rounded-lg px-3 py-2 text-xs text-ink w-24 focus:outline-none focus:border-emerald-500 transition-all"
                 />
               </div>
             </div>
@@ -456,10 +456,10 @@ function SpectrumHamlibPanel({
 
           {/* FT4222: status indicator + span control */}
           {spectrumSettings.source === "ft4222" && spectrumSettings.enabled && (
-            <div className="rounded-lg bg-[#1a1b1e] border border-[#2a2b2e] p-3 space-y-1">
+            <div className="rounded-lg bg-panel-2 border border-line p-3 space-y-1">
               <div className="flex items-center gap-2">
                 <span className={`w-2 h-2 rounded-full ${yaesuStatus.running ? "bg-emerald-400" : "bg-gray-600"}`} />
-                <span className="text-xs text-[#e0e0e0]">
+                <span className="text-xs text-ink">
                   {yaesuStatus.running ? "Reader running" : "Reader stopped"}
                 </span>
               </div>
@@ -494,7 +494,7 @@ function SpectrumHamlibPanel({
             return (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Scope Span</label>
+                  <label className="text-[0.625rem] uppercase text-muted font-bold">Scope Span</label>
                   {liveSpanHz !== null && (
                     <span className="text-[0.625rem] text-emerald-400 font-mono">
                       Live: {liveSpanHz >= 1_000_000 ? `${liveSpanHz / 1_000_000} MHz` : `${liveSpanHz / 1000} kHz`}
@@ -520,7 +520,7 @@ function SpectrumHamlibPanel({
                       className={`py-1.5 px-1 rounded text-[0.5625rem] font-semibold transition-colors ${
                         displayedSpanIndex === index
                           ? "bg-emerald-600 text-white"
-                          : "bg-[#0a0a0a] border border-[#2a2b2e] text-[#8e9299] hover:text-[#e0e0e0]"
+                          : "bg-app border border-line text-muted hover:text-ink"
                       }`}
                     >
                       {label}
@@ -533,10 +533,10 @@ function SpectrumHamlibPanel({
 
           {/* I/Q: status indicator */}
           {spectrumSettings.source === "iq" && spectrumSettings.enabled && (
-            <div className="rounded-lg bg-[#1a1b1e] border border-[#2a2b2e] p-3 space-y-1">
+            <div className="rounded-lg bg-panel-2 border border-line p-3 space-y-1">
               <div className="flex items-center gap-2">
                 <span className={`w-2 h-2 rounded-full ${iqStatus.running ? "bg-emerald-400" : "bg-gray-600"}`} />
-                <span className="text-xs text-[#e0e0e0]">
+                <span className="text-xs text-ink">
                   {iqStatus.running ? "Capture running" : "Capture stopped"}
                 </span>
               </div>
@@ -550,7 +550,7 @@ function SpectrumHamlibPanel({
           {spectrumSettings.source === "iq" && (
             <div className="space-y-3">
               <div className="space-y-2">
-                <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Capture Device</label>
+                <label className="text-[0.625rem] uppercase text-muted font-bold">Capture Device</label>
                 <select
                   value={spectrumSettings.iqAudioDevice}
                   onFocus={() => socket?.emit("get-audio-devices")}
@@ -559,7 +559,7 @@ function SpectrumHamlibPanel({
                     setSpectrumSettings(next);
                     socket?.emit("save-settings", { spectrumSettings: next });
                   }}
-                  className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-3 py-2 text-xs text-[#e0e0e0] focus:outline-none focus:border-emerald-500 transition-all"
+                  className="w-full bg-app border border-line rounded-lg px-3 py-2 text-xs text-ink focus:outline-none focus:border-emerald-500 transition-all"
                 >
                   <option value="">Select capture device</option>
                   {iqInputDevices.map(d => {
@@ -573,7 +573,7 @@ function SpectrumHamlibPanel({
               </div>
 
               <div className="space-y-2">
-                <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Sample Rate (Span)</label>
+                <label className="text-[0.625rem] uppercase text-muted font-bold">Sample Rate (Span)</label>
                 <div className="grid grid-cols-3 gap-1">
                   {IQ_SAMPLE_RATE_OPTIONS.map(rate => (
                     <button
@@ -586,7 +586,7 @@ function SpectrumHamlibPanel({
                       className={`py-1.5 px-1 rounded text-[0.5625rem] font-semibold transition-colors ${
                         spectrumSettings.iqSampleRate === rate
                           ? "bg-emerald-600 text-white"
-                          : "bg-[#0a0a0a] border border-[#2a2b2e] text-[#8e9299] hover:text-[#e0e0e0]"
+                          : "bg-app border border-line text-muted hover:text-ink"
                       }`}
                     >
                       {rate / 1000} kHz
@@ -597,8 +597,8 @@ function SpectrumHamlibPanel({
 
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-semibold text-[#e0e0e0]">Swap I/Q</div>
-                  <div className="text-[0.625rem] text-[#8e9299] mt-0.5">Fixes a mirrored/reversed-sideband display</div>
+                  <div className="text-xs font-semibold text-ink">Swap I/Q</div>
+                  <div className="text-[0.625rem] text-muted mt-0.5">Fixes a mirrored/reversed-sideband display</div>
                 </div>
                 <button
                   onClick={() => {
@@ -606,7 +606,7 @@ function SpectrumHamlibPanel({
                     setSpectrumSettings(next);
                     socket?.emit("save-settings", { spectrumSettings: next });
                   }}
-                  className={`w-10 h-5 rounded-full transition-colors relative ${spectrumSettings.iqSwapChannels ? "bg-emerald-500" : "bg-[#2a2b2e]"}`}
+                  className={`w-10 h-5 rounded-full transition-colors relative ${spectrumSettings.iqSwapChannels ? "bg-emerald-500" : "bg-line"}`}
                 >
                   <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${spectrumSettings.iqSwapChannels ? "left-5.5" : "left-0.5"}`} />
                 </button>
@@ -616,11 +616,11 @@ function SpectrumHamlibPanel({
 
           {/* Color map */}
           <div className="space-y-2">
-            <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Color Map</label>
+            <label className="text-[0.625rem] uppercase text-muted font-bold">Color Map</label>
             <select
               value={colorMapId}
               onChange={e => { setColorMapId(e.target.value); lsSet(lsKey("colormap"), e.target.value); }}
-              className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-all"
+              className="w-full bg-app border border-line rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-all"
             >
               {COLORMAP_NAMES.map(cm => (
                 <option key={cm.id} value={cm.id}>{cm.label}</option>
@@ -631,8 +631,8 @@ function SpectrumHamlibPanel({
           {/* Floor */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Noise Floor</label>
-              <span className="text-xs font-mono text-[#8e9299]">
+              <label className="text-[0.625rem] uppercase text-muted font-bold">Noise Floor</label>
+              <span className="text-xs font-mono text-muted">
                 {autoLevel.autoFloor ? `${Math.round(autoLevel.displayFloor)} dBm (auto)` : `${autoLevel.floor} dBm`}
               </span>
             </div>
@@ -643,7 +643,7 @@ function SpectrumHamlibPanel({
               onChange={e => autoLevel.setFloor(Number(e.target.value))}
               className="w-full accent-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
             />
-            <label className="flex items-center gap-2 text-[0.625rem] text-[#8e9299]">
+            <label className="flex items-center gap-2 text-[0.625rem] text-muted">
               <input
                 type="checkbox"
                 checked={autoLevel.autoFloor}
@@ -656,8 +656,8 @@ function SpectrumHamlibPanel({
           {/* Ceiling */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Ceiling</label>
-              <span className="text-xs font-mono text-[#8e9299]">
+              <label className="text-[0.625rem] uppercase text-muted font-bold">Ceiling</label>
+              <span className="text-xs font-mono text-muted">
                 {autoLevel.autoCeiling ? `${Math.round(autoLevel.displayCeiling)} dBm (auto)` : `${autoLevel.ceiling} dBm`}
               </span>
             </div>
@@ -668,7 +668,7 @@ function SpectrumHamlibPanel({
               onChange={e => autoLevel.setCeiling(Number(e.target.value))}
               className="w-full accent-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
             />
-            <label className="flex items-center gap-2 text-[0.625rem] text-[#8e9299]">
+            <label className="flex items-center gap-2 text-[0.625rem] text-muted">
               <input
                 type="checkbox"
                 checked={autoLevel.autoCeiling}
@@ -681,15 +681,15 @@ function SpectrumHamlibPanel({
           <button
             onClick={() => autoLevel.resetAutoScale()}
             disabled={!autoLevel.autoFloor && !autoLevel.autoCeiling}
-            className="flex items-center gap-1.5 text-[0.625rem] text-[#8e9299] hover:text-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-1.5 text-[0.625rem] text-muted hover:text-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             title="Clear tracked auto-scale estimates and re-converge from scratch"
           >
             <RefreshCw size={11} /> Reset Auto-Scale
           </button>
 
           {/* Requirements */}
-          <div className="rounded-lg bg-[#1a1b1e] border border-[#2a2b2e] p-3 text-[0.625rem] text-[#8e9299] space-y-1 leading-relaxed">
-            <div className="font-semibold text-[#b0b3b8]">Requirements</div>
+          <div className="rounded-lg bg-panel-2 border border-line p-3 text-[0.625rem] text-muted space-y-1 leading-relaxed">
+            <div className="font-semibold text-muted-2">Requirements</div>
             {spectrumSettings.source === "hamlib" ? (
               <>
                 <div>• Radio with CI-V spectrum scope: IC-7300, IC-7610, IC-705, IC-9700</div>
@@ -749,7 +749,7 @@ function SpectrumHamlibPanel({
       <div ref={canvasContainerRef} className="flex flex-col gap-0 relative">
         {cursorLineX !== null && (
           <div
-            className="pointer-events-none absolute top-0 z-10 w-px bg-white/30"
+            className="pointer-events-none absolute top-0 z-10 w-px bg-ink/30"
             style={{ left: cursorLineX, height: spectrumHeight + waterfallHeight }}
           />
         )}
@@ -757,7 +757,7 @@ function SpectrumHamlibPanel({
             incremental scroll-and-shift optimization in the drawing effect above never bakes
             it into the waterfall's pixel history (it would otherwise smear down every frame). */}
         <div
-          className="pointer-events-none absolute z-10 w-0 border-l border-dashed border-white/35"
+          className="pointer-events-none absolute z-10 w-0 border-l border-dashed border-ink/35"
           style={{ left: "50%", top: spectrumHeight, height: waterfallHeight }}
         />
         {tooltip && (

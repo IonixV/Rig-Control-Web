@@ -118,7 +118,7 @@ export function SearchableSelect({
   };
 
   const triggerClasses = cn(
-    "w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 flex items-center justify-between gap-2",
+    "w-full bg-app border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 flex items-center justify-between gap-2",
     className
   );
 
@@ -133,7 +133,7 @@ export function SearchableSelect({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
-        <span className={cn("truncate text-left", selectedOption ? "text-white" : "text-[#8e9299]")}>
+        <span className={cn("truncate text-left", selectedOption ? "text-ink" : "text-muted")}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
         <span className="flex items-center gap-1 shrink-0">
@@ -146,12 +146,12 @@ export function SearchableSelect({
                 e.stopPropagation();
                 onChange("");
               }}
-              className="text-[#8e9299] hover:text-white p-0.5"
+              className="text-muted hover:text-ink p-0.5"
             >
               <X size={14} />
             </span>
           )}
-          <ChevronDown size={14} className="text-[#8e9299]" />
+          <ChevronDown size={14} className="text-muted" />
         </span>
       </button>
 
@@ -160,9 +160,9 @@ export function SearchableSelect({
           <div
             ref={panelRef}
             style={panelStyle}
-            className="z-[70] bg-[#151619] border border-[#2a2b2e] rounded-lg shadow-2xl flex flex-col overflow-hidden"
+            className="z-[70] bg-panel border border-line rounded-lg shadow-2xl flex flex-col overflow-hidden"
           >
-            <div className="p-2 border-b border-[#2a2b2e] shrink-0">
+            <div className="p-2 border-b border-line shrink-0">
               <input
                 ref={inputRef}
                 type="text"
@@ -175,7 +175,7 @@ export function SearchableSelect({
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleInputKeyDown}
                 placeholder="Search..."
-                className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 text-white"
+                className="w-full bg-app border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 text-ink"
               />
             </div>
             <ul
@@ -184,7 +184,7 @@ export function SearchableSelect({
               className="overflow-y-auto custom-scrollbar"
             >
               {filteredOptions.length === 0 ? (
-                <li className="px-3 py-2 text-sm text-[#8e9299] italic">
+                <li className="px-3 py-2 text-sm text-muted italic">
                   No radios match &quot;{query}&quot;
                 </li>
               ) : (
@@ -199,7 +199,7 @@ export function SearchableSelect({
                     onClick={() => selectOption(option)}
                     className={cn(
                       "px-3 py-2 text-sm cursor-pointer truncate",
-                      index === activeIndex ? "bg-emerald-500/20 text-white" : "text-white/90",
+                      index === activeIndex ? "bg-emerald-500/20 text-white" : "text-ink/90",
                       option.value === value && "font-semibold"
                     )}
                   >

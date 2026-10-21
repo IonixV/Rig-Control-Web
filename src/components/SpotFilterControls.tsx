@@ -71,12 +71,12 @@ export function PillToggleGroup({ ac, options, selected, onChange, layout }: Pil
 
   const pillClass = (active: boolean) => cn(
     "flex items-center gap-1.5 px-2 py-1.5 rounded border cursor-pointer transition-all select-none",
-    active ? ac.pill : "bg-[#0a0a0a] border-[#2a2b2e] text-[#8e9299] hover:border-[#4a4b4e] hover:text-white"
+    active ? ac.pill : "bg-app border-line text-muted hover:border-faint hover:text-ink"
   );
 
   const allPillClass = cn(
     "flex items-center gap-1.5 px-2 py-1.5 rounded border cursor-pointer transition-all select-none",
-    allChecked ? ac.pill : indeterminate ? cn(ac.pill, "opacity-60") : "bg-[#0a0a0a] border-[#2a2b2e] text-[#8e9299] hover:border-[#4a4b4e] hover:text-white",
+    allChecked ? ac.pill : indeterminate ? cn(ac.pill, "opacity-60") : "bg-app border-line text-muted hover:border-faint hover:text-ink",
     layout === 'grid-4' && "col-span-1"
   );
 

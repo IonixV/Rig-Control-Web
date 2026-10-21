@@ -418,7 +418,7 @@ export function usePotaSpots({
   const renderSpotsTable = (showFullLocation: boolean) => (
     <table className="w-full text-[0.625rem] font-mono border-collapse table-auto">
       <thead>
-        <tr className="bg-[#0a0a0a]">
+        <tr className="bg-app">
           {([
             { key: 'activator', label: 'Activator', width: '' },
             { key: 'frequency', label: 'Frequency', width: '' },
@@ -429,7 +429,7 @@ export function usePotaSpots({
             <th
               key={key}
               onClick={() => pota.handleSort(key)}
-              className={cn("px-2 py-1.5 text-left text-[0.5625rem] uppercase text-[#8e9299] cursor-pointer hover:text-white select-none border-b border-[#2a2b2e]", width)}
+              className={cn("px-2 py-1.5 text-left text-[0.5625rem] uppercase text-muted cursor-pointer hover:text-ink select-none border-b border-line", width)}
             >
               {label}
               {pota.sortCol === key && pota.sortDir !== 'api' && (
@@ -442,7 +442,7 @@ export function usePotaSpots({
       <tbody>
         {pota.displayedSpots.length === 0 ? (
           <tr>
-            <td colSpan={5} className="px-2 py-4 text-center text-[#4a4b4e] italic">
+            <td colSpan={5} className="px-2 py-4 text-center text-faint italic">
               No POTA spots in the last {pota.maxAge} min...
             </td>
           </tr>
@@ -451,16 +451,16 @@ export function usePotaSpots({
             <React.Fragment key={isPinned ? `pinned-${spot.spotId}` : String(spot.spotId)}>
               {!isPinned && index > 0 && pota.displayedSpots[index - 1].isPinned && (
                 <tr>
-                  <td colSpan={5} className="px-2 py-1 text-center text-[0.5rem] uppercase tracking-widest text-[#4a4b4e] border-t-2 border-[#2a2b2e]">
+                  <td colSpan={5} className="px-2 py-1 text-center text-[0.5rem] uppercase tracking-widest text-faint border-t-2 border-line">
                     — on frequency —
                   </td>
                 </tr>
               )}
               <tr className={cn(
-                "border-b border-[#2a2b2e]/40 transition-colors",
+                "border-b border-line/40 transition-colors",
                 pota.matchedSpotIds.has(spot.spotId)
                   ? "bg-red-500/10 hover:bg-red-500/20"
-                  : "hover:bg-white/5"
+                  : "hover:bg-ink/5"
               )}>
                 <td className="px-2 py-1 text-emerald-400 whitespace-nowrap">{spot.activator}</td>
                 <td className="px-2 py-1 whitespace-nowrap">
@@ -473,13 +473,13 @@ export function usePotaSpots({
                     {parseFloat((spot.frequency / 1000).toFixed(4)).toString()}
                   </button>
                 </td>
-                <td className="px-2 py-1 text-[#e0e0e0] whitespace-nowrap">{spot.mode}</td>
-                <td className="px-2 py-1 text-[#8e9299]">
+                <td className="px-2 py-1 text-ink whitespace-nowrap">{spot.mode}</td>
+                <td className="px-2 py-1 text-muted">
                   {showFullLocation
                     ? `${spot.locationDesc} · ${spot.reference} · ${spot.name}`
                     : `${spot.locationDesc} · ${spot.reference}`}
                 </td>
-                <td className="px-2 py-1 text-[#8e9299] whitespace-nowrap">{formatSpotAge(potaAccessors.timeMs(spot))}</td>
+                <td className="px-2 py-1 text-muted whitespace-nowrap">{formatSpotAge(potaAccessors.timeMs(spot))}</td>
               </tr>
             </React.Fragment>
           ))
@@ -491,7 +491,7 @@ export function usePotaSpots({
   const renderSotaSpotsTable = () => (
     <table className="w-full text-[0.625rem] font-mono border-collapse table-auto">
       <thead>
-        <tr className="bg-[#0a0a0a]">
+        <tr className="bg-app">
           {([
             { key: 'activatorCallsign', label: 'Activator', width: '' },
             { key: 'frequency', label: 'Frequency', width: '' },
@@ -502,7 +502,7 @@ export function usePotaSpots({
             <th
               key={key}
               onClick={() => sota.handleSort(key)}
-              className={cn("px-2 py-1.5 text-left text-[0.5625rem] uppercase text-[#8e9299] cursor-pointer hover:text-white select-none border-b border-[#2a2b2e]", width)}
+              className={cn("px-2 py-1.5 text-left text-[0.5625rem] uppercase text-muted cursor-pointer hover:text-ink select-none border-b border-line", width)}
             >
               {label}
               {sota.sortCol === key && sota.sortDir !== 'api' && (
@@ -515,7 +515,7 @@ export function usePotaSpots({
       <tbody>
         {sota.displayedSpots.length === 0 ? (
           <tr>
-            <td colSpan={5} className="px-2 py-4 text-center text-[#4a4b4e] italic">
+            <td colSpan={5} className="px-2 py-4 text-center text-faint italic">
               No SOTA spots in the last {sota.maxAge} min...
             </td>
           </tr>
@@ -524,16 +524,16 @@ export function usePotaSpots({
             <React.Fragment key={isPinned ? `pinned-${spot.id}` : String(spot.id)}>
               {!isPinned && index > 0 && sota.displayedSpots[index - 1].isPinned && (
                 <tr>
-                  <td colSpan={5} className="px-2 py-1 text-center text-[0.5rem] uppercase tracking-widest text-[#4a4b4e] border-t-2 border-[#2a2b2e]">
+                  <td colSpan={5} className="px-2 py-1 text-center text-[0.5rem] uppercase tracking-widest text-faint border-t-2 border-line">
                     — on frequency —
                   </td>
                 </tr>
               )}
               <tr className={cn(
-                "border-b border-[#2a2b2e]/40 transition-colors",
+                "border-b border-line/40 transition-colors",
                 sota.matchedSpotIds.has(spot.id)
                   ? "bg-red-500/10 hover:bg-red-500/20"
-                  : "hover:bg-white/5"
+                  : "hover:bg-ink/5"
               )}>
                 <td className="px-2 py-1 text-amber-400 whitespace-nowrap">{spot.activatorCallsign}</td>
                 <td className="px-2 py-1 whitespace-nowrap">
@@ -546,9 +546,9 @@ export function usePotaSpots({
                     {parseFloat(parseFloat(spot.frequency).toFixed(4)).toString()}
                   </button>
                 </td>
-                <td className="px-2 py-1 text-[#e0e0e0] whitespace-nowrap">{spot.mode}</td>
-                <td className="px-2 py-1 text-[#8e9299]">{spot.associationCode}/{spot.summitCode}</td>
-                <td className="px-2 py-1 text-[#8e9299] whitespace-nowrap">{formatSpotAge(sotaAccessors.timeMs(spot))}</td>
+                <td className="px-2 py-1 text-ink whitespace-nowrap">{spot.mode}</td>
+                <td className="px-2 py-1 text-muted">{spot.associationCode}/{spot.summitCode}</td>
+                <td className="px-2 py-1 text-muted whitespace-nowrap">{formatSpotAge(sotaAccessors.timeMs(spot))}</td>
               </tr>
             </React.Fragment>
           ))
@@ -560,7 +560,7 @@ export function usePotaSpots({
   const renderWwffSpotsTable = () => (
     <table className="w-full text-[0.625rem] font-mono border-collapse table-auto">
       <thead>
-        <tr className="bg-[#0a0a0a]">
+        <tr className="bg-app">
           {([
             { key: 'activator', label: 'Activator', width: '' },
             { key: 'frequency_khz', label: 'Frequency', width: '' },
@@ -571,7 +571,7 @@ export function usePotaSpots({
             <th
               key={key}
               onClick={() => wwff.handleSort(key)}
-              className={cn("px-2 py-1.5 text-left text-[0.5625rem] uppercase text-[#8e9299] cursor-pointer hover:text-white select-none border-b border-[#2a2b2e]", width)}
+              className={cn("px-2 py-1.5 text-left text-[0.5625rem] uppercase text-muted cursor-pointer hover:text-ink select-none border-b border-line", width)}
             >
               {label}
               {wwff.sortCol === key && wwff.sortDir !== 'api' && (
@@ -584,7 +584,7 @@ export function usePotaSpots({
       <tbody>
         {wwff.displayedSpots.length === 0 ? (
           <tr>
-            <td colSpan={5} className="px-2 py-4 text-center text-[#4a4b4e] italic">
+            <td colSpan={5} className="px-2 py-4 text-center text-faint italic">
               No WWFF spots in the last {wwff.maxAge} min...
             </td>
           </tr>
@@ -593,16 +593,16 @@ export function usePotaSpots({
             <React.Fragment key={isPinned ? `pinned-${spot.id}` : String(spot.id)}>
               {!isPinned && index > 0 && wwff.displayedSpots[index - 1].isPinned && (
                 <tr>
-                  <td colSpan={5} className="px-2 py-1 text-center text-[0.5rem] uppercase tracking-widest text-[#4a4b4e] border-t-2 border-[#2a2b2e]">
+                  <td colSpan={5} className="px-2 py-1 text-center text-[0.5rem] uppercase tracking-widest text-faint border-t-2 border-line">
                     — on frequency —
                   </td>
                 </tr>
               )}
               <tr className={cn(
-                "border-b border-[#2a2b2e]/40 transition-colors",
+                "border-b border-line/40 transition-colors",
                 wwff.matchedSpotIds.has(spot.id)
                   ? "bg-red-500/10 hover:bg-red-500/20"
-                  : "hover:bg-white/5"
+                  : "hover:bg-ink/5"
               )}>
                 <td className="px-2 py-1 text-sky-400 whitespace-nowrap">{spot.activator}</td>
                 <td className="px-2 py-1 whitespace-nowrap">
@@ -615,9 +615,9 @@ export function usePotaSpots({
                     {parseFloat((spot.frequency_khz / 1000).toFixed(4)).toString()}
                   </button>
                 </td>
-                <td className="px-2 py-1 text-[#e0e0e0] whitespace-nowrap">{spot.mode}</td>
-                <td className="px-2 py-1 text-[#8e9299]">{spot.reference} · {spot.reference_name}</td>
-                <td className="px-2 py-1 text-[#8e9299] whitespace-nowrap">{formatSpotAge(wwffAccessors.timeMs(spot))}</td>
+                <td className="px-2 py-1 text-ink whitespace-nowrap">{spot.mode}</td>
+                <td className="px-2 py-1 text-muted">{spot.reference} · {spot.reference_name}</td>
+                <td className="px-2 py-1 text-muted whitespace-nowrap">{formatSpotAge(wwffAccessors.timeMs(spot))}</td>
               </tr>
             </React.Fragment>
           ))

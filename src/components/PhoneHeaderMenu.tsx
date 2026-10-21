@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { LayoutGrid, LogOut, Maximize, Menu, Minimize, Plug, Settings, Unplug } from "lucide-react";
+import { LayoutGrid, LogOut, Maximize, Menu, Minimize, Moon, Plug, Settings, Sun, Unplug } from "lucide-react";
 import { cn } from "../utils";
 
 export interface PhoneHeaderMenuProps {
@@ -12,6 +12,8 @@ export interface PhoneHeaderMenuProps {
   onToggleEditMode: () => void;
   isFullscreenActive: boolean;
   onToggleFullscreen: () => void;
+  theme: "dark" | "light";
+  onToggleTheme: () => void;
   onLogout: () => void;
   callsign: string;
 }
@@ -31,6 +33,8 @@ function PhoneHeaderMenu({
   onToggleEditMode,
   isFullscreenActive,
   onToggleFullscreen,
+  theme,
+  onToggleTheme,
   onLogout,
   callsign,
 }: PhoneHeaderMenuProps) {
@@ -55,7 +59,7 @@ function PhoneHeaderMenu({
 
   const triggerClass = variant === "collapsed"
     ? "p-1 rounded transition-all flex-shrink-0"
-    : "p-1.5 sm:p-2 bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg transition-all flex-shrink-0";
+    : "p-1.5 sm:p-2 bg-app border border-line rounded-lg transition-all flex-shrink-0";
   const iconSize = variant === "collapsed" ? 14 : 18;
 
   const rowClass = (active: boolean, danger?: boolean) => cn(
@@ -63,8 +67,8 @@ function PhoneHeaderMenu({
     active
       ? "text-emerald-400 bg-emerald-500/10"
       : danger
-        ? "text-[#8e9299] hover:text-red-400 hover:bg-red-500/10"
-        : "text-[#e0e0e0] hover:bg-white/5"
+        ? "text-muted hover:text-red-400 hover:bg-red-500/10"
+        : "text-ink hover:bg-ink/5"
   );
 
   return (
@@ -77,7 +81,7 @@ function PhoneHeaderMenu({
         <Menu size={iconSize} />
       </button>
       {isOpen && (
-        <div className="absolute right-0 top-full mt-1 w-56 bg-[#151619] border border-[#2a2b2e] rounded-lg shadow-2xl py-1 z-50">
+        <div className="absolute right-0 top-full mt-1 w-56 bg-panel border border-line rounded-lg shadow-2xl py-1 z-50">
           <button
             onClick={() => { setIsOpen(false); onToggleConnect(); }}
             className={rowClass(false)}
@@ -105,6 +109,13 @@ function PhoneHeaderMenu({
           >
             {isFullscreenActive ? <Minimize size={16} /> : <Maximize size={16} />}
             {isFullscreenActive ? "Exit Full Screen" : "Full Screen & Stay Awake"}
+          </button>
+          <button
+            onClick={() => { setIsOpen(false); onToggleTheme(); }}
+            className={rowClass(false)}
+          >
+            {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+            {theme === "dark" ? "Light Theme" : "Dark Theme"}
           </button>
           <button
             onClick={() => { setIsOpen(false); onLogout(); }}

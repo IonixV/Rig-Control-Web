@@ -97,7 +97,7 @@ export function AudioFeedHeaderActions({
       <button
         onClick={() => setIsAudioSettingsOpen(true)}
         className={cn(
-          "hover:bg-[#2a2b2e] rounded-lg text-[#8e9299] transition-all",
+          "hover:bg-line rounded-lg text-muted transition-all",
           variant === "phone" ? "p-1.5" : "p-1"
         )}
         title="Audio Settings"

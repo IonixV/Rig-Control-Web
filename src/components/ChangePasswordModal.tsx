@@ -74,16 +74,16 @@ export default function ChangePasswordModal({
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-app flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        <div className="bg-[#111] border border-[#2a2b2e] rounded-xl p-6 space-y-5">
+        <div className="bg-deep border border-line rounded-xl p-6 space-y-5">
           <div className="flex items-center gap-2">
             <KeyRound size={18} className="text-emerald-500" />
             <div>
-              <h2 className="text-sm font-bold uppercase tracking-widest text-white">
+              <h2 className="text-sm font-bold uppercase tracking-widest text-ink">
                 {forced ? "Change Password Required" : "Change Password"}
               </h2>
-              <p className="text-xs text-[#8e9299] mt-0.5">
+              <p className="text-xs text-muted mt-0.5">
                 {forced
                   ? `Welcome, ${callsign}. You must set a new password before continuing.`
                   : `Changing password for ${callsign}`}
@@ -93,7 +93,7 @@ export default function ChangePasswordModal({
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1">
-              <label className="text-xs font-bold uppercase tracking-wider text-[#8e9299]">
+              <label className="text-xs font-bold uppercase tracking-wider text-muted">
                 Current Password
               </label>
               <input
@@ -101,12 +101,12 @@ export default function ChangePasswordModal({
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 autoComplete="current-password"
-                className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-emerald-600 transition-colors"
+                className="w-full bg-app border border-line rounded-lg px-3 py-2 text-sm font-mono text-ink focus:outline-none focus:border-emerald-600 transition-colors"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold uppercase tracking-wider text-[#8e9299]">
+              <label className="text-xs font-bold uppercase tracking-wider text-muted">
                 New Password
               </label>
               <input
@@ -114,13 +114,13 @@ export default function ChangePasswordModal({
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 autoComplete="new-password"
-                className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-emerald-600 transition-colors"
+                className="w-full bg-app border border-line rounded-lg px-3 py-2 text-sm font-mono text-ink focus:outline-none focus:border-emerald-600 transition-colors"
               />
-              <p className="text-xs text-[#666]">8–72 characters</p>
+              <p className="text-xs text-faint-2">8–72 characters</p>
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold uppercase tracking-wider text-[#8e9299]">
+              <label className="text-xs font-bold uppercase tracking-wider text-muted">
                 Confirm New Password
               </label>
               <input
@@ -128,7 +128,7 @@ export default function ChangePasswordModal({
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 autoComplete="new-password"
-                className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-emerald-600 transition-colors"
+                className="w-full bg-app border border-line rounded-lg px-3 py-2 text-sm font-mono text-ink focus:outline-none focus:border-emerald-600 transition-colors"
               />
             </div>
 
@@ -143,7 +143,7 @@ export default function ChangePasswordModal({
                 <button
                   type="button"
                   onClick={onCancel}
-                  className="flex-1 py-2.5 rounded-lg font-bold uppercase text-sm tracking-wider bg-[#1a1b1e] text-[#8e9299] border border-[#2a2b2e] hover:border-[#444] transition-all"
+                  className="flex-1 py-2.5 rounded-lg font-bold uppercase text-sm tracking-wider bg-panel-2 text-muted border border-line hover:border-faint transition-all"
                 >
                   Cancel
                 </button>
@@ -154,7 +154,7 @@ export default function ChangePasswordModal({
                 className={cn(
                   "flex-1 py-2.5 rounded-lg font-bold uppercase text-sm tracking-wider transition-all",
                   submitting
-                    ? "bg-[#1a1b1e] text-[#444] border border-[#2a2b2e] cursor-not-allowed"
+                    ? "bg-panel-2 text-faint border border-line cursor-not-allowed"
                     : "bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500"
                 )}
               >

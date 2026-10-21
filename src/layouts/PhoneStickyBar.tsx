@@ -30,7 +30,7 @@ function PhoneStickyBar({
   const isCwMode = ['CW', 'CWR', 'CW-R'].includes(status?.mode || '');
 
   return (
-    <div ref={stickyBarRef} className="flex-shrink-0 px-3 py-3 bg-[#151619] border-t border-[#2a2b2e]">
+    <div ref={stickyBarRef} className="flex-shrink-0 px-3 py-3 bg-panel border-t border-line">
       {cwSettings.enabled && isCwMode ? (
         <div className="flex gap-3">
           <button
@@ -58,7 +58,7 @@ function PhoneStickyBar({
             className={cn(
               "flex flex-col items-center justify-center flex-1 h-16 rounded-xl border transition-all gap-1 touch-none select-none",
               !connected && "opacity-50 cursor-not-allowed",
-              ditButtonActive ? "bg-amber-500/20 border-amber-400 text-amber-300" : "bg-[#0a0a0a] border-[#2a2b2e] text-[#e0e0e0]"
+              ditButtonActive ? "bg-amber-500/20 border-amber-400 text-amber-300" : "bg-app border-line text-ink"
             )}
           >
             <span className="text-2xl font-bold leading-none">·</span>
@@ -89,7 +89,7 @@ function PhoneStickyBar({
             className={cn(
               "flex flex-col items-center justify-center flex-1 h-16 rounded-xl border transition-all gap-1 touch-none select-none",
               !connected && "opacity-50 cursor-not-allowed",
-              dahButtonActive ? "bg-amber-500/20 border-amber-400 text-amber-500" : "bg-[#0a0a0a] border-[#2a2b2e] text-[#e0e0e0]"
+              dahButtonActive ? "bg-amber-500/20 border-amber-400 text-amber-500" : "bg-app border-line text-ink"
             )}
           >
             <span className="text-2xl font-bold leading-none">—</span>
@@ -116,7 +116,7 @@ function PhoneStickyBar({
           className={cn(
             "flex flex-col items-center justify-center w-full h-16 rounded-xl border transition-all gap-1 touch-none select-none",
             !connected && "opacity-50 cursor-not-allowed",
-            status.ptt ? "bg-red-500/20 border-red-500 text-red-500" : "bg-[#0a0a0a] border-[#2a2b2e]"
+            status.ptt ? "bg-red-500/20 border-red-500 text-red-500" : "bg-app border-line"
           )}
         >
           <Mic size={24} />

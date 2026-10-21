@@ -44,7 +44,7 @@ export default function SpotComboPanel({
 
   return (
     <>
-      <div className="flex items-center gap-1 px-2 py-1 border-b border-[#2a2b2e] bg-[#1a1b1e] flex-shrink-0">
+      <div className="flex items-center gap-1 px-2 py-1 border-b border-line bg-panel-2 flex-shrink-0">
         {TABS.map(t => (
           <button
             key={t.key}
@@ -53,7 +53,7 @@ export default function SpotComboPanel({
               'px-1.5 py-0.5 rounded text-[0.5625rem] font-bold uppercase tracking-wide transition-all',
               activeTab === t.key
                 ? t.activeClass
-                : 'text-[#8e9299] hover:bg-white/5'
+                : 'text-muted hover:bg-ink/5'
             )}
           >
             {t.label}

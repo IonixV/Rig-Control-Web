@@ -120,8 +120,8 @@ function AudioSettingsModal({
   const backendLocked = audioSettings.backendLockedToAdmin && role !== "admin";
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
-      <div className="bg-[#151619] w-full max-w-md rounded-2xl border border-[#2a2b2e] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-        <div className="p-6 border-b border-[#2a2b2e] flex items-center justify-between bg-[#1a1b1e]">
+      <div className="bg-panel w-full max-w-md rounded-2xl border border-line shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="p-6 border-b border-line flex items-center justify-between bg-panel-2">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-500/10 rounded-lg text-blue-500">
               <Headphones size={20} />
@@ -132,7 +132,7 @@ function AudioSettingsModal({
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-[#2a2b2e] rounded-xl text-[#8e9299] transition-all"
+            className="p-2 hover:bg-line rounded-xl text-muted transition-all"
           >
             <X size={20} />
           </button>
@@ -141,7 +141,7 @@ function AudioSettingsModal({
         <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
           <div className="space-y-4">
             <div className="space-y-4">
-              <h4 className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Local Client Audio (Your System)</h4>
+              <h4 className="text-[0.625rem] uppercase text-muted font-bold">Local Client Audio (Your System)</h4>
 
               {activeMicClientId && clientId !== activeMicClientId && (
                 <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 flex items-center gap-3">
@@ -154,7 +154,7 @@ function AudioSettingsModal({
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-[0.625rem] uppercase text-[#4a4b4e] font-bold">Local Input (Microphone)</label>
+                  <label className="text-[0.625rem] uppercase text-faint font-bold">Local Input (Microphone)</label>
                   {localAudioDevices.inputs.length > 0 && !localAudioDevices.inputs[0].label && (
                     <button
                       onClick={async () => {
@@ -187,7 +187,7 @@ function AudioSettingsModal({
                       startMicCapture();
                     }
                   }}
-                  className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all"
+                  className="w-full bg-app border border-line rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all"
                 >
                   <option value="default">Default Input</option>
                   {localAudioDevices.inputs.map(d => (
@@ -197,7 +197,7 @@ function AudioSettingsModal({
               </div>
 
               <div className="space-y-2">
-                <label className="text-[0.625rem] uppercase text-[#4a4b4e] font-bold">Local Output (Speakers/Headphones)</label>
+                <label className="text-[0.625rem] uppercase text-faint font-bold">Local Output (Speakers/Headphones)</label>
                 <select
                   value={localAudioSettings.outputDevice}
                   onFocus={() => navigator.mediaDevices.enumerateDevices().then(devices => {
@@ -214,7 +214,7 @@ function AudioSettingsModal({
                       (sidetoneCtxRef.current as any).setSinkId(e.target.value).catch(console.error);
                     }
                   }}
-                  className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all"
+                  className="w-full bg-app border border-line rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all"
                 >
                   <option value="default">Default Output</option>
                   {localAudioDevices.outputs.map(d => (
@@ -222,7 +222,7 @@ function AudioSettingsModal({
                   ))}
                 </select>
                 <div className="flex items-center gap-3 pt-1">
-                  <label className="text-[0.625rem] uppercase text-[#4a4b4e] font-bold whitespace-nowrap">Local Speaker Volume</label>
+                  <label className="text-[0.625rem] uppercase text-faint font-bold whitespace-nowrap">Local Speaker Volume</label>
                   <input
                     type="range"
                     min={0}
@@ -237,12 +237,12 @@ function AudioSettingsModal({
                     }}
                     className="flex-1 accent-blue-500"
                   />
-                  <span className="text-xs text-[#8e9299] w-8 text-right">{Math.round(inboundVolume * 100)}%</span>
+                  <span className="text-xs text-muted w-8 text-right">{Math.round(inboundVolume * 100)}%</span>
                 </div>
               </div>
 
               <div className="flex items-center justify-between pt-1">
-                <label className="text-[0.625rem] uppercase text-[#4a4b4e] font-bold">Audio Enhancements (AGC / Noise Suppression / Echo Cancellation)</label>
+                <label className="text-[0.625rem] uppercase text-faint font-bold">Audio Enhancements (AGC / Noise Suppression / Echo Cancellation)</label>
                 <button
                   onClick={() => {
                     const enabled = !localAudioSettings.enhancementsEnabled;
@@ -251,7 +251,7 @@ function AudioSettingsModal({
                   }}
                   className={cn(
                     "relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0",
-                    localAudioSettings.enhancementsEnabled ? "bg-blue-500" : "bg-[#2a2b2e]"
+                    localAudioSettings.enhancementsEnabled ? "bg-blue-500" : "bg-line"
                   )}
                 >
                   <span className={cn(
@@ -263,11 +263,11 @@ function AudioSettingsModal({
             </div>
 
             {/* WSJTX Bridge Section */}
-            <div className="pt-4 border-t border-[#2a2b2e]/50 space-y-3">
+            <div className="pt-4 border-t border-line/50 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Radio size={14} className="text-[#8e9299]" />
-                  <h4 className="text-[0.625rem] uppercase text-[#8e9299] font-bold">WSJTX / Digital Mode Bridge</h4>
+                  <Radio size={14} className="text-muted" />
+                  <h4 className="text-[0.625rem] uppercase text-muted font-bold">WSJTX / Digital Mode Bridge</h4>
                 </div>
                 <div className="flex items-center gap-2">
                   {wsjtxBridgeEnabled && (
@@ -283,7 +283,7 @@ function AudioSettingsModal({
                     onClick={() => setWsjtxBridgeEnabled(!wsjtxBridgeEnabled)}
                     className={cn(
                       "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
-                      wsjtxBridgeEnabled ? "bg-blue-500" : "bg-[#2a2b2e]"
+                      wsjtxBridgeEnabled ? "bg-blue-500" : "bg-line"
                     )}
                   >
                     <span className={cn(
@@ -311,7 +311,7 @@ function AudioSettingsModal({
               {wsjtxBridgeEnabled && (
                 <div className="space-y-3">
                   <div className="space-y-2">
-                    <label className="text-[0.625rem] uppercase text-[#4a4b4e] font-bold">WSJTX Audio Output (Virtual Cable)</label>
+                    <label className="text-[0.625rem] uppercase text-faint font-bold">WSJTX Audio Output (Virtual Cable)</label>
                     <select
                       value={localAudioSettings.wsjtxOutputDevice}
                       onFocus={() => navigator.mediaDevices.enumerateDevices().then(devices => {
@@ -322,7 +322,7 @@ function AudioSettingsModal({
                         setLocalAudioSettings(newSettings);
                         updateWsjtxOutput(e.target.value);
                       }}
-                      className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all"
+                      className="w-full bg-app border border-line rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all"
                     >
                       <option value="">None (Disabled)</option>
                       {localAudioDevices.outputs.map(d => {
@@ -338,16 +338,16 @@ function AudioSettingsModal({
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[0.625rem] uppercase text-[#4a4b4e] font-bold">Bridge WebSocket Port</label>
+                    <label className="text-[0.625rem] uppercase text-faint font-bold">Bridge WebSocket Port</label>
                     <input
                       type="number"
                       value={wsjtxWsPort}
                       onChange={(e) => setWsjtxWsPort(parseInt(e.target.value) || 4541)}
-                      className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all"
+                      className="w-full bg-app border border-line rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all"
                     />
                   </div>
 
-                  <p className="text-[0.5rem] uppercase text-[#4a4b4e] font-bold">
+                  <p className="text-[0.5rem] uppercase text-faint font-bold">
                     Run wsjtx-bridge helper on this machine. In WSJTX, set Rig to "Hamlib NET rigctl" → localhost:4540.{" "}
                     <a href="https://jbdubbs.github.io/Rig-Control-Web/downloads/" target="_blank" rel="noreferrer" className="text-emerald-400 underline hover:text-emerald-300 normal-case">Download Helper</a>
                     {" · "}
@@ -357,12 +357,12 @@ function AudioSettingsModal({
               )}
             </div>
 
-            <div className="pt-4 border-t border-[#2a2b2e]/50">
+            <div className="pt-4 border-t border-line/50">
               <button
                 onClick={onToggleBackendEngineCollapsed}
                 className="w-full flex items-center justify-between mb-3 group"
               >
-                <h4 className="text-[0.625rem] uppercase text-[#8e9299] font-bold group-hover:text-white transition-colors">Backend Audio Engine</h4>
+                <h4 className="text-[0.625rem] uppercase text-muted font-bold group-hover:text-ink transition-colors">Backend Audio Engine</h4>
                 <div className="flex items-center gap-2">
                   <span className={cn(
                     "text-[0.5rem] uppercase font-bold px-1.5 py-0.5 rounded",
@@ -374,7 +374,7 @@ function AudioSettingsModal({
                     "text-[0.5rem] uppercase font-bold px-1.5 py-0.5 rounded",
                     audioStatus === "playing" ? "bg-blue-500/20 text-blue-400"
                       : audioStatus === "cooldown" ? "bg-amber-500/20 text-amber-400"
-                      : "bg-[#2a2b2e] text-[#4a4b4e]"
+                      : "bg-line text-faint"
                   )}>
                     {audioStatus === "playing" ? "RUNNING" : audioStatus === "cooldown" ? "COOLDOWN" : "STOPPED"}
                   </span>
@@ -383,14 +383,14 @@ function AudioSettingsModal({
                       <Lock size={9} /> Locked
                     </span>
                   )}
-                  {isBackendEngineCollapsed ? <ChevronDown size={12} className="text-[#8e9299]" /> : <ChevronUp size={12} className="text-[#8e9299]" />}
+                  {isBackendEngineCollapsed ? <ChevronDown size={12} className="text-muted" /> : <ChevronUp size={12} className="text-muted" />}
                 </div>
               </button>
 
               {!isBackendEngineCollapsed && (<>
               {role === "admin" && (
-                <div className="flex items-center justify-between px-3 py-2 mb-3 bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg">
-                  <div className="flex items-center gap-2 text-[0.625rem] uppercase text-[#8e9299] font-bold">
+                <div className="flex items-center justify-between px-3 py-2 mb-3 bg-app border border-line rounded-lg">
+                  <div className="flex items-center gap-2 text-[0.625rem] uppercase text-muted font-bold">
                     <Lock size={12} /> Restrict to Admins
                   </div>
                   <button
@@ -401,7 +401,7 @@ function AudioSettingsModal({
                     }}
                     className={cn(
                       "w-8 h-4 rounded-full transition-all relative",
-                      audioSettings.backendLockedToAdmin ? "bg-amber-500" : "bg-[#2a2b2e]"
+                      audioSettings.backendLockedToAdmin ? "bg-amber-500" : "bg-line"
                     )}
                   >
                     <div className={cn(
@@ -439,9 +439,9 @@ function AudioSettingsModal({
               <div className={cn("space-y-4", (!audioEngineState.isReady || audioStatus === "cooldown" || backendLocked) && "opacity-50 pointer-events-none")}>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Backend Input (Mic/Line)</label>
+                    <label className="text-[0.625rem] uppercase text-muted font-bold">Backend Input (Mic/Line)</label>
                     <div className="flex items-center gap-2">
-                      <span className="text-[0.5rem] uppercase text-[#4a4b4e]">Enabled</span>
+                      <span className="text-[0.5rem] uppercase text-faint">Enabled</span>
                       <button
                         disabled={backendLocked}
                         onClick={() => {
@@ -451,7 +451,7 @@ function AudioSettingsModal({
                         }}
                         className={cn(
                           "w-8 h-4 rounded-full transition-all relative",
-                          audioSettings.inboundEnabled ? "bg-blue-500" : "bg-[#2a2b2e]"
+                          audioSettings.inboundEnabled ? "bg-blue-500" : "bg-line"
                         )}
                       >
                         <div className={cn(
@@ -470,7 +470,7 @@ function AudioSettingsModal({
                       setAudioSettings(newSettings);
                       socket?.emit("update-audio-settings", newSettings);
                     }}
-                    className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all"
+                    className="w-full bg-app border border-line rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all"
                   >
                     <option value="">Select Backend Input</option>
                     {audioDevices.inputs.map(d => {
@@ -482,9 +482,9 @@ function AudioSettingsModal({
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Backend Output (Speakers)</label>
+                    <label className="text-[0.625rem] uppercase text-muted font-bold">Backend Output (Speakers)</label>
                     <div className="flex items-center gap-2">
-                      <span className="text-[0.5rem] uppercase text-[#4a4b4e]">Enabled</span>
+                      <span className="text-[0.5rem] uppercase text-faint">Enabled</span>
                       <button
                         disabled={backendLocked}
                         onClick={() => {
@@ -494,7 +494,7 @@ function AudioSettingsModal({
                         }}
                         className={cn(
                           "w-8 h-4 rounded-full transition-all relative",
-                          audioSettings.outboundEnabled ? "bg-blue-500" : "bg-[#2a2b2e]"
+                          audioSettings.outboundEnabled ? "bg-blue-500" : "bg-line"
                         )}
                       >
                         <div className={cn(
@@ -513,7 +513,7 @@ function AudioSettingsModal({
                       setAudioSettings(newSettings);
                       socket?.emit("update-audio-settings", newSettings);
                     }}
-                    className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all"
+                    className="w-full bg-app border border-line rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all"
                   >
                     <option value="">Select Backend Output</option>
                     {audioDevices.outputs.map(d => {
@@ -556,14 +556,14 @@ function AudioSettingsModal({
                 </button>
               </div>
 
-              <div className="flex items-center gap-2 p-3 bg-[#0a0a0a] border border-[#2a2b2e] rounded-xl">
+              <div className="flex items-center gap-2 p-3 bg-app border border-line rounded-xl">
                 <div className={cn(
                   "w-2 h-2 rounded-full",
                   audioStatus === "playing" ? "bg-blue-500 animate-pulse"
                     : audioStatus === "cooldown" ? "bg-amber-500 animate-pulse"
-                    : "bg-[#2a2b2e]"
+                    : "bg-line"
                 )} />
-                <span className="text-[0.625rem] uppercase font-bold text-[#8e9299]">
+                <span className="text-[0.625rem] uppercase font-bold text-muted">
                   Backend Audio: {audioStatus.toUpperCase()}
                 </span>
               </div>

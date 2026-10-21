@@ -64,15 +64,15 @@ export default function PanelChrome({
     <div
       ref={outerRef}
       className={cn(
-        "bg-[#151619] rounded-xl border border-[#2a2b2e] overflow-hidden",
+        "bg-panel rounded-xl border border-line overflow-hidden",
         className
       )}
     >
       <div
         className={cn(
           headerPaddingMap[headerSize],
-          "flex items-center justify-between bg-[#1a1b1e]",
-          !hideCollapse && !isCollapsed && "border-b border-[#2a2b2e]"
+          "flex items-center justify-between bg-panel-2",
+          !hideCollapse && !isCollapsed && "border-b border-line"
         )}
       >
         {customHeaderContent ? (
@@ -81,7 +81,7 @@ export default function PanelChrome({
           </div>
         ) : (
           <>
-            <div className="flex items-center gap-2 text-[#8e9299] flex-1 min-w-0">
+            <div className="flex items-center gap-2 text-muted flex-1 min-w-0">
               {isCollapsed && collapsedContent ? (
                 collapsedContent
               ) : (
@@ -110,7 +110,7 @@ export default function PanelChrome({
         {!hideCollapse && (
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-1 hover:bg-white/5 rounded text-[#8e9299] flex-shrink-0"
+            className="p-1 hover:bg-ink/5 rounded text-muted flex-shrink-0"
             title={collapseTitle ?? (isCollapsed ? "Expand" : "Collapse")}
             data-testid={collapseTestId}
           >

@@ -71,14 +71,14 @@ export default function PanelPicker({ existingTypes, availableTypes, onSelect, o
         onClick={onClose}
       />
       {/* Picker panel */}
-      <div className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 bg-[#151619] border border-[#2a2b2e] rounded-xl shadow-2xl overflow-hidden">
+      <div className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 bg-panel border border-line rounded-xl shadow-2xl overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between p-3 border-b border-[#2a2b2e] bg-[#1a1b1e]">
+        <div className="flex items-center justify-between p-3 border-b border-line bg-panel-2">
           {step === 'config' ? (
             <button
               onClick={() => setStep('pick')}
-              className="flex items-center gap-1 text-[#8e9299] hover:text-white transition-colors"
+              className="flex items-center gap-1 text-muted hover:text-ink transition-colors"
             >
               <ChevronLeft size={13} />
               <span className="text-[0.5625rem] uppercase tracking-widest font-bold">
@@ -86,9 +86,9 @@ export default function PanelPicker({ existingTypes, availableTypes, onSelect, o
               </span>
             </button>
           ) : (
-            <span className="text-[0.5625rem] uppercase tracking-widest font-bold text-[#8e9299]">Add Panel</span>
+            <span className="text-[0.5625rem] uppercase tracking-widest font-bold text-muted">Add Panel</span>
           )}
-          <button onClick={onClose} className="p-1 text-[#8e9299] hover:text-white rounded hover:bg-white/5 transition-all">
+          <button onClick={onClose} className="p-1 text-muted hover:text-ink rounded hover:bg-ink/5 transition-all">
             <X size={14} />
           </button>
         </div>
@@ -106,12 +106,12 @@ export default function PanelPicker({ existingTypes, availableTypes, onSelect, o
                   className={cn(
                     "text-left px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all border",
                     inUse
-                      ? "text-[#4a4b4e] border-[#2a2b2e] cursor-not-allowed"
-                      : "text-[#e0e0e0] border-[#2a2b2e] hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-300"
+                      ? "text-faint border-line cursor-not-allowed"
+                      : "text-ink border-line hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-300"
                   )}
                 >
                   {PANEL_LABELS[type]}
-                  {inUse && <span className="block text-[0.5rem] text-[#4a4b4e] normal-case tracking-normal mt-0.5">already placed</span>}
+                  {inUse && <span className="block text-[0.5rem] text-faint normal-case tracking-normal mt-0.5">already placed</span>}
                 </button>
               );
             })}
@@ -126,8 +126,8 @@ export default function PanelPicker({ existingTypes, availableTypes, onSelect, o
               {opts.hasHeightSlider && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[0.625rem] uppercase tracking-widest font-bold text-[#8e9299]">Height</span>
-                    <span className="text-[0.625rem] font-mono text-white">{heightPx}px</span>
+                    <span className="text-[0.625rem] uppercase tracking-widest font-bold text-muted">Height</span>
+                    <span className="text-[0.625rem] font-mono text-ink">{heightPx}px</span>
                   </div>
                   <input
                     type="range"
@@ -138,7 +138,7 @@ export default function PanelPicker({ existingTypes, availableTypes, onSelect, o
                     onChange={(e) => setHeightPx(Number(e.target.value))}
                     className="w-full accent-emerald-500"
                   />
-                  <div className="flex justify-between text-[0.5rem] text-[#5a5b5e]">
+                  <div className="flex justify-between text-[0.5rem] text-faint-2">
                     <span>200px</span>
                     <span>800px</span>
                   </div>
@@ -153,7 +153,7 @@ export default function PanelPicker({ existingTypes, availableTypes, onSelect, o
                     onChange={(e) => setFullWidth(e.target.checked)}
                     className="w-3.5 h-3.5 accent-emerald-500"
                   />
-                  <span className="text-[0.625rem] uppercase tracking-widest font-bold text-[#8e9299]">Full Width</span>
+                  <span className="text-[0.625rem] uppercase tracking-widest font-bold text-muted">Full Width</span>
                 </label>
               )}
 

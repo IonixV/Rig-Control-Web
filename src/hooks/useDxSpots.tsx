@@ -262,7 +262,7 @@ export function useDxSpots({
   const renderDxSpotsTable = () => (
     <table className="w-full text-[0.625rem] font-mono border-collapse table-auto">
       <thead>
-        <tr className="bg-[#0a0a0a]">
+        <tr className="bg-app">
           {([
             { key: 'dxCall', label: 'DX', width: '' },
             { key: 'frequency', label: 'Frequency', width: '' },
@@ -273,7 +273,7 @@ export function useDxSpots({
             <th
               key={key}
               onClick={() => handleDxSort(key)}
-              className={cn("px-2 py-1.5 text-left text-[0.5625rem] uppercase text-[#8e9299] cursor-pointer hover:text-white select-none border-b border-[#2a2b2e]", width)}
+              className={cn("px-2 py-1.5 text-left text-[0.5625rem] uppercase text-muted cursor-pointer hover:text-ink select-none border-b border-line", width)}
             >
               {label}
               {dxSortCol === key && dxSortDir !== 'api' && (
@@ -286,19 +286,19 @@ export function useDxSpots({
       <tbody>
         {!dxClusterEnabled ? (
           <tr>
-            <td colSpan={5} className="px-2 py-4 text-center text-[#4a4b4e] italic">
+            <td colSpan={5} className="px-2 py-4 text-center text-faint italic">
               DX Cluster disabled — enable it in Spot Settings...
             </td>
           </tr>
         ) : !dxConnected ? (
           <tr>
-            <td colSpan={5} className="px-2 py-4 text-center text-[#4a4b4e] italic">
+            <td colSpan={5} className="px-2 py-4 text-center text-faint italic">
               {dxError ? `DX Cluster error: ${dxError}` : 'Connecting to DX Cluster...'}
             </td>
           </tr>
         ) : displayedDxSpots.length === 0 ? (
           <tr>
-            <td colSpan={5} className="px-2 py-4 text-center text-[#4a4b4e] italic">
+            <td colSpan={5} className="px-2 py-4 text-center text-faint italic">
               No DX spots in the last {dxMaxAge} min...
             </td>
           </tr>
@@ -307,16 +307,16 @@ export function useDxSpots({
             <React.Fragment key={isPinned ? `pinned-${spot.id}` : spot.id}>
               {!isPinned && index > 0 && displayedDxSpots[index - 1].isPinned && (
                 <tr>
-                  <td colSpan={5} className="px-2 py-1 text-center text-[0.5rem] uppercase tracking-widest text-[#4a4b4e] border-t-2 border-[#2a2b2e]">
+                  <td colSpan={5} className="px-2 py-1 text-center text-[0.5rem] uppercase tracking-widest text-faint border-t-2 border-line">
                     — on frequency —
                   </td>
                 </tr>
               )}
               <tr className={cn(
-                "border-b border-[#2a2b2e]/40 transition-colors",
+                "border-b border-line/40 transition-colors",
                 matchedDxSpotIds.has(spot.id)
                   ? "bg-red-500/10 hover:bg-red-500/20"
-                  : "hover:bg-white/5"
+                  : "hover:bg-ink/5"
               )}>
                 <td className="px-2 py-1 text-rose-400 whitespace-nowrap">{spot.dxCall}</td>
                 <td className="px-2 py-1 whitespace-nowrap">
@@ -329,9 +329,9 @@ export function useDxSpots({
                     {parseFloat((spot.frequency / 1000).toFixed(4)).toString()}
                   </button>
                 </td>
-                <td className="px-2 py-1 text-[#e0e0e0] whitespace-nowrap">{spot.spotter}</td>
-                <td className="px-2 py-1 text-[#8e9299]">{spot.comment}</td>
-                <td className="px-2 py-1 text-[#8e9299] whitespace-nowrap">{formatDxSpotAge(spot.spotTime)}</td>
+                <td className="px-2 py-1 text-ink whitespace-nowrap">{spot.spotter}</td>
+                <td className="px-2 py-1 text-muted">{spot.comment}</td>
+                <td className="px-2 py-1 text-muted whitespace-nowrap">{formatDxSpotAge(spot.spotTime)}</td>
               </tr>
             </React.Fragment>
           ))

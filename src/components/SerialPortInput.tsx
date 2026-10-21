@@ -133,7 +133,7 @@ export function SerialPortInput({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         className={cn(
-          "w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 text-white",
+          "w-full bg-app border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 text-ink",
           className
         )}
       />
@@ -144,7 +144,7 @@ export function SerialPortInput({
           <div
             ref={panelRef}
             style={panelStyle}
-            className="z-[70] bg-[#151619] border border-[#2a2b2e] rounded-lg shadow-2xl overflow-y-auto custom-scrollbar"
+            className="z-[70] bg-panel border border-line rounded-lg shadow-2xl overflow-y-auto custom-scrollbar"
           >
             <ul id={listboxId} role="listbox">
               {filteredOptions.map((option, index) => (
@@ -159,7 +159,7 @@ export function SerialPortInput({
                   onClick={() => selectOption(option)}
                   className={cn(
                     "px-3 py-2 text-sm cursor-pointer break-all",
-                    index === activeIndex ? "bg-emerald-500/20 text-white" : "text-white/90",
+                    index === activeIndex ? "bg-emerald-500/20 text-white" : "text-ink/90",
                     option.value === value && "font-semibold"
                   )}
                 >

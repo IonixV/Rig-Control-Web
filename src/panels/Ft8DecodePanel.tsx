@@ -16,11 +16,11 @@ function Ft8DecodePanel({ ft8Decodes, ft8ScrollContainerRef, maxHeightClass = 'm
     <div ref={ft8ScrollContainerRef} className={cn(maxHeightClass, "overflow-y-auto overflow-x-hidden custom-scrollbar")}>
       <table className="w-full text-[0.625rem] font-mono border-separate border-spacing-0 table-auto">
         <thead>
-          <tr className="bg-[#0a0a0a]">
+          <tr className="bg-app">
             {COLUMNS.map((label) => (
               <th
                 key={label}
-                className="sticky top-0 z-10 px-2 py-1.5 text-left text-[0.5625rem] uppercase text-[#8e9299] bg-[#0a0a0a] border-b border-[#2a2b2e]"
+                className="sticky top-0 z-10 px-2 py-1.5 text-left text-[0.5625rem] uppercase text-muted bg-app border-b border-line"
               >
                 {label}
               </th>
@@ -30,7 +30,7 @@ function Ft8DecodePanel({ ft8Decodes, ft8ScrollContainerRef, maxHeightClass = 'm
         <tbody>
           {ft8Decodes.length === 0 ? (
             <tr>
-              <td colSpan={COLUMNS.length} className="px-2 py-4 text-center text-[#4a4b4e] italic">
+              <td colSpan={COLUMNS.length} className="px-2 py-4 text-center text-faint italic">
                 Waiting for FT8 decodes...
               </td>
             </tr>
@@ -42,19 +42,19 @@ function Ft8DecodePanel({ ft8Decodes, ft8ScrollContainerRef, maxHeightClass = 'm
                 <React.Fragment key={d.id}>
                   {isNewTimeslot && (
                     <tr>
-                      <td colSpan={COLUMNS.length} className="px-2 py-1 text-center text-[0.6875rem] uppercase tracking-widest text-[#e0e0e0] border-t-2 border-[#2a2b2e]">
+                      <td colSpan={COLUMNS.length} className="px-2 py-1 text-center text-[0.6875rem] uppercase tracking-widest text-ink border-t-2 border-line">
                         — {d.utcTime} UTC —
                       </td>
                     </tr>
                   )}
-                  <tr className="border-b border-[#2a2b2e]/40 hover:bg-white/5">
+                  <tr className="border-b border-line/40 hover:bg-ink/5">
                     <td className={cn("px-2 py-1 whitespace-nowrap", d.snr >= 0 ? "text-emerald-400" : "text-amber-400")}>
                       {d.snr > 0 ? `+${d.snr.toFixed(0)}` : d.snr.toFixed(0)}
                     </td>
-                    <td className="px-2 py-1 text-[#8e9299] whitespace-nowrap">{d.dt.toFixed(1)}</td>
-                    <td className="px-2 py-1 text-[#8e9299] whitespace-nowrap">{d.freqHz.toFixed(0)}</td>
-                    <td className="px-2 py-1 text-[#e0e0e0]">{d.message}</td>
-                    <td className={cn("px-2 py-1 whitespace-nowrap", country ? "text-white font-bold text-[0.6875rem]" : "text-[#8e9299]")}>
+                    <td className="px-2 py-1 text-muted whitespace-nowrap">{d.dt.toFixed(1)}</td>
+                    <td className="px-2 py-1 text-muted whitespace-nowrap">{d.freqHz.toFixed(0)}</td>
+                    <td className="px-2 py-1 text-ink">{d.message}</td>
+                    <td className={cn("px-2 py-1 whitespace-nowrap", country ? "text-ink font-bold text-[0.6875rem]" : "text-muted")}>
                       {country ? country.country : '—'}
                     </td>
                   </tr>
@@ -78,7 +78,7 @@ export function Ft8DepthSelect({ depth, onChange }: { depth: Ft8Depth; onChange:
       value={depth}
       onChange={(e) => onChange(e.target.value as Ft8Depth)}
       title="Decode depth"
-      className="bg-[#0a0a0a] border border-[#2a2b2e] rounded text-[0.5625rem] uppercase text-[#8e9299] px-1.5 py-0.5 hover:text-white focus:outline-none"
+      className="bg-app border border-line rounded text-[0.5625rem] uppercase text-muted px-1.5 py-0.5 hover:text-ink focus:outline-none"
     >
       <option value="fast">Fast</option>
       <option value="balanced">Balanced</option>

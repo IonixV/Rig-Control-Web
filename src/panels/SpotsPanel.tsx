@@ -12,7 +12,7 @@ export function SpotSettingsGear({ accent, onClick }: SpotSettingsGearProps) {
   return (
     <button
       onClick={onClick}
-      className={cn("p-1 rounded transition-colors text-[#8e9299]", hoverClass)}
+      className={cn("p-1 rounded transition-colors text-muted", hoverClass)}
       title="Spot settings"
     >
       <Settings size={11} />

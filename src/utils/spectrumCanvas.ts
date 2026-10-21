@@ -7,8 +7,15 @@ export function lsSet(key: string, value: string): void {
   try { localStorage.setItem(key, value); } catch { /* ignore */ }
 }
 
+// Neutral overlay color (grid, markers) that stays visible on both themes. Reads the
+// theme attribute directly rather than getComputedStyle so it is cheap per frame.
+export function themeInkRgba(alpha: number): string {
+  const light = document.documentElement.dataset.theme === "light";
+  return light ? `rgba(26,27,30,${alpha})` : `rgba(255,255,255,${alpha})`;
+}
+
 export function drawDbGridLines(ctx: CanvasRenderingContext2D, w: number, h: number, effFloor: number, effCeiling: number): void {
-  ctx.strokeStyle = "rgba(255,255,255,0.08)";
+  ctx.strokeStyle = themeInkRgba(0.08);
   ctx.lineWidth = 1;
   for (let db = Math.ceil(effFloor / 10) * 10; db <= effCeiling; db += 10) {
     const y = h - ((db - effFloor) / (effCeiling - effFloor)) * h;

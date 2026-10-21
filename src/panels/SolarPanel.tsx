@@ -55,7 +55,7 @@ function SolarPanel({ solarData, onRefresh }: Props) {
 
   if (!solarData) {
     return (
-      <div className="flex items-center justify-center h-24 text-[#8e9299] text-[0.625rem]">
+      <div className="flex items-center justify-center h-24 text-muted text-[0.625rem]">
         Loading solar data…
       </div>
     );
@@ -68,14 +68,14 @@ function SolarPanel({ solarData, onRefresh }: Props) {
   return (
     <div className="flex flex-col h-full text-[0.625rem] font-mono">
       {/* Tab bar */}
-      <div className="flex gap-1 px-2 pt-1.5 pb-1 border-b border-[#2a2b2e]">
+      <div className="flex gap-1 px-2 pt-1.5 pb-1 border-b border-line">
         {([["hf", "HF"], ["vhf", "VHF"], ["solar", "SOLAR/GEO"]] as const).map(([t, label]) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={cn(
               "px-2 py-0.5 rounded font-bold uppercase transition-all",
-              tab === t ? "bg-sky-600 text-white" : "text-[#8e9299] hover:bg-white/5"
+              tab === t ? "bg-sky-600 text-white" : "text-muted hover:bg-ink/5"
             )}
           >
             {label}
@@ -87,25 +87,25 @@ function SolarPanel({ solarData, onRefresh }: Props) {
         {tab === "hf" && (
           <>
             {/* Quick-glance indices */}
-            <div className="flex gap-x-3 text-white">
+            <div className="flex gap-x-3 text-ink">
               <span>SFI=<span className={sfiColor(solarData.solarflux)}>{solarData.solarflux}</span></span>
-              <span>SN=<span className="text-white">{solarData.sunspots}</span></span>
+              <span>SN=<span className="text-ink">{solarData.sunspots}</span></span>
               <span>A=<span className={aColor(solarData.aindex)}>{solarData.aindex}</span></span>
               <span>K=<span className={kColor(solarData.kindex)}>{solarData.kindex}</span></span>
             </div>
 
             {/* HF band conditions table */}
-            <div className="border border-[#2a2b2e] rounded overflow-hidden mt-0.5">
-              <div className="grid grid-cols-3 bg-[#1a1b1e] text-[#8e9299] px-1.5 py-0.5 border-b border-[#2a2b2e]">
+            <div className="border border-line rounded overflow-hidden mt-0.5">
+              <div className="grid grid-cols-3 bg-panel-2 text-muted px-1.5 py-0.5 border-b border-line">
                 <span>Band</span>
                 <span>Day</span>
                 <span>Night</span>
               </div>
               {sortedHfBands.map(b => (
-                <div key={b.name} className="grid grid-cols-3 px-1.5 py-0.5 even:bg-[#1a1b1e]">
-                  <span className="text-[#8e9299]">{b.name}</span>
-                  <span className={cn(COND_COLOR[b.day] ?? "text-white")}>{b.day}</span>
-                  <span className={cn(COND_COLOR[b.night] ?? "text-white")}>{b.night}</span>
+                <div key={b.name} className="grid grid-cols-3 px-1.5 py-0.5 even:bg-panel-2">
+                  <span className="text-muted">{b.name}</span>
+                  <span className={cn(COND_COLOR[b.day] ?? "text-ink")}>{b.day}</span>
+                  <span className={cn(COND_COLOR[b.night] ?? "text-ink")}>{b.night}</span>
                 </div>
               ))}
             </div>
@@ -115,27 +115,27 @@ function SolarPanel({ solarData, onRefresh }: Props) {
         {tab === "solar" && (() => {
           const solarRows: Array<{ label: string; value: React.ReactNode }> = [
             { label: "SFI",  value: <span className={sfiColor(solarData.solarflux)}>{solarData.solarflux}</span> },
-            { label: "SN",   value: <span className="text-white">{solarData.sunspots}</span> },
+            { label: "SN",   value: <span className="text-ink">{solarData.sunspots}</span> },
             ...(solarData.esfi !== null ? [
               { label: "eSFI", value: <span className={sfiColor(solarData.esfi!)}>{solarData.esfi}</span> },
-              { label: "eSSN", value: <span className="text-white">{solarData.essn}</span> },
+              { label: "eSSN", value: <span className="text-ink">{solarData.essn}</span> },
             ] : []),
           ];
           const geoRows: Array<{ label: string; value: React.ReactNode }> = [
             { label: "A",      value: <span className={aColor(solarData.aindex)}>{solarData.aindex}</span> },
             { label: "K",      value: <span className={kColor(solarData.kindex)}>{solarData.kindex}</span> },
             { label: "Geomag", value: <span className={geomagColor(solarData.geomagfield)}>{solarData.geomagfield}</span> },
-            { label: "XRay",   value: <span className="text-white">{solarData.xray}</span> },
-            { label: "Noise",  value: <span className="text-white">{solarData.signalnoise}</span> },
+            { label: "XRay",   value: <span className="text-ink">{solarData.xray}</span> },
+            { label: "Noise",  value: <span className="text-ink">{solarData.signalnoise}</span> },
           ];
           const renderTable = (heading: string, rows: typeof solarRows) => (
-            <div className="border border-[#2a2b2e] rounded overflow-hidden">
-              <div className="bg-[#1a1b1e] text-[#8e9299] px-1.5 py-0.5 border-b border-[#2a2b2e]">
+            <div className="border border-line rounded overflow-hidden">
+              <div className="bg-panel-2 text-muted px-1.5 py-0.5 border-b border-line">
                 {heading}
               </div>
               {rows.map((r, i) => (
-                <div key={r.label} className={cn("grid grid-cols-2 px-1.5 py-0.5", i % 2 === 0 ? "" : "bg-[#1a1b1e]")}>
-                  <span className="text-[#8e9299]">{r.label}</span>
+                <div key={r.label} className={cn("grid grid-cols-2 px-1.5 py-0.5", i % 2 === 0 ? "" : "bg-panel-2")}>
+                  <span className="text-muted">{r.label}</span>
                   {r.value}
                 </div>
               ))}
@@ -150,43 +150,43 @@ function SolarPanel({ solarData, onRefresh }: Props) {
         })()}
 
         {tab === "vhf" && (
-          <div className="border border-[#2a2b2e] rounded overflow-hidden">
-            <div className="grid grid-cols-[1fr_1fr_auto] bg-[#1a1b1e] text-[#8e9299] px-1.5 py-0.5 border-b border-[#2a2b2e]">
+          <div className="border border-line rounded overflow-hidden">
+            <div className="grid grid-cols-[1fr_1fr_auto] bg-panel-2 text-muted px-1.5 py-0.5 border-b border-line">
               <span>Type</span>
               <span>Location</span>
               <span>Status</span>
             </div>
             {solarData.vhfConditions.map((v, i) => (
-              <div key={i} className="grid grid-cols-[1fr_1fr_auto] px-1.5 py-0.5 even:bg-[#1a1b1e]">
-                <span className="text-[#8e9299]">{v.name}</span>
-                <span className="text-white">{VHF_LOC[v.location] ?? v.location}</span>
+              <div key={i} className="grid grid-cols-[1fr_1fr_auto] px-1.5 py-0.5 even:bg-panel-2">
+                <span className="text-muted">{v.name}</span>
+                <span className="text-ink">{VHF_LOC[v.location] ?? v.location}</span>
                 <span className={v.condition === "Band Closed" ? "text-red-400" : "text-emerald-400"}>
                   {v.condition === "Band Closed" ? "Closed" : v.condition}
                 </span>
               </div>
             ))}
             {solarData.vhfConditions.length === 0 && (
-              <div className="px-1.5 py-1 text-[#8e9299]">No VHF data</div>
+              <div className="px-1.5 py-1 text-muted">No VHF data</div>
             )}
           </div>
         )}
       </div>
 
       {/* Footer */}
-      <div className="px-2 pt-1 pb-1.5 border-t border-[#2a2b2e] text-[#8e9299] space-y-0.5">
+      <div className="px-2 pt-1 pb-1.5 border-t border-line text-muted space-y-0.5">
         <div className="flex items-center justify-between">
           <span>As of {solarData.updated}</span>
           <button
             onClick={onRefresh}
             title="Refresh solar data"
-            className="p-0.5 hover:bg-white/5 rounded transition-colors hover:text-white"
+            className="p-0.5 hover:bg-ink/5 rounded transition-colors hover:text-ink"
           >
             <RefreshCw size={9} />
           </button>
         </div>
-        <div className="text-[0.55rem] text-[#5a5b5e]">
-          Solar data: <span className="text-[#6a6b6e]">hamqsl.com</span> (N0NBH)
-          {solarData.esfi !== null && <> · eSFI/eSSN: <span className="text-[#6a6b6e]">prop.kc2g.com</span> (KC2G/WWROF/GIRO)</>}
+        <div className="text-[0.55rem] text-faint-2">
+          Solar data: <span className="text-faint-2">hamqsl.com</span> (N0NBH)
+          {solarData.esfi !== null && <> · eSFI/eSSN: <span className="text-faint-2">prop.kc2g.com</span> (KC2G/WWROF/GIRO)</>}
         </div>
       </div>
     </div>

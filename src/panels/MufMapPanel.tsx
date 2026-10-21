@@ -341,7 +341,7 @@ function MufMapPanel({ heightPx = DEFAULT_HEIGHT, callsign = "" }: Props) {
   return (
     <div className="flex flex-col">
       {/* Controls bar */}
-      <div className="flex items-center gap-1 px-2 py-1 border-b border-[#2a2b2e] bg-[#1a1b1e] flex-shrink-0">
+      <div className="flex items-center gap-1 px-2 py-1 border-b border-line bg-panel-2 flex-shrink-0">
         <div className="flex gap-0.5">
           {(["mufd", "fof2"] as Metric[]).map(m => (
             <button
@@ -349,14 +349,14 @@ function MufMapPanel({ heightPx = DEFAULT_HEIGHT, callsign = "" }: Props) {
               onClick={() => setMetric(m)}
               className={cn(
                 "px-1.5 py-0.5 rounded text-[0.5625rem] font-bold uppercase tracking-wide transition-all",
-                metric === m ? "bg-sky-600 text-white" : "text-[#8e9299] hover:bg-white/5"
+                metric === m ? "bg-sky-600 text-white" : "text-muted hover:bg-ink/5"
               )}
             >
               {METRIC_LABELS[m]}
             </button>
           ))}
         </div>
-        <span className="text-[#3a3b3e] text-[0.5rem] select-none">|</span>
+        <span className="text-line-strong text-[0.5rem] select-none">|</span>
         <div className="flex gap-0.5">
           {(["now", "1h", "12h", "24h"] as TimeSlot[]).map(t => (
             <button
@@ -364,7 +364,7 @@ function MufMapPanel({ heightPx = DEFAULT_HEIGHT, callsign = "" }: Props) {
               onClick={() => setTimeSlot(t)}
               className={cn(
                 "px-1.5 py-0.5 rounded text-[0.5625rem] font-bold uppercase tracking-wide transition-all",
-                timeSlot === t ? "bg-emerald-600 text-white" : "text-[#8e9299] hover:bg-white/5"
+                timeSlot === t ? "bg-emerald-600 text-white" : "text-muted hover:bg-ink/5"
               )}
             >
               {TIME_LABELS[t]}
@@ -383,7 +383,7 @@ function MufMapPanel({ heightPx = DEFAULT_HEIGHT, callsign = "" }: Props) {
         <button
           onClick={refresh}
           title="Refresh map"
-          className="ml-auto p-0.5 text-[#8e9299] hover:text-white hover:bg-white/5 rounded transition-colors"
+          className="ml-auto p-0.5 text-muted hover:text-ink hover:bg-ink/5 rounded transition-colors"
         >
           <RefreshCw size={9} />
         </button>
@@ -400,12 +400,12 @@ function MufMapPanel({ heightPx = DEFAULT_HEIGHT, callsign = "" }: Props) {
         onDoubleClick={resetTransform}
       >
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#151619] z-10">
-            <span className="text-[#8e9299] text-[0.625rem]">Loading map…</span>
+          <div className="absolute inset-0 flex items-center justify-center bg-panel z-10">
+            <span className="text-muted text-[0.625rem]">Loading map…</span>
           </div>
         )}
         {error && !loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#151619] z-10">
+          <div className="absolute inset-0 flex items-center justify-center bg-panel z-10">
             <span className="text-red-400 text-[0.625rem]">Map unavailable — check connection</span>
           </div>
         )}
@@ -441,11 +441,11 @@ function MufMapPanel({ heightPx = DEFAULT_HEIGHT, callsign = "" }: Props) {
       </div>
 
       {/* Footer */}
-      <div className="px-2 py-1 border-t border-[#2a2b2e] flex items-center justify-between text-[0.55rem] text-[#5a5b5e] flex-shrink-0">
+      <div className="px-2 py-1 border-t border-line flex items-center justify-between text-[0.55rem] text-faint-2 flex-shrink-0">
         <span>
-          {METRIC_DESC[metric]} · <span className="text-[#6a6b6e]">prop.kc2g.com</span> (KC2G/WWROF/GIRO)
+          {METRIC_DESC[metric]} · <span className="text-faint-2">prop.kc2g.com</span> (KC2G/WWROF/GIRO)
         </span>
-        <span className="text-[#4a4b4e]">
+        <span className="text-faint">
           {lastRefreshed.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </span>
       </div>

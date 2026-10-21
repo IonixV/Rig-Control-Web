@@ -530,7 +530,7 @@ function PhoneLayout({
                 ? "border-emerald-500/30"
                 : status.vfo === "VFOB"
                 ? "border-blue-500/30"
-                : "border-[#2a2b2e]"
+                : "border-line"
             )}
             bodyClassName="p-3 space-y-2"
             headerSize="md"
@@ -719,7 +719,7 @@ function PhoneLayout({
             setIsCollapsed={setPotaSpotsCollapsed}
             headerActions={
               <div className="flex items-center gap-1.5">
-                <span className="text-[0.5rem] text-[#8e9299]">
+                <span className="text-[0.5rem] text-muted">
                   {filteredSpots.length} spot{filteredSpots.length !== 1 ? "s" : ""}
                 </span>
                 <SpotSettingsGear accent="emerald" onClick={() => setShowPotaSettings(true)} />
@@ -744,7 +744,7 @@ function PhoneLayout({
             setIsCollapsed={setSotaSpotsCollapsed}
             headerActions={
               <div className="flex items-center gap-1.5">
-                <span className="text-[0.5rem] text-[#8e9299]">
+                <span className="text-[0.5rem] text-muted">
                   {filteredSotaSpots.length} spot{filteredSotaSpots.length !== 1 ? "s" : ""}
                 </span>
                 <SpotSettingsGear accent="amber" onClick={() => setShowSotaSettings(true)} />
@@ -769,7 +769,7 @@ function PhoneLayout({
             setIsCollapsed={setWwffSpotsCollapsed}
             headerActions={
               <div className="flex items-center gap-1.5">
-                <span className="text-[0.5rem] text-[#8e9299]">
+                <span className="text-[0.5rem] text-muted">
                   {filteredWwffSpots.length} spot{filteredWwffSpots.length !== 1 ? "s" : ""}
                 </span>
                 <SpotSettingsGear accent="sky" onClick={() => setShowWwffSettings(true)} />
@@ -794,7 +794,7 @@ function PhoneLayout({
             setIsCollapsed={setDxSpotsCollapsed}
             headerActions={
               <div className="flex items-center gap-1.5">
-                <span className="text-[0.5rem] text-[#8e9299]">
+                <span className="text-[0.5rem] text-muted">
                   {filteredDxSpots.length} spot{filteredDxSpots.length !== 1 ? "s" : ""}
                 </span>
                 <SpotSettingsGear accent="rose" onClick={() => setShowDxSettings(true)} />
@@ -959,14 +959,14 @@ function PhoneLayout({
                 disabled={idx === 0}
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => { e.stopPropagation(); movePhonePanel(item, 'up', idx); }}
-                className="w-6 h-6 flex items-center justify-center rounded bg-[#0a0a0a]/90 border border-[#3a3b3e] text-[#aaaaaa] hover:text-white disabled:opacity-20 disabled:cursor-not-allowed text-[10px] transition-all"
+                className="w-6 h-6 flex items-center justify-center rounded bg-app/90 border border-line-strong text-muted-2 hover:text-ink disabled:opacity-20 disabled:cursor-not-allowed text-[10px] transition-all"
                 title="Move up"
               >▲</button>
               <button
                 disabled={idx === visibleItems.length - 1}
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => { e.stopPropagation(); movePhonePanel(item, 'down', idx); }}
-                className="w-6 h-6 flex items-center justify-center rounded bg-[#0a0a0a]/90 border border-[#3a3b3e] text-[#aaaaaa] hover:text-white disabled:opacity-20 disabled:cursor-not-allowed text-[10px] transition-all"
+                className="w-6 h-6 flex items-center justify-center rounded bg-app/90 border border-line-strong text-muted-2 hover:text-ink disabled:opacity-20 disabled:cursor-not-allowed text-[10px] transition-all"
                 title="Move down"
               >▼</button>
               <button

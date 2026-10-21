@@ -77,7 +77,7 @@ export default function ControlsPanel({
         (!connected || isTuning) && "opacity-50 cursor-not-allowed",
         isTuning ? "bg-red-500/20 border-red-500 text-red-500"
           : (status.tuner || tuneJustFinished) ? "bg-emerald-500/10 border-emerald-500 text-emerald-500"
-          : "bg-[#0a0a0a] border-[#2a2b2e] hover:border-emerald-500"
+          : "bg-app border-line hover:border-emerald-500"
       )}
     >
       <RefreshCw size={isPhone ? 18 : iconSizeLarge} className={cn("transition-transform", isTuning ? "animate-spin" : "")} />
@@ -93,7 +93,7 @@ export default function ControlsPanel({
       className={cn(
         isPhone ? btnBasePhone : btnBase, extraClass,
         (!connected || attenuatorLevels.length === 0) && "opacity-50 cursor-not-allowed",
-        status.attenuation > 0 ? "bg-emerald-500/10 border-emerald-500 text-emerald-500" : "bg-[#0a0a0a] border-[#2a2b2e] hover:border-emerald-500"
+        status.attenuation > 0 ? "bg-emerald-500/10 border-emerald-500 text-emerald-500" : "bg-app border-line hover:border-emerald-500"
       )}
     >
       <Signal size={isPhone ? 18 : iconSizeSmall} />
@@ -109,7 +109,7 @@ export default function ControlsPanel({
       className={cn(
         isPhone ? btnBasePhone : btnBase, extraClass,
         (!connected || preampLevels.length === 0) && "opacity-50 cursor-not-allowed",
-        status.preamp > 0 ? "bg-emerald-500/10 border-emerald-500 text-emerald-500" : "bg-[#0a0a0a] border-[#2a2b2e] hover:border-emerald-500"
+        status.preamp > 0 ? "bg-emerald-500/10 border-emerald-500 text-emerald-500" : "bg-app border-line hover:border-emerald-500"
       )}
     >
       <Zap size={isPhone ? 18 : iconSizeSmall} />
@@ -125,7 +125,7 @@ export default function ControlsPanel({
       className={cn(
         isPhone ? btnBasePhone : btnBase, extraClass,
         (!connected || !nbCapabilities.supported) && "opacity-50 cursor-not-allowed",
-        status.nb ? "bg-emerald-500/10 border-emerald-500 text-emerald-500" : "bg-[#0a0a0a] border-[#2a2b2e] hover:border-emerald-500"
+        status.nb ? "bg-emerald-500/10 border-emerald-500 text-emerald-500" : "bg-app border-line hover:border-emerald-500"
       )}
     >
       <Waves size={isPhone ? 16 : iconSizeSmall} />
@@ -141,7 +141,7 @@ export default function ControlsPanel({
       className={cn(
         isPhone ? btnBasePhone : btnBase, extraClass,
         (!connected || !nrCapabilities.supported) && "opacity-50 cursor-not-allowed",
-        status.nr ? "bg-emerald-500/10 border-emerald-500 text-emerald-500" : "bg-[#0a0a0a] border-[#2a2b2e] hover:border-emerald-500"
+        status.nr ? "bg-emerald-500/10 border-emerald-500 text-emerald-500" : "bg-app border-line hover:border-emerald-500"
       )}
     >
       <Activity size={isPhone ? 16 : iconSizeSmall} />
@@ -157,7 +157,7 @@ export default function ControlsPanel({
       className={cn(
         isPhone ? btnBasePhone : btnBase, extraClass,
         (!connected || !anfCapabilities.supported) && "opacity-50 cursor-not-allowed",
-        status.anf ? "bg-emerald-500/10 border-emerald-500 text-emerald-500" : "bg-[#0a0a0a] border-[#2a2b2e] hover:border-emerald-500"
+        status.anf ? "bg-emerald-500/10 border-emerald-500 text-emerald-500" : "bg-app border-line hover:border-emerald-500"
       )}
     >
       <Activity size={isPhone ? 16 : iconSizeSmall} />
@@ -173,7 +173,7 @@ export default function ControlsPanel({
       className={cn(
         isPhone ? btnBasePhone : btnBase, extraClass,
         (!connected || agcLevels.length === 0) && "opacity-50 cursor-not-allowed",
-        status.agc > 0 ? "bg-emerald-500/10 border-emerald-500 text-emerald-500" : "bg-[#0a0a0a] border-[#2a2b2e] hover:border-emerald-500"
+        status.agc > 0 ? "bg-emerald-500/10 border-emerald-500 text-emerald-500" : "bg-app border-line hover:border-emerald-500"
       )}
     >
       <Settings size={isPhone ? 16 : iconSizeSmall} />
@@ -209,7 +209,7 @@ export default function ControlsPanel({
           title="Radio does not support power control"
           className={cn(
             isPhone ? btnBasePhone : btnBase, extraClass,
-            "opacity-50 cursor-not-allowed bg-[#0a0a0a] border-[#2a2b2e]"
+            "opacity-50 cursor-not-allowed bg-app border-line"
           )}
         >
           <Power size={isPhone ? 18 : iconSizeLarge} />
@@ -248,7 +248,7 @@ export default function ControlsPanel({
           isPhone ? btnBasePhone : btnBase, extraClass,
           powerState === 'on' ? "bg-emerald-500/10 border-emerald-500 text-emerald-500"
             : powerState === 'off' ? "bg-red-500/20 border-red-500 text-red-500"
-            : "bg-[#0a0a0a] border-[#2a2b2e] text-[#8e9299] hover:border-emerald-500"
+            : "bg-app border-line text-muted hover:border-emerald-500"
         )}
       >
         <Power size={isPhone ? 18 : iconSizeLarge} />
@@ -290,7 +290,7 @@ export default function ControlsPanel({
           className={cn(
             btnBase,
             !connected && "opacity-50 cursor-not-allowed",
-            status.ptt ? "bg-red-500/20 border-red-500 text-red-500" : "bg-[#0a0a0a] border-[#2a2b2e] hover:border-emerald-500"
+            status.ptt ? "bg-red-500/20 border-red-500 text-red-500" : "bg-app border-line hover:border-emerald-500"
           )}
         >
           <Mic size={16} />

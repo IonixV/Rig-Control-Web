@@ -120,8 +120,8 @@ function SettingsModal({
   if (!isOpen) return null;
   return (
 <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
-  <div className="bg-[#151619] border border-[#2a2b2e] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-    <div className="p-4 border-b border-[#2a2b2e] flex justify-between items-center bg-[#1a1b1e]">
+  <div className="bg-panel border border-line rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+    <div className="p-4 border-b border-line flex justify-between items-center bg-panel-2">
       <div className="flex items-center gap-2">
         <div className="p-1.5 bg-emerald-500/10 text-emerald-500 rounded-lg">
           <Settings size={16} />
@@ -130,14 +130,14 @@ function SettingsModal({
       </div>
       <button
         onClick={() => onClose()}
-        className="p-1.5 hover:bg-white/5 rounded-full transition-colors text-[#8e9299] hover:text-white"
+        className="p-1.5 hover:bg-ink/5 rounded-full transition-colors text-muted hover:text-ink"
       >
         <X size={18} />
       </button>
     </div>
 
     {/* Tab Bar */}
-    <div className="flex border-b border-[#2a2b2e] bg-[#1a1b1e]">
+    <div className="flex border-b border-line bg-panel-2">
       {([
         ...(["rigctld", "cw", "diagnostics"] as const),
         ...(role === "admin" ? (["admin"] as const) : []),
@@ -149,7 +149,7 @@ function SettingsModal({
             "px-5 py-2.5 text-[0.625rem] font-bold uppercase tracking-wider transition-colors border-b-2 -mb-px",
             activeSettingsTab === tab
               ? "border-emerald-500 text-emerald-400"
-              : "border-transparent text-[#8e9299] hover:text-white"
+              : "border-transparent text-muted hover:text-ink"
           )}
         >
           {tab}
@@ -163,18 +163,18 @@ function SettingsModal({
       <div className="space-y-4">
         <h3 className="text-[0.625rem] uppercase text-emerald-500 font-bold border-b border-emerald-500/20 pb-1">Client Side Settings (Connection to Rigctld)</h3>
         <div className="space-y-1">
-          <label className="text-[0.625rem] uppercase text-[#8e9299]">Host Address</label>
+          <label className="text-[0.625rem] uppercase text-muted">Host Address</label>
           <input 
             type="text" 
             value={host}
             onChange={(e) => setHost(e.target.value)}
-            className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 text-white"
+            className="w-full bg-app border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 text-ink"
             placeholder="127.0.0.1"
           />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="text-[0.625rem] uppercase text-[#8e9299]">Port</label>
+            <label className="text-[0.625rem] uppercase text-muted">Port</label>
             <input 
               type="number" 
               value={(port === null || isNaN(port)) ? "" : port}
@@ -182,15 +182,15 @@ function SettingsModal({
                 const val = parseInt(e.target.value);
                 setPort(isNaN(val) ? NaN : val);
               }}
-              className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 text-white"
+              className="w-full bg-app border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 text-ink"
             />
           </div>
           <div className="space-y-1">
-            <label className="text-[0.625rem] uppercase text-[#8e9299]">Poll Rate</label>
+            <label className="text-[0.625rem] uppercase text-muted">Poll Rate</label>
             <select 
               value={pollRate}
               onChange={(e) => handlePollRateChange(parseInt(e.target.value))}
-              className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 text-white appearance-none cursor-pointer"
+              className="w-full bg-app border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 text-ink appearance-none cursor-pointer"
             >
               <option value={250}>250 ms</option>
               <option value={500}>500 ms</option>
@@ -207,7 +207,7 @@ function SettingsModal({
       <div className="space-y-4">
         <div className="flex items-center justify-between border-b border-blue-500/20 pb-1">
           <h3 className="text-[0.625rem] uppercase text-blue-500 font-bold">Server Side / Backend Settings</h3>
-          <span className="text-[0.5rem] text-[#8e9299] font-medium italic">Hamlib 4.7.0+ Recommended</span>
+          <span className="text-[0.5rem] text-muted font-medium italic">Hamlib 4.7.0+ Recommended</span>
         </div>
         {!rigctldVersionInfo.isSupported && (
           <div className="p-3 bg-amber-500/10 border border-amber-500/50 rounded-xl text-amber-500 text-[0.6875rem] animate-in slide-in-from-top-2">
@@ -221,7 +221,7 @@ function SettingsModal({
           </div>
         )}
         <div className="space-y-1">
-          <label htmlFor="rig-model-select" className="text-[0.625rem] uppercase text-[#8e9299]">Rig Model (Hamlib Rig #)</label>
+          <label htmlFor="rig-model-select" className="text-[0.625rem] uppercase text-muted">Rig Model (Hamlib Rig #)</label>
           <SearchableSelect
             id="rig-model-select"
             options={radioOptions}
@@ -232,7 +232,7 @@ function SettingsModal({
         </div>
 
         <div className="space-y-1">
-          <label className="text-[0.625rem] uppercase text-[#8e9299]">Serial Port (e.g. /dev/serial/by-id/radio-device or COM3)</label>
+          <label className="text-[0.625rem] uppercase text-muted">Serial Port (e.g. /dev/serial/by-id/radio-device or COM3)</label>
           <SerialPortInput
             id="rigctld-serial-port"
             options={serialPortOptions}
@@ -245,41 +245,41 @@ function SettingsModal({
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="text-[0.625rem] uppercase text-[#8e9299]">Server Port</label>
+            <label className="text-[0.625rem] uppercase text-muted">Server Port</label>
             <input 
               type="text"
               value={rigctldSettings.portNumber}
               onChange={(e) => setRigctldSettings(prev => ({ ...prev, portNumber: e.target.value }))}
               placeholder="4532"
-              className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 text-white"
+              className="w-full bg-app border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 text-ink"
             />
           </div>
           <div className="space-y-1">
-            <label className="text-[0.625rem] uppercase text-[#8e9299]">Serial Speed</label>
+            <label className="text-[0.625rem] uppercase text-muted">Serial Speed</label>
             <input 
               type="text"
               value={rigctldSettings.serialPortSpeed}
               onChange={(e) => setRigctldSettings(prev => ({ ...prev, serialPortSpeed: e.target.value }))}
               placeholder="38400"
-              className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 text-white"
+              className="w-full bg-app border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 text-ink"
             />
           </div>
         </div>
 
         <div className="space-y-1">
-          <label className="text-[0.625rem] uppercase text-[#8e9299]">Listen Address</label>
+          <label className="text-[0.625rem] uppercase text-muted">Listen Address</label>
           <input
             type="text"
             value={rigctldSettings.ipAddress}
             onChange={(e) => setRigctldSettings(prev => ({ ...prev, ipAddress: e.target.value }))}
             placeholder="127.0.0.1"
-            className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 text-white"
+            className="w-full bg-app border border-line rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 text-ink"
           />
         </div>
 
         <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <label className="text-[0.625rem] uppercase text-[#8e9299]">PTT Type</label>
+            <label className="text-[0.625rem] uppercase text-muted">PTT Type</label>
             <div className="flex gap-2 flex-wrap justify-end">
               {([
                 { id: 'rig', label: 'CI-V / CAT' },
@@ -294,7 +294,7 @@ function SettingsModal({
                     "px-3 py-1 rounded text-xs font-bold border transition-colors",
                     (rigctldSettings.pttType ?? 'rig') === id
                       ? "bg-emerald-500/20 border-emerald-500 text-emerald-400"
-                      : "border-[#2a2b2e] text-[#8e9299] bg-[#1a1b1e]"
+                      : "border-line text-muted bg-panel-2"
                   )}
                 >
                   {label}
@@ -311,12 +311,12 @@ function SettingsModal({
 
         <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <label className="text-[0.625rem] uppercase text-[#8e9299]">PTT Hotkey</label>
+            <label className="text-[0.625rem] uppercase text-muted">PTT Hotkey</label>
             <button
               onClick={() => setPttRebindActive(active => !active)}
               className={cn(
                 "px-3 py-1 rounded text-xs font-mono border transition-colors",
-                pttRebindActive ? "bg-amber-500/20 border-amber-400 text-amber-300 animate-pulse" : "bg-[#1a1b1e] border-[#2a2b2e] text-[#e0e0e0]"
+                pttRebindActive ? "bg-amber-500/20 border-amber-400 text-amber-300 animate-pulse" : "bg-panel-2 border-line text-ink"
               )}
             >
               {pttRebindActive ? 'Press a key…' : (rigctldSettings.pttKey || 'Unbound')}
@@ -352,14 +352,14 @@ function SettingsModal({
           </div>
         )}
 
-        <div className="flex items-center justify-between p-3 bg-[#0a0a0a] border border-[#2a2b2e] rounded-xl">
+        <div className="flex items-center justify-between p-3 bg-app border border-line rounded-xl">
           <div className="flex items-center gap-2">
             <div className={cn(
               "w-2 h-2 rounded-full",
               rigctldProcessStatus === "running" ? "bg-emerald-500 animate-pulse" : 
-              rigctldProcessStatus === "error" || rigctldProcessStatus === "already_running" ? "bg-red-500" : "bg-[#2a2b2e]"
+              rigctldProcessStatus === "error" || rigctldProcessStatus === "already_running" ? "bg-red-500" : "bg-line"
             )} />
-            <span className="text-[0.625rem] uppercase font-bold text-[#8e9299]">
+            <span className="text-[0.625rem] uppercase font-bold text-muted">
               Status: {rigctldProcessStatus.toUpperCase()}
             </span>
           </div>
@@ -371,7 +371,7 @@ function SettingsModal({
                 "px-3 py-1 rounded text-[0.625rem] font-bold uppercase transition-all",
                 rigctldProcessStatus === "running" 
                   ? "bg-gray-500/10 text-gray-500 border border-gray-500/20 cursor-not-allowed" 
-                  : "bg-blue-500/10 text-blue-500 border border-blue-500/50 hover:bg-blue-500 hover:text-white"
+                  : "bg-blue-500/10 text-blue-500 border border-blue-500/50 hover:bg-blue-500 hover:text-ink"
               )}
             >
               Test
@@ -382,14 +382,14 @@ function SettingsModal({
                   socket?.emit("set-autoconnect-eligible", false);
                   socket?.emit("stop-rigctld");
                 }}
-                className="px-3 py-1 bg-red-500/10 text-red-500 border border-red-500/50 rounded text-[0.625rem] font-bold uppercase hover:bg-red-500 hover:text-white transition-all"
+                className="px-3 py-1 bg-red-500/10 text-red-500 border border-red-500/50 rounded text-[0.625rem] font-bold uppercase hover:bg-red-500 hover:text-ink transition-all"
               >
                 Stop
               </button>
             ) : (
               <button 
                 onClick={() => socket?.emit("start-rigctld")}
-                className="px-3 py-1 bg-emerald-500/10 text-emerald-500 border border-emerald-500/50 rounded text-[0.625rem] font-bold uppercase hover:bg-emerald-500 hover:text-white transition-all"
+                className="px-3 py-1 bg-emerald-500/10 text-emerald-500 border border-emerald-500/50 rounded text-[0.625rem] font-bold uppercase hover:bg-emerald-500 hover:text-ink transition-all"
               >
                 Start
               </button>
@@ -401,22 +401,22 @@ function SettingsModal({
       </div>
 
       {/* Log View */}
-      <div className="space-y-2 pt-4 border-t border-[#2a2b2e]">
+      <div className="space-y-2 pt-4 border-t border-line">
         <div className="flex items-center justify-between">
-          <label className="text-[0.625rem] uppercase text-[#8e9299]">Process Logs</label>
+          <label className="text-[0.625rem] uppercase text-muted">Process Logs</label>
           <button 
             onClick={() => setRigctldLogs([])}
-            className="text-[0.5rem] uppercase font-bold text-[#8e9299] hover:text-white transition-colors"
+            className="text-[0.5rem] uppercase font-bold text-muted hover:text-ink transition-colors"
           >
             Clear
           </button>
         </div>
-        <div className="bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg p-3 h-32 overflow-y-auto custom-scrollbar font-mono text-[0.625rem] space-y-1">
+        <div className="bg-app border border-line rounded-lg p-3 h-32 overflow-y-auto custom-scrollbar font-mono text-[0.625rem] space-y-1">
           {rigctldLogs.length === 0 ? (
-            <p className="text-[#4a4b4e] italic">No logs available...</p>
+            <p className="text-faint italic">No logs available...</p>
           ) : (
             rigctldLogs.map((log, i) => (
-              <div key={i} className="text-[#8e9299] break-all">
+              <div key={i} className="text-muted break-all">
                 <span className="text-emerald-500/50 mr-2">[{i+1}]</span>
                 {log}
               </div>
@@ -438,8 +438,8 @@ function SettingsModal({
         <h3 className="text-[0.625rem] uppercase text-emerald-500 font-bold border-b border-emerald-500/20 pb-1">CW Keyer</h3>
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm text-[#e0e0e0] font-bold">Enable CW Keyer</div>
-            <div className="text-[0.625rem] text-[#8e9299] mt-0.5">Activates keyboard CW keying and sidetone</div>
+            <div className="text-sm text-ink font-bold">Enable CW Keyer</div>
+            <div className="text-[0.625rem] text-muted mt-0.5">Activates keyboard CW keying and sidetone</div>
           </div>
           <button
             onClick={() => {
@@ -448,7 +448,7 @@ function SettingsModal({
               cwSettingsRef.current = next;
               socket?.emit("update-cw-settings", { enabled: !cwSettings.enabled });
             }}
-            className={cn("relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0", cwSettings.enabled ? "bg-emerald-500" : "bg-[#2a2b2e]")}
+            className={cn("relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0", cwSettings.enabled ? "bg-emerald-500" : "bg-line")}
           >
             <span className={cn("inline-block h-4 w-4 transform rounded-full bg-white transition-transform", cwSettings.enabled ? "translate-x-6" : "translate-x-1")} />
           </button>
@@ -456,7 +456,7 @@ function SettingsModal({
 
         {/* Keying Method */}
         <div className="space-y-1">
-          <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Keying Method</label>
+          <label className="text-[0.625rem] uppercase text-muted font-bold">Keying Method</label>
           <div className="flex gap-2 flex-wrap">
             {([
               { id: 'dtr', label: 'DTR' },
@@ -471,7 +471,7 @@ function SettingsModal({
                   cwSettingsRef.current = next;
                   socket?.emit("update-cw-settings", { keyingMethod: id });
                 }}
-                className={cn("px-3 py-1 rounded text-xs font-bold border transition-colors", cwSettings.keyingMethod === id ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" : "border-[#2a2b2e] text-[#8e9299] bg-[#1a1b1e]")}
+                className={cn("px-3 py-1 rounded text-xs font-bold border transition-colors", cwSettings.keyingMethod === id ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" : "border-line text-muted bg-panel-2")}
               >
                 {label}
               </button>
@@ -494,8 +494,8 @@ function SettingsModal({
         {cwSettings.keyingMethod !== 'rigctld-ptt' && (
           <>
             <div className="space-y-1">
-              <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Keyer Serial Port</label>
-              <div className="text-[0.625rem] text-[#8e9299]">
+              <label className="text-[0.625rem] uppercase text-muted font-bold">Keyer Serial Port</label>
+              <div className="text-[0.625rem] text-muted">
                 {cwSettings.keyingMethod === 'dtr'
                   ? 'DTR line on this port keys the radio (e.g. /dev/ttyUSB1, COM4)'
                   : 'RTS line on this port keys the radio (e.g. /dev/ttyUSB1, COM4)'}
@@ -503,7 +503,7 @@ function SettingsModal({
               <div className="flex gap-2 items-center">
                 <SerialPortInput
                   id="cw-keyer-serial-port"
-                  className="flex-1 bg-[#1a1b1e] font-mono"
+                  className="flex-1 bg-panel-2 font-mono"
                   options={serialPortOptions}
                   value={cwSettings.keyerPort}
                   onChange={(val) => setCwSettings(prev => ({ ...prev, keyerPort: val }))}
@@ -515,15 +515,15 @@ function SettingsModal({
                   }}
                   placeholder="/dev/ttyUSB1"
                 />
-                <div className={cn("text-[0.625rem] font-bold px-2 py-0.5 rounded", cwPortStatus.open ? "text-emerald-400 bg-emerald-400/10" : "text-[#8e9299] bg-[#2a2b2e]")}>
+                <div className={cn("text-[0.625rem] font-bold px-2 py-0.5 rounded", cwPortStatus.open ? "text-emerald-400 bg-emerald-400/10" : "text-muted bg-line")}>
                   {cwPortStatus.open ? "OPEN" : cwPortStatus.error ? "ERROR" : "CLOSED"}
                 </div>
               </div>
               {cwPortStatus.error && <div className="text-[0.625rem] text-red-400">{cwPortStatus.error}</div>}
             </div>
             <div className="space-y-1">
-              <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Key Polarity</label>
-              <div className="text-[0.625rem] text-[#8e9299]">Whether line high or line low activates the key. Most interfaces use Active High.</div>
+              <label className="text-[0.625rem] uppercase text-muted font-bold">Key Polarity</label>
+              <div className="text-[0.625rem] text-muted">Whether line high or line low activates the key. Most interfaces use Active High.</div>
               <div className="flex gap-2">
                 {(['high', 'low'] as const).map(p => (
                   <button
@@ -534,7 +534,7 @@ function SettingsModal({
                       cwSettingsRef.current = next;
                       socket?.emit("update-cw-settings", { serialKeyPolarity: p });
                     }}
-                    className={cn("px-3 py-1 rounded text-xs font-bold border transition-colors", cwSettings.serialKeyPolarity === p ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" : "border-[#2a2b2e] text-[#8e9299] bg-[#1a1b1e]")}
+                    className={cn("px-3 py-1 rounded text-xs font-bold border transition-colors", cwSettings.serialKeyPolarity === p ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" : "border-line text-muted bg-panel-2")}
                   >
                     Active {p.charAt(0).toUpperCase() + p.slice(1)}
                   </button>
@@ -549,7 +549,7 @@ function SettingsModal({
       <div className="space-y-4">
         <h3 className="text-[0.625rem] uppercase text-emerald-500 font-bold border-b border-emerald-500/20 pb-1">Mode & Speed</h3>
         <div className="space-y-1">
-          <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Keyer Mode</label>
+          <label className="text-[0.625rem] uppercase text-muted font-bold">Keyer Mode</label>
           <div className="flex gap-2">
             {(['iambic-a', 'iambic-b', 'straight'] as const).map(m => (
               <button
@@ -560,7 +560,7 @@ function SettingsModal({
                   cwSettingsRef.current = next;
                   socket?.emit("update-cw-settings", { mode: m });
                 }}
-                className={cn("px-3 py-1 rounded text-xs font-bold border transition-colors capitalize", cwSettings.mode === m ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" : "border-[#2a2b2e] text-[#8e9299] bg-[#1a1b1e]")}
+                className={cn("px-3 py-1 rounded text-xs font-bold border transition-colors capitalize", cwSettings.mode === m ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" : "border-line text-muted bg-panel-2")}
               >
                 {m === 'iambic-a' ? 'Iambic A' : m === 'iambic-b' ? 'Iambic B' : 'Straight'}
               </button>
@@ -569,7 +569,7 @@ function SettingsModal({
         </div>
         <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Speed</label>
+            <label className="text-[0.625rem] uppercase text-muted font-bold">Speed</label>
             <span className="text-sm text-emerald-400 font-bold">{cwSettings.wpm} WPM</span>
           </div>
           <input
@@ -585,7 +585,7 @@ function SettingsModal({
             onTouchEnd={(e) => socket?.emit("update-cw-settings", { wpm: Number((e.target as HTMLInputElement).value) })}
             className="w-full accent-emerald-500"
           />
-          <div className="flex justify-between text-[0.5rem] text-[#8e9299]"><span>5</span><span>30</span></div>
+          <div className="flex justify-between text-[0.5rem] text-muted"><span>5</span><span>30</span></div>
         </div>
       </div>
 
@@ -593,7 +593,7 @@ function SettingsModal({
       <div className="space-y-4">
         <h3 className="text-[0.625rem] uppercase text-emerald-500 font-bold border-b border-emerald-500/20 pb-1">Sidetone</h3>
         <div className="flex items-center justify-between">
-          <div className="text-sm text-[#e0e0e0] font-bold">Enable Sidetone</div>
+          <div className="text-sm text-ink font-bold">Enable Sidetone</div>
           <button
             onClick={() => {
               const next = { ...cwSettings, sidetoneEnabled: !cwSettings.sidetoneEnabled };
@@ -601,7 +601,7 @@ function SettingsModal({
               cwSettingsRef.current = next;
               socket?.emit("update-cw-settings", { sidetoneEnabled: !cwSettings.sidetoneEnabled });
             }}
-            className={cn("relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0", cwSettings.sidetoneEnabled ? "bg-emerald-500" : "bg-[#2a2b2e]")}
+            className={cn("relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0", cwSettings.sidetoneEnabled ? "bg-emerald-500" : "bg-line")}
           >
             <span className={cn("inline-block h-4 w-4 transform rounded-full bg-white transition-transform", cwSettings.sidetoneEnabled ? "translate-x-6" : "translate-x-1")} />
           </button>
@@ -609,7 +609,7 @@ function SettingsModal({
         {cwSettings.sidetoneEnabled && (<>
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Frequency</label>
+              <label className="text-[0.625rem] uppercase text-muted font-bold">Frequency</label>
               <span className="text-sm text-emerald-400 font-bold">{cwSettings.sidetoneHz} Hz</span>
             </div>
             <input type="range" min={400} max={1200} step={10}
@@ -625,11 +625,11 @@ function SettingsModal({
               onTouchEnd={(e) => socket?.emit("update-cw-settings", { sidetoneHz: Number((e.target as HTMLInputElement).value) })}
               className="w-full accent-emerald-500"
             />
-            <div className="flex justify-between text-[0.5rem] text-[#8e9299]"><span>400 Hz</span><span>1200 Hz</span></div>
+            <div className="flex justify-between text-[0.5rem] text-muted"><span>400 Hz</span><span>1200 Hz</span></div>
           </div>
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Volume</label>
+              <label className="text-[0.625rem] uppercase text-muted font-bold">Volume</label>
               <span className="text-sm text-emerald-400 font-bold">{Math.round(cwSettings.sidetoneVolume * 100)}%</span>
             </div>
             <input type="range" min={0} max={1} step={0.01}
@@ -644,7 +644,7 @@ function SettingsModal({
               onTouchEnd={(e) => socket?.emit("update-cw-settings", { sidetoneVolume: Number((e.target as HTMLInputElement).value) })}
               className="w-full accent-emerald-500"
             />
-            <div className="flex justify-between text-[0.5rem] text-[#8e9299]"><span>0%</span><span>100%</span></div>
+            <div className="flex justify-between text-[0.5rem] text-muted"><span>0%</span><span>100%</span></div>
           </div>
         </>)}
       </div>
@@ -652,17 +652,17 @@ function SettingsModal({
       {/* Key Bindings */}
       <div className="space-y-4">
         <h3 className="text-[0.625rem] uppercase text-emerald-500 font-bold border-b border-emerald-500/20 pb-1">Key Bindings</h3>
-        <div className="text-[0.625rem] text-[#8e9299]">Default L-CTRL / R-CTRL matches vband USB paddle interface. Click a binding to rebind.</div>
+        <div className="text-[0.625rem] text-muted">Default L-CTRL / R-CTRL matches vband USB paddle interface. Click a binding to rebind.</div>
         {([
           { key: 'ditKey', label: cwSettings.mode === 'straight' ? 'N/A' : 'Dit (left paddle)' },
           { key: 'dahKey', label: cwSettings.mode === 'straight' ? 'N/A' : 'Dah (right paddle)' },
           { key: 'straightKey', label: 'Straight Key' }
         ] as const).filter(b => cwSettings.mode === 'straight' ? b.key === 'straightKey' : b.key !== 'straightKey').map(({ key, label }) => (
           <div key={key} className="flex items-center justify-between">
-            <span className="text-xs text-[#e0e0e0]">{label}</span>
+            <span className="text-xs text-ink">{label}</span>
             <button
               onClick={() => setRebindTarget(rebindTarget === key ? null : key)}
-              className={cn("px-3 py-1 rounded text-xs font-mono border transition-colors", rebindTarget === key ? "bg-amber-500/20 border-amber-400 text-amber-300 animate-pulse" : "bg-[#1a1b1e] border-[#2a2b2e] text-[#e0e0e0]")}
+              className={cn("px-3 py-1 rounded text-xs font-mono border transition-colors", rebindTarget === key ? "bg-amber-500/20 border-amber-400 text-amber-300 animate-pulse" : "bg-panel-2 border-line text-ink")}
             >
               {rebindTarget === key ? 'Press a key…' : cwSettings[key]}
             </button>
@@ -677,13 +677,13 @@ function SettingsModal({
     )}
 
     {activeSettingsTab === 'diagnostics' && (
-      <Suspense fallback={<div className="p-6 text-xs text-[#8e9299]">Loading…</div>}>
+      <Suspense fallback={<div className="p-6 text-xs text-muted">Loading…</div>}>
         <DiagnosticsTab socket={socket} appVersion={appVersion} />
       </Suspense>
     )}
 
     {activeSettingsTab === 'admin' && role === 'admin' && (
-      <Suspense fallback={<div className="p-6 text-xs text-[#8e9299]">Loading…</div>}>
+      <Suspense fallback={<div className="p-6 text-xs text-muted">Loading…</div>}>
         <AdminTab socket={socket} callsign={callsign} />
       </Suspense>
     )}

@@ -57,7 +57,7 @@ export function VfoCollapsedHeader({
       <button
         onClick={() => adjustVfoFrequency(vfoIsA ? "A" : "B", -1)}
         disabled={!connected}
-        className="flex items-center gap-1 px-2 py-1 bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg text-emerald-500 hover:bg-emerald-500/10 disabled:opacity-50 flex-shrink-0"
+        className="flex items-center gap-1 px-2 py-1 bg-app border border-line rounded-lg text-emerald-500 hover:bg-emerald-500/10 disabled:opacity-50 flex-shrink-0"
         title="Frequency Down"
       >
         <ChevronLeft size={14} />
@@ -70,7 +70,7 @@ export function VfoCollapsedHeader({
             status.isSplit
               ? "bg-amber-500"
               : !vfoKnown
-              ? "bg-[#4a4b4e]"
+              ? "bg-faint"
               : vfoIsA
               ? "bg-emerald-500"
               : "bg-blue-500"
@@ -82,7 +82,7 @@ export function VfoCollapsedHeader({
             status.isSplit
               ? "text-amber-500"
               : !vfoKnown
-              ? "text-[#8e9299]"
+              ? "text-muted"
               : vfoIsA
               ? "text-emerald-500"
               : "text-blue-500"
@@ -90,7 +90,7 @@ export function VfoCollapsedHeader({
         >
           {status.isSplit ? "SPLIT" : !vfoKnown ? "-" : vfoIsA ? "A" : "B"}
         </span>
-        <span className="text-[#4a4b4e] flex-shrink-0">—</span>
+        <span className="text-faint flex-shrink-0">—</span>
         <span
           className={cn(
             "text-sm font-mono font-bold truncate",
@@ -99,7 +99,7 @@ export function VfoCollapsedHeader({
               : status.isSplit
               ? "text-amber-500"
               : !vfoKnown
-              ? "text-[#8e9299]"
+              ? "text-muted"
               : vfoIsA
               ? "text-emerald-500"
               : "text-blue-500"
@@ -107,15 +107,15 @@ export function VfoCollapsedHeader({
         >
           {vfoKnown ? `${parseFloat(vfoIsA ? inputVfoA : inputVfoB).toFixed(3)} MHz` : "-"}
         </span>
-        <span className="text-[#4a4b4e] flex-shrink-0">—</span>
-        <span className="text-xs font-bold text-[#8e9299] flex-shrink-0">
+        <span className="text-faint flex-shrink-0">—</span>
+        <span className="text-xs font-bold text-muted flex-shrink-0">
           {localMode}
         </span>
       </div>
       <button
         onClick={() => adjustVfoFrequency(vfoIsA ? "A" : "B", 1)}
         disabled={!connected}
-        className="flex items-center gap-1 px-2 py-1 bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg text-emerald-500 hover:bg-emerald-500/10 disabled:opacity-50 flex-shrink-0"
+        className="flex items-center gap-1 px-2 py-1 bg-app border border-line rounded-lg text-emerald-500 hover:bg-emerald-500/10 disabled:opacity-50 flex-shrink-0"
         title="Frequency Up"
       >
         <span className="text-[0.625rem] font-bold">{stepLabel(vfoStep)}</span>
@@ -199,8 +199,8 @@ function VfoFreqStepButtons({ size, vfoIsA, vfoStep, connected, adjustVfoFrequen
   const isCompact = size === "compact";
   const iconSize = isCompact ? 12 : 14;
   const btnClass = cn(
-    "flex items-center gap-1 px-2 py-1 border border-[#2a2b2e] text-emerald-500 hover:bg-emerald-500/10 disabled:opacity-50",
-    isCompact ? "bg-[#0a0a0a] rounded" : "bg-[#1a1b1e] rounded-lg"
+    "flex items-center gap-1 px-2 py-1 border border-line text-emerald-500 hover:bg-emerald-500/10 disabled:opacity-50",
+    isCompact ? "bg-app rounded" : "bg-panel-2 rounded-lg"
   );
   return (
     <div className={cn("flex items-center", isCompact ? "justify-center gap-2" : "gap-1")}>
@@ -248,10 +248,10 @@ function VfoFrequencyInput({
   const colorClass = cn(
     status.isSplit
       ? (status.vfo === status.txVFO ? "text-red-500 hover:bg-red-500/10 focus:bg-red-500/10 border-red-500/30 focus:border-red-500/50" : "text-amber-500 hover:bg-amber-500/10 focus:bg-amber-500/10 border-amber-500/30 focus:border-amber-500/50")
-      : !vfoKnown ? "text-[#8e9299] hover:bg-white/5 focus:bg-white/5 border-[#2a2b2e] focus:border-[#4a4b4e]"
-      : (vfoIsA ? "text-emerald-500 hover:bg-emerald-500/10 focus:bg-emerald-500/10 border-[#2a2b2e] focus:border-emerald-500/50" : "text-blue-500 hover:bg-blue-500/10 focus:bg-blue-500/10 border-[#2a2b2e] focus:border-blue-500/50")
+      : !vfoKnown ? "text-muted hover:bg-ink/5 focus:bg-ink/5 border-line focus:border-faint"
+      : (vfoIsA ? "text-emerald-500 hover:bg-emerald-500/10 focus:bg-emerald-500/10 border-line focus:border-emerald-500/50" : "text-blue-500 hover:bg-blue-500/10 focus:bg-blue-500/10 border-line focus:border-blue-500/50")
   );
-  const mhzColorClass = !vfoKnown ? "text-[#8e9299]/50" : vfoIsA ? "text-emerald-500/50" : "text-blue-500/50";
+  const mhzColorClass = !vfoKnown ? "text-muted/50" : vfoIsA ? "text-emerald-500/50" : "text-blue-500/50";
 
   const input = (
     <input
@@ -267,7 +267,7 @@ function VfoFrequencyInput({
       }}
       onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
       className={cn(
-        "w-full bg-white/5 font-bold tracking-tighter font-mono text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-all cursor-text border",
+        "w-full bg-ink/5 font-bold tracking-tighter font-mono text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-all cursor-text border",
         isCompact ? "text-4xl rounded-lg py-1 px-2" : "text-3xl rounded-xl py-1.5 px-3",
         !connected && "opacity-50 cursor-not-allowed",
         colorClass
@@ -283,7 +283,7 @@ function VfoFrequencyInput({
         <span className={cn("text-sm font-bold", mhzColorClass)}>MHz</span>
         <Pencil size={12} className={cn(
           "absolute right-12 top-1/2 -translate-y-1/2 transition-opacity pointer-events-none",
-          !vfoKnown ? "text-[#8e9299]/30" : vfoIsA ? "text-emerald-500/30" : "text-blue-500/30"
+          !vfoKnown ? "text-muted/30" : vfoIsA ? "text-emerald-500/30" : "text-blue-500/30"
         )} />
       </div>
     );
@@ -314,7 +314,7 @@ function VfoStepSelector({ size, vfoStep, setVfoStep, connected }: VfoStepSelect
           disabled={!connected}
           className={cn(
             "flex-shrink-0 px-2 py-1 rounded-lg text-xs font-bold transition-all",
-            vfoStep === s ? "bg-emerald-500 text-white" : "bg-[#0a0a0a] border border-[#2a2b2e] text-[#8e9299] hover:border-emerald-500/50 disabled:opacity-50"
+            vfoStep === s ? "bg-emerald-500 text-white" : "bg-app border border-line text-muted hover:border-emerald-500/50 disabled:opacity-50"
           )}
         >{stepLabel(s)}</button>
       ))}
@@ -353,8 +353,8 @@ export default function VfoPanel({
   if (variant === "compact") {
     return (
       <div className={cn(
-        "bg-[#151619] p-3 rounded-xl border shadow-lg space-y-2",
-        !vfoKnown ? "border-[#2a2b2e]" : vfoIsA ? "border-emerald-500/30" : "border-blue-500/30"
+        "bg-panel p-3 rounded-xl border shadow-lg space-y-2",
+        !vfoKnown ? "border-line" : vfoIsA ? "border-emerald-500/30" : "border-blue-500/30"
       )}>
         <div className="grid grid-cols-3 items-center">
           <VfoButtonGroup

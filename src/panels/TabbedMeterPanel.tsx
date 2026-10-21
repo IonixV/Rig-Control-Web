@@ -33,7 +33,7 @@ export function TabbedMeterHeaderContent({
               ? `S9+${status.smeter}dB`
               : `S${Math.round(((status.smeter ?? -54) + 54) / 6)}`}
           </span>
-          <span className="text-[#3a3b3e]">·</span>
+          <span className="text-line-strong">·</span>
           <span
             className={cn(
               "text-sm font-mono font-bold",
@@ -42,7 +42,7 @@ export function TabbedMeterHeaderContent({
           >
             {(status.swr ?? 1).toFixed(2)}
           </span>
-          <span className="text-[#3a3b3e]">·</span>
+          <span className="text-line-strong">·</span>
           <span className="text-sm font-mono font-bold text-blue-400">
             {(status.alc ?? 0).toFixed(2)}
           </span>
@@ -61,7 +61,7 @@ export function TabbedMeterHeaderContent({
                     : "bg-emerald-500 text-white"
                   : m === "swr" && (status.swr ?? 1) > 3
                   ? "text-red-500 bg-red-500/10"
-                  : "text-[#8e9299] hover:bg-white/5"
+                  : "text-muted hover:bg-ink/5"
               )}
             >
               {m === "signal" ? "SIG/PWR" : m.toUpperCase()}
@@ -261,7 +261,7 @@ export function MeterHistoryChart({
             x2={VIEWBOX_W - rightPad}
             y1={y}
             y2={y}
-            stroke="#2a2b2e"
+            className="stroke-line"
             strokeOpacity={0.3}
             strokeDasharray="3 3"
             vectorEffect="non-scaling-stroke"
@@ -276,7 +276,7 @@ export function MeterHistoryChart({
               textAnchor="end"
               dominantBaseline="middle"
               fontSize={tickFontSize}
-              fill="#4a4b4e"
+              className="fill-faint"
             >
               {t}
             </text>
@@ -287,7 +287,7 @@ export function MeterHistoryChart({
             x2={xAt(hoverIndex!)}
             y1={topPad}
             y2={VIEWBOX_H - bottomPad}
-            stroke="#4a4b4e"
+            className="stroke-faint"
             strokeOpacity={0.5}
             vectorEffect="non-scaling-stroke"
           />
@@ -307,16 +307,16 @@ export function MeterHistoryChart({
       </svg>
       {tooltipLines && (
         <div
-          className="absolute top-1 px-1.5 py-1 rounded bg-[#151619] border border-[#2a2b2e] pointer-events-none whitespace-nowrap"
+          className="absolute top-1 px-1.5 py-1 rounded bg-panel border border-line pointer-events-none whitespace-nowrap"
           style={{
             left: `${Math.min(85, Math.max(2, hoverFrac! * 100))}%`,
             fontSize: tooltipFontSize,
           }}
         >
           {tooltipLines.map((l) => (
-            <div key={l.label} className="text-[#8e9299] font-mono">
-              <span className="text-[#5a5b5e]">{l.label}</span>{" "}
-              <span className="text-white font-bold">{l.value}</span>
+            <div key={l.label} className="text-muted font-mono">
+              <span className="text-faint-2">{l.label}</span>{" "}
+              <span className="text-ink font-bold">{l.value}</span>
             </div>
           ))}
         </div>

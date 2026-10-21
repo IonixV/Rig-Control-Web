@@ -361,7 +361,7 @@ function SpectrumAudioPanel({
   const headerActions = (
     <button
       onClick={e => { e.stopPropagation(); setIsSettingsOpen(true); }}
-      className="p-1 rounded hover:bg-white/10 text-gray-400 hover:text-gray-200 transition-colors mr-1"
+      className="p-1 rounded hover:bg-ink/10 text-gray-400 hover:text-gray-200 transition-colors mr-1"
       title="Waterfall settings"
     >
       <Settings size={13} />
@@ -374,10 +374,10 @@ function SpectrumAudioPanel({
       onClick={() => setIsSettingsOpen(false)}
     >
       <div
-        className="bg-[#151619] w-full max-w-sm rounded-2xl border border-[#2a2b2e] shadow-2xl overflow-hidden mt-16"
+        className="bg-panel w-full max-w-sm rounded-2xl border border-line shadow-2xl overflow-hidden mt-16"
         onClick={e => e.stopPropagation()}
       >
-        <div className="p-5 border-b border-[#2a2b2e] flex items-center justify-between bg-[#1a1b1e]">
+        <div className="p-5 border-b border-line flex items-center justify-between bg-panel-2">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400">
               <Waves size={18} />
@@ -386,7 +386,7 @@ function SpectrumAudioPanel({
           </div>
           <button
             onClick={() => setIsSettingsOpen(false)}
-            className="p-2 hover:bg-[#2a2b2e] rounded-xl text-[#8e9299] transition-all"
+            className="p-2 hover:bg-line rounded-xl text-muted transition-all"
           >
             <X size={18} />
           </button>
@@ -395,8 +395,8 @@ function SpectrumAudioPanel({
         <div className="p-5 space-y-5">
           {/* Waterfall style */}
           <div className="space-y-2">
-            <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Waterfall Style</label>
-            <div className="grid grid-cols-2 gap-1 bg-[#0a0a0a] rounded-lg p-1 border border-[#2a2b2e]">
+            <label className="text-[0.625rem] uppercase text-muted font-bold">Waterfall Style</label>
+            <div className="grid grid-cols-2 gap-1 bg-app rounded-lg p-1 border border-line">
               {(["live", "wsjtx"] as const).map(m => (
                 <button
                   key={m}
@@ -408,7 +408,7 @@ function SpectrumAudioPanel({
                   className={`py-1.5 px-2 rounded text-[0.625rem] font-semibold transition-colors ${
                     waterfallMode === m
                       ? "bg-emerald-600 text-white"
-                      : "text-[#8e9299] hover:text-[#e0e0e0]"
+                      : "text-muted hover:text-ink"
                   }`}
                 >
                   {m === "live" ? "Live" : "WSJT-X"}
@@ -416,7 +416,7 @@ function SpectrumAudioPanel({
               ))}
             </div>
             {waterfallMode === "wsjtx" && (
-              <p className="text-[0.5rem] text-[#4a4b4e] uppercase font-bold">
+              <p className="text-[0.5rem] text-faint uppercase font-bold">
                 Mimics WSJT-X's default FT8 Wide Graph: Bins/Pixel 4, N Avg 2, Flatten on — scrolls ~6 rows/sec
               </p>
             )}
@@ -424,7 +424,7 @@ function SpectrumAudioPanel({
 
           {/* Bandwidth */}
           <div className="space-y-2">
-            <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Display Bandwidth</label>
+            <label className="text-[0.625rem] uppercase text-muted font-bold">Display Bandwidth</label>
             <select
               value={bwOverride}
               onChange={e => {
@@ -432,14 +432,14 @@ function SpectrumAudioPanel({
                 lsSet(lsKey("bwOverride"), e.target.value);
                 waterfallLinesRef.current = [];
               }}
-              className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all"
+              className="w-full bg-app border border-line rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all"
             >
               {BW_OPTIONS.map(o => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
             {bwOverride === "auto" && (
-              <p className="text-[0.5rem] text-[#4a4b4e] uppercase font-bold">
+              <p className="text-[0.5rem] text-faint uppercase font-bold">
                 Currently {displayBandwidth >= 1000 ? `${(displayBandwidth / 1000).toFixed(1)} kHz` : `${displayBandwidth} Hz`}
                 {mode === "CW" || mode === "CWR" ? " (CW ×2)" : ""}
               </p>
@@ -448,11 +448,11 @@ function SpectrumAudioPanel({
 
           {/* Color map */}
           <div className="space-y-2">
-            <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Color Map</label>
+            <label className="text-[0.625rem] uppercase text-muted font-bold">Color Map</label>
             <select
               value={colorMapId}
               onChange={e => { setColorMapId(e.target.value); lsSet(lsKey("colormap"), e.target.value); }}
-              className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all"
+              className="w-full bg-app border border-line rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all"
             >
               {COLORMAP_NAMES.map(cm => (
                 <option key={cm.id} value={cm.id}>{cm.label}</option>
@@ -463,8 +463,8 @@ function SpectrumAudioPanel({
           {/* Floor */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Noise Floor</label>
-              <span className="text-xs font-mono text-[#8e9299]">
+              <label className="text-[0.625rem] uppercase text-muted font-bold">Noise Floor</label>
+              <span className="text-xs font-mono text-muted">
                 {autoLevel.autoFloor ? `${Math.round(autoLevel.displayFloor)} dBFS (auto)` : `${autoLevel.floor} dBFS`}
               </span>
             </div>
@@ -475,7 +475,7 @@ function SpectrumAudioPanel({
               onChange={e => autoLevel.setFloor(Number(e.target.value))}
               className="w-full accent-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             />
-            <label className="flex items-center gap-2 text-[0.625rem] text-[#8e9299]">
+            <label className="flex items-center gap-2 text-[0.625rem] text-muted">
               <input
                 type="checkbox"
                 checked={autoLevel.autoFloor}
@@ -488,8 +488,8 @@ function SpectrumAudioPanel({
           {/* Ceiling */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Ceiling</label>
-              <span className="text-xs font-mono text-[#8e9299]">
+              <label className="text-[0.625rem] uppercase text-muted font-bold">Ceiling</label>
+              <span className="text-xs font-mono text-muted">
                 {autoLevel.autoCeiling ? `${Math.round(autoLevel.displayCeiling)} dBFS (auto)` : `${autoLevel.ceiling} dBFS`}
               </span>
             </div>
@@ -500,7 +500,7 @@ function SpectrumAudioPanel({
               onChange={e => autoLevel.setCeiling(Number(e.target.value))}
               className="w-full accent-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             />
-            <label className="flex items-center gap-2 text-[0.625rem] text-[#8e9299]">
+            <label className="flex items-center gap-2 text-[0.625rem] text-muted">
               <input
                 type="checkbox"
                 checked={autoLevel.autoCeiling}
@@ -513,7 +513,7 @@ function SpectrumAudioPanel({
           <button
             onClick={() => autoLevel.resetAutoScale()}
             disabled={!autoLevel.autoFloor && !autoLevel.autoCeiling}
-            className="flex items-center gap-1.5 text-[0.625rem] text-[#8e9299] hover:text-blue-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-1.5 text-[0.625rem] text-muted hover:text-blue-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             title="Clear tracked auto-scale estimates and re-converge from scratch"
           >
             <RefreshCw size={11} /> Reset Auto-Scale

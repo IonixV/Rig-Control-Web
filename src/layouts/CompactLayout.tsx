@@ -529,7 +529,7 @@ function CompactLayout({
                   ? "border-emerald-500/30"
                   : status.vfo === "VFOB"
                   ? "border-blue-500/30"
-                  : "border-[#2a2b2e]"
+                  : "border-line"
               )}
               bodyClassName="p-3 space-y-2"
               headerSize="sm"
@@ -559,7 +559,7 @@ function CompactLayout({
                         "px-2 py-1 rounded text-[0.625rem] font-bold uppercase transition-all",
                         activeMeter === m
                           ? (m === 'swr' && (status.swr ?? 1) > 3 ? "bg-red-500 text-white" : "bg-emerald-500 text-white")
-                          : (m === 'swr' && (status.swr ?? 1) > 3 ? "text-red-500 bg-red-500/10" : "text-[#8e9299] hover:bg-white/5")
+                          : (m === 'swr' && (status.swr ?? 1) > 3 ? "text-red-500 bg-red-500/10" : "text-muted hover:bg-ink/5")
                       )}
                     >
                       {m === 'signal' ? 'SIG/PWR' : m}
@@ -572,15 +572,15 @@ function CompactLayout({
                       ? `${Math.round((status.powerMeter ?? 0) * 100)}W`
                       : (status.smeter ?? -54) > 0 ? `S9+${status.smeter}dB` : `S${Math.round(((status.smeter ?? -54) + 54) / 6)}`}
                   </span>
-                  <span className="text-[#3a3b3e] text-[0.5rem]">·</span>
+                  <span className="text-line-strong text-[0.5rem]">·</span>
                   <span className={cn("text-[0.625rem] font-mono font-bold", (status.swr ?? 1) > 3 ? "text-red-500" : "text-amber-500")}>
                     {(status.swr ?? 1).toFixed(2)}
                   </span>
-                  <span className="text-[#3a3b3e] text-[0.5rem]">·</span>
+                  <span className="text-line-strong text-[0.5rem]">·</span>
                   <span className="text-[0.625rem] font-mono font-bold text-blue-400">
                     {(status.alc ?? 0).toFixed(2)}
                   </span>
-                  <span className="text-[#3a3b3e] text-[0.5rem]">·</span>
+                  <span className="text-line-strong text-[0.5rem]">·</span>
                   <span className="text-[0.625rem] font-mono font-bold text-emerald-400">
                     {(status.vdd ?? 0).toFixed(1)}V
                   </span>
@@ -1080,14 +1080,14 @@ function CompactLayout({
             disabled={idx === 0}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => { e.stopPropagation(); moveCompactPanel(item, 'up'); }}
-            className="w-6 h-6 flex items-center justify-center rounded bg-[#0a0a0a]/90 border border-[#3a3b3e] text-[#aaaaaa] hover:text-white disabled:opacity-20 disabled:cursor-not-allowed text-[10px] transition-all"
+            className="w-6 h-6 flex items-center justify-center rounded bg-app/90 border border-line-strong text-muted-2 hover:text-ink disabled:opacity-20 disabled:cursor-not-allowed text-[10px] transition-all"
             title="Move up"
           >▲</button>
           <button
             disabled={idx === siblingsCount - 1}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => { e.stopPropagation(); moveCompactPanel(item, 'down'); }}
-            className="w-6 h-6 flex items-center justify-center rounded bg-[#0a0a0a]/90 border border-[#3a3b3e] text-[#aaaaaa] hover:text-white disabled:opacity-20 disabled:cursor-not-allowed text-[10px] transition-all"
+            className="w-6 h-6 flex items-center justify-center rounded bg-app/90 border border-line-strong text-muted-2 hover:text-ink disabled:opacity-20 disabled:cursor-not-allowed text-[10px] transition-all"
             title="Move down"
           >▼</button>
           {!isFullWidth && (
@@ -1096,14 +1096,14 @@ function CompactLayout({
                 disabled={item.x === 0}
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => { e.stopPropagation(); moveCompactPanelColumn(item, 'left'); }}
-                className="w-6 h-6 flex items-center justify-center rounded bg-[#0a0a0a]/90 border border-[#3a3b3e] text-[#aaaaaa] hover:text-white disabled:opacity-20 disabled:cursor-not-allowed text-[10px] transition-all"
+                className="w-6 h-6 flex items-center justify-center rounded bg-app/90 border border-line-strong text-muted-2 hover:text-ink disabled:opacity-20 disabled:cursor-not-allowed text-[10px] transition-all"
                 title="Move to left column"
               >◄</button>
               <button
                 disabled={item.x >= compactLayout.cols - 1}
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => { e.stopPropagation(); moveCompactPanelColumn(item, 'right'); }}
-                className="w-6 h-6 flex items-center justify-center rounded bg-[#0a0a0a]/90 border border-[#3a3b3e] text-[#aaaaaa] hover:text-white disabled:opacity-20 disabled:cursor-not-allowed text-[10px] transition-all"
+                className="w-6 h-6 flex items-center justify-center rounded bg-app/90 border border-line-strong text-muted-2 hover:text-ink disabled:opacity-20 disabled:cursor-not-allowed text-[10px] transition-all"
                 title="Move to right column"
               >►</button>
             </>

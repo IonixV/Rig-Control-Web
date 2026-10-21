@@ -43,13 +43,13 @@ export function VideoFeedHeaderActions({
           "w-2 h-2 rounded-full",
           videoStatus === "streaming"
             ? "bg-emerald-500 animate-pulse"
-            : "bg-[#2a2b2e]"
+            : "bg-line"
         )}
       />
       <button
         onClick={handleSettingsClick}
         className={cn(
-          "hover:bg-[#2a2b2e] rounded-lg text-[#8e9299] transition-all",
+          "hover:bg-line rounded-lg text-muted transition-all",
           variant === "phone" ? "p-1.5" : "p-1"
         )}
         title="Video Settings"
@@ -111,7 +111,7 @@ function VideoFeedPanel({
         )}
       />
       {videoStatus !== "streaming" && (
-        <div className="flex flex-col items-center gap-4 text-[#3a3b3e]">
+        <div className="flex flex-col items-center gap-4 text-line-strong">
           <Monitor size={stoppedMonitorSize} strokeWidth={1} />
           <span className="text-[0.5rem] uppercase font-bold tracking-widest">
             {stoppedLabel}

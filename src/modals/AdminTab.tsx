@@ -258,7 +258,7 @@ export default function AdminTab({ socket, callsign }: Props) {
   };
 
   const inputClass =
-    "w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded px-2 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-emerald-600 transition-colors";
+    "w-full bg-app border border-line rounded px-2 py-1.5 text-xs font-mono text-ink focus:outline-none focus:border-emerald-600 transition-colors";
   const btnClass =
     "px-3 py-1 rounded text-xs font-bold uppercase tracking-wide transition-all";
 
@@ -283,10 +283,10 @@ export default function AdminTab({ socket, callsign }: Props) {
           {users.map((u) => (
             <div
               key={u.callsign}
-              className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 gap-2"
+              className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-app border border-line rounded px-3 py-2 gap-2"
             >
               <div className="flex items-center gap-2 min-w-0">
-                <span className="text-xs font-mono font-bold text-white truncate">
+                <span className="text-xs font-mono font-bold text-ink truncate">
                   {u.callsign}
                 </span>
                 <span
@@ -294,7 +294,7 @@ export default function AdminTab({ socket, callsign }: Props) {
                     "text-[0.6rem] font-bold uppercase px-1.5 py-0.5 rounded border",
                     u.role === "admin"
                       ? "text-amber-400 border-amber-500/40 bg-amber-500/10"
-                      : "text-[#8e9299] border-[#2a2b2e]"
+                      : "text-muted border-line"
                   )}
                 >
                   {u.role}
@@ -307,14 +307,14 @@ export default function AdminTab({ socket, callsign }: Props) {
                 <button
                   onClick={() => handleChangeRole(u.callsign, u.role)}
                   disabled={u.callsign === callsign || opPending}
-                  className={cn(btnClass, "bg-[#1a1b1e] text-[#8e9299] hover:text-white border border-[#2a2b2e] disabled:opacity-30 disabled:cursor-not-allowed")}
+                  className={cn(btnClass, "bg-panel-2 text-muted hover:text-ink border border-line disabled:opacity-30 disabled:cursor-not-allowed")}
                   title="Toggle role"
                 >
                   Role
                 </button>
                 <button
                   onClick={() => handleResetPassword(u.callsign)}
-                  className={cn(btnClass, "bg-[#1a1b1e] text-[#8e9299] hover:text-white border border-[#2a2b2e]")}
+                  className={cn(btnClass, "bg-panel-2 text-muted hover:text-ink border border-line")}
                 >
                   Reset PW
                 </button>
@@ -331,8 +331,8 @@ export default function AdminTab({ socket, callsign }: Props) {
         </div>
 
         {resetPwTarget && (
-          <div className="bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg p-3 space-y-2">
-            <p className="text-[0.625rem] uppercase font-bold text-[#8e9299]">
+          <div className="bg-app border border-line rounded-lg p-3 space-y-2">
+            <p className="text-[0.625rem] uppercase font-bold text-muted">
               Reset Password — {resetPwTarget}
             </p>
             <input
@@ -353,7 +353,7 @@ export default function AdminTab({ socket, callsign }: Props) {
               </button>
               <button
                 onClick={() => { setResetPwTarget(null); setResetPwValue(""); }}
-                className={cn(btnClass, "flex-1 bg-[#1a1b1e] text-[#8e9299] border border-[#2a2b2e]")}
+                className={cn(btnClass, "flex-1 bg-panel-2 text-muted border border-line")}
               >
                 Cancel
               </button>
@@ -362,8 +362,8 @@ export default function AdminTab({ socket, callsign }: Props) {
         )}
 
         {showAddUser ? (
-          <div className="bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg p-3 space-y-2">
-            <p className="text-[0.625rem] uppercase font-bold text-[#8e9299]">Add User</p>
+          <div className="bg-app border border-line rounded-lg p-3 space-y-2">
+            <p className="text-[0.625rem] uppercase font-bold text-muted">Add User</p>
             <input
               type="text"
               placeholder="Callsign"
@@ -396,7 +396,7 @@ export default function AdminTab({ socket, callsign }: Props) {
               </button>
               <button
                 onClick={() => { setShowAddUser(false); setNewCallsign(""); setNewPassword(""); }}
-                className={cn(btnClass, "flex-1 bg-[#1a1b1e] text-[#8e9299] border border-[#2a2b2e]")}
+                className={cn(btnClass, "flex-1 bg-panel-2 text-muted border border-line")}
               >
                 Cancel
               </button>
@@ -405,7 +405,7 @@ export default function AdminTab({ socket, callsign }: Props) {
         ) : (
           <button
             onClick={() => setShowAddUser(true)}
-            className={cn(btnClass, "w-full bg-[#1a1b1e] text-emerald-400 border border-emerald-500/30 hover:border-emerald-500/70")}
+            className={cn(btnClass, "w-full bg-panel-2 text-emerald-400 border border-emerald-500/30 hover:border-emerald-500/70")}
           >
             + Add User
           </button>
@@ -415,19 +415,19 @@ export default function AdminTab({ socket, callsign }: Props) {
       {/* ── Active Sessions ─────────────────────────────────────────── */}
       <Section title="Active Sessions">
         {sessions.length === 0 ? (
-          <p className="text-xs text-[#666]">No active sessions</p>
+          <p className="text-xs text-faint-2">No active sessions</p>
         ) : (
           <div className="space-y-1">
             {sessions.map((s) => (
               <div
                 key={s.socketId}
-                className="flex items-center justify-between bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 gap-2"
+                className="flex items-center justify-between bg-app border border-line rounded px-3 py-2 gap-2"
               >
                 <div className="min-w-0">
-                  <span className="text-xs font-mono font-bold text-white">
+                  <span className="text-xs font-mono font-bold text-ink">
                     {s.callsign}
                   </span>
-                  <span className="text-[0.6rem] text-[#666] ml-2">
+                  <span className="text-[0.6rem] text-faint-2 ml-2">
                     {s.ip} · {formatDuration(Date.now() - s.connectedAt)} ago
                   </span>
                 </div>
@@ -447,18 +447,18 @@ export default function AdminTab({ socket, callsign }: Props) {
       {/* ── Lockouts ────────────────────────────────────────────────── */}
       <Section title="Lockouts">
         {lockouts.length === 0 ? (
-          <p className="text-xs text-[#666]">No active lockouts</p>
+          <p className="text-xs text-faint-2">No active lockouts</p>
         ) : (
           <div className="space-y-1">
             {lockouts.map((l) => (
               <div
                 key={`${l.callsign}-${l.type}`}
-                className="flex items-center justify-between bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 gap-2"
+                className="flex items-center justify-between bg-app border border-line rounded px-3 py-2 gap-2"
               >
                 <div className="min-w-0">
-                  <span className="text-xs font-mono font-bold text-white">{l.callsign}</span>
-                  <span className="text-[0.6rem] text-[#666] ml-2">{l.type}</span>
-                  <span className="text-[0.6rem] text-[#666] ml-2">
+                  <span className="text-xs font-mono font-bold text-ink">{l.callsign}</span>
+                  <span className="text-[0.6rem] text-faint-2 ml-2">{l.type}</span>
+                  <span className="text-[0.6rem] text-faint-2 ml-2">
                     until {new Date(l.resetAt).toLocaleTimeString()}
                   </span>
                 </div>
@@ -477,18 +477,18 @@ export default function AdminTab({ socket, callsign }: Props) {
 
       {/* ── Audit Log ───────────────────────────────────────────────── */}
       <Section title="Audit Log">
-        <div className="max-h-40 overflow-y-auto space-y-0.5 bg-[#0a0a0a] border border-[#2a2b2e] rounded p-2">
+        <div className="max-h-40 overflow-y-auto space-y-0.5 bg-app border border-line rounded p-2">
           {auditLog.length === 0 ? (
-            <p className="text-xs text-[#666]">No entries</p>
+            <p className="text-xs text-faint-2">No entries</p>
           ) : (
             auditLog.map((e, i) => (
-              <div key={i} className="flex gap-2 text-[0.6rem] font-mono text-[#8e9299]">
-                <span className="text-[#444] flex-shrink-0">
+              <div key={i} className="flex gap-2 text-[0.6rem] font-mono text-muted">
+                <span className="text-faint flex-shrink-0">
                   {formatAuditTimestamp(e.ts)}
                 </span>
                 <span className="text-emerald-600 flex-shrink-0">{e.event}</span>
-                <span className="text-white">{e.callsign}</span>
-                {e.detail && <span className="text-[#666]">{e.detail}</span>}
+                <span className="text-ink">{e.callsign}</span>
+                {e.detail && <span className="text-faint-2">{e.detail}</span>}
               </div>
             ))
           )}
@@ -498,7 +498,7 @@ export default function AdminTab({ socket, callsign }: Props) {
       {/* ── System Info ─────────────────────────────────────────────── */}
       <Section title="System Info">
         {systemInfo ? (
-          <div className="bg-[#0a0a0a] border border-[#2a2b2e] rounded p-3 space-y-1">
+          <div className="bg-app border border-line rounded p-3 space-y-1">
             {[
               ["Version", systemInfo.version],
               ["Uptime", formatUptime(systemInfo.uptime)],
@@ -506,13 +506,13 @@ export default function AdminTab({ socket, callsign }: Props) {
               ["TLS Cert Expiry", systemInfo.certExpiry],
             ].map(([label, value]) => (
               <div key={label} className="flex justify-between gap-3 text-xs">
-                <span className="text-[#8e9299] flex-shrink-0">{label}</span>
-                <span className="font-mono text-white text-right">{value}</span>
+                <span className="text-muted flex-shrink-0">{label}</span>
+                <span className="font-mono text-ink text-right">{value}</span>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-xs text-[#666]">Loading…</p>
+          <p className="text-xs text-faint-2">Loading…</p>
         )}
       </Section>
 
@@ -521,12 +521,12 @@ export default function AdminTab({ socket, callsign }: Props) {
         <div className="bg-red-950/20 border border-red-500/20 rounded-lg p-4 space-y-4">
           {/* Clear user preferences */}
           <div className="space-y-2">
-            <p className="text-xs font-bold text-[#8e9299]">Clear User Preferences</p>
+            <p className="text-xs font-bold text-muted">Clear User Preferences</p>
             <div className="flex gap-2">
               <select
                 value={clearPrefsTarget}
                 onChange={(e) => setClearPrefsTarget(e.target.value)}
-                className="flex-1 bg-[#0a0a0a] border border-[#2a2b2e] rounded px-2 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-red-500/50 transition-colors"
+                className="flex-1 bg-app border border-line rounded px-2 py-1.5 text-xs font-mono text-ink focus:outline-none focus:border-red-500/50 transition-colors"
               >
                 <option value="">Select user…</option>
                 {users.map((u) => (
@@ -548,7 +548,7 @@ export default function AdminTab({ socket, callsign }: Props) {
           {/* Factory reset */}
           <div className="space-y-2 border-t border-red-500/20 pt-4">
             <p className="text-xs font-bold text-red-400">Factory Reset</p>
-            <p className="text-[0.625rem] text-[#8e9299]">
+            <p className="text-[0.625rem] text-muted">
               Removes all users and resets the default ADMIN/admin credentials. All active sessions are disconnected.
             </p>
             {!showResetConfirm ? (
@@ -565,7 +565,7 @@ export default function AdminTab({ socket, callsign }: Props) {
                   placeholder='Type "RESET" to confirm'
                   value={resetConfirmText}
                   onChange={(e) => setResetConfirmText(e.target.value)}
-                  className="w-full bg-[#0a0a0a] border border-red-500/40 rounded px-2 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-red-500 transition-colors"
+                  className="w-full bg-app border border-red-500/40 rounded px-2 py-1.5 text-xs font-mono text-ink focus:outline-none focus:border-red-500 transition-colors"
                 />
                 <div className="flex gap-2">
                   <button
@@ -577,7 +577,7 @@ export default function AdminTab({ socket, callsign }: Props) {
                   </button>
                   <button
                     onClick={() => { setShowResetConfirm(false); setResetConfirmText(""); }}
-                    className={cn(btnClass, "flex-1 bg-[#1a1b1e] text-[#8e9299] border border-[#2a2b2e]")}
+                    className={cn(btnClass, "flex-1 bg-panel-2 text-muted border border-line")}
                   >
                     Cancel
                   </button>
@@ -589,8 +589,8 @@ export default function AdminTab({ socket, callsign }: Props) {
           {/* Change port */}
           <div className="space-y-2 border-t border-red-500/20 pt-4">
             <p className="text-xs font-bold text-red-400">Change Server Port</p>
-            <p className="text-[0.625rem] text-[#8e9299]">
-              Currently <span className="font-mono text-white">{systemInfo?.port ?? "…"}</span> (default 3000). The server re-binds immediately and
+            <p className="text-[0.625rem] text-muted">
+              Currently <span className="font-mono text-ink">{systemInfo?.port ?? "…"}</span> (default 3000). The server re-binds immediately and
               existing connections are dropped. Browsers treat the new port as a new site, so you must reload at the new
               address, accept the certificate warning again, and sign in again; saved layouts and preferences are stored per address. Open the new port in your
               firewall (Windows, Docker and bare-metal hosts), and update bookmarks. The Electron app follows automatically.
@@ -613,7 +613,7 @@ export default function AdminTab({ socket, callsign }: Props) {
                     value={portInput}
                     onChange={(e) => { setPortInput(e.target.value); setShowPortConfirm(false); }}
                     placeholder="1024–65535"
-                    className="flex-1 bg-[#0a0a0a] border border-[#2a2b2e] rounded px-2 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-red-500/50 transition-colors"
+                    className="flex-1 bg-app border border-line rounded px-2 py-1.5 text-xs font-mono text-ink focus:outline-none focus:border-red-500/50 transition-colors"
                   />
                   {!showPortConfirm && (
                     <button
@@ -634,7 +634,7 @@ export default function AdminTab({ socket, callsign }: Props) {
                     >
                       Confirm: move to port {portInput}
                     </button>
-                    <button onClick={() => setShowPortConfirm(false)} className={cn(btnClass, "bg-[#1a1b1e] text-[#8e9299] border border-[#2a2b2e]")}>
+                    <button onClick={() => setShowPortConfirm(false)} className={cn(btnClass, "bg-panel-2 text-muted border border-line")}>
                       Cancel
                     </button>
                   </div>

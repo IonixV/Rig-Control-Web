@@ -13,6 +13,8 @@ import {
   LogOut,
   ChevronDown,
   ChevronUp,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { cn } from "./utils";
 import PhoneLayout from "./layouts/PhoneLayout";
@@ -27,6 +29,7 @@ import LoginScreen from "./components/LoginScreen";
 import ChangePasswordModal from "./components/ChangePasswordModal";
 import PhoneHeaderMenu from "./components/PhoneHeaderMenu";
 import { useAuth } from "./hooks/useAuth";
+import { useTheme } from "./hooks/useTheme";
 import { usePotaSpots } from "./hooks/usePotaSpots";
 import { useDxSpots } from "./hooks/useDxSpots";
 import { useSolarData } from "./hooks/useSolarData";
@@ -143,6 +146,7 @@ export default function App() {
     logout,
     onPasswordChanged,
   } = useAuth(socket);
+  const { theme, toggleTheme } = useTheme();
 
   // ── Hooks ─────────────────────────────────────────────────────────────────
   const { isCompact, isPhone, stickyBarHeight, containerRef, stickyBarRef } = useLayoutState();
@@ -729,7 +733,7 @@ export default function App() {
 
   // ── Auth gates ────────────────────────────────────────────────────────────
   if (authState === "unknown") {
-    return <div className="min-h-screen bg-[#0a0a0a]" />;
+    return <div className="min-h-screen bg-app" />;
   }
   if (authState === "unauthenticated") {
     return (
@@ -762,7 +766,7 @@ export default function App() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className={cn(
-      "bg-[#0a0a0a] text-[#e0e0e0] font-mono",
+      "bg-app text-ink font-mono",
       isPhone ? "h-[100dvh] flex flex-col overflow-hidden" : "p-2 min-h-screen"
     )}>
       {/* CW stuck-key safety alert */}
@@ -782,7 +786,7 @@ export default function App() {
       >
         {/* Header / Connection */}
         {isHeaderCollapsed ? (
-          <header className="bg-[#151619] rounded-xl border border-[#2a2b2e] shadow-2xl py-1 px-2 flex items-center justify-between gap-2">
+          <header className="bg-panel rounded-xl border border-line shadow-2xl py-1 px-2 flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 flex-shrink-0">
               <img src="/rcw-r-64.png" className="w-5 h-5 flex-shrink-0" alt="" />
             </div>
@@ -829,15 +833,22 @@ export default function App() {
                       "p-1 rounded transition-all flex-shrink-0",
                       isCompactEditMode
                         ? "text-emerald-400 bg-emerald-500/10"
-                        : "text-[#8e9299] hover:text-emerald-400"
+                        : "text-muted hover:text-emerald-400"
                     )}
                     title={isCompactEditMode ? "Exit layout editor" : "Edit layout"}
                   >
                     <LayoutGrid size={14} />
                   </button>
                   <button
+                    onClick={toggleTheme}
+                    className="p-1 rounded text-muted hover:text-ink transition-all flex-shrink-0"
+                    title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+                  >
+                    {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+                  </button>
+                  <button
                     onClick={logout}
-                    className="p-1 rounded text-[#8e9299] hover:text-red-400 hover:bg-red-500/10 transition-all flex-shrink-0"
+                    className="p-1 rounded text-muted hover:text-red-400 hover:bg-red-500/10 transition-all flex-shrink-0"
                     title={`Sign out (${currentUser?.callsign ?? ''})`}
                   >
                     <LogOut size={14} />
@@ -855,13 +866,15 @@ export default function App() {
                   onToggleEditMode={() => setIsPhoneEditMode(v => !v)}
                   isFullscreenActive={isFullscreenWakeLockActive}
                   onToggleFullscreen={toggleFullscreenWakeLock}
+                  theme={theme}
+                  onToggleTheme={toggleTheme}
                   onLogout={logout}
                   callsign={currentUser?.callsign ?? ''}
                 />
               )}
               <button
                 onClick={() => setHeaderCollapsed(false)}
-                className="p-1 hover:bg-white/5 rounded text-[#8e9299] flex-shrink-0"
+                className="p-1 hover:bg-ink/5 rounded text-muted flex-shrink-0"
                 title="Expand header"
               >
                 <ChevronDown size={14} />
@@ -869,7 +882,7 @@ export default function App() {
             </div>
           </header>
         ) : (
-          <header className="bg-[#151619] rounded-xl border border-[#2a2b2e] shadow-2xl py-1.5 px-3 sm:p-4 flex items-center justify-between gap-2">
+          <header className="bg-panel rounded-xl border border-line shadow-2xl py-1.5 px-3 sm:p-4 flex items-center justify-between gap-2">
             <div className="flex sm:hidden items-center gap-2 flex-shrink-0">
               <span className="text-sm font-bold tracking-tight uppercase text-center">RigControl Web</span>
             </div>
@@ -885,8 +898,8 @@ export default function App() {
                     className={cn(
                       "p-1.5 sm:px-6 sm:py-2 rounded-lg font-bold uppercase text-sm transition-all flex items-center gap-2",
                       uiConnected
-                        ? "bg-red-500/20 text-red-500 border border-red-500/50 hover:bg-red-500 hover:text-white"
-                        : "bg-emerald-500/20 text-emerald-500 border border-emerald-500/50 hover:bg-emerald-500 hover:text-white"
+                        ? "bg-red-500/20 text-red-500 border border-red-500/50 hover:bg-red-500 hover:text-ink"
+                        : "bg-emerald-500/20 text-emerald-500 border border-emerald-500/50 hover:bg-emerald-500 hover:text-ink"
                     )}
                   >
                     {uiConnected ? <Unplug size={16} className="flex-shrink-0" /> : <Plug size={16} className="flex-shrink-0" />}
@@ -895,7 +908,7 @@ export default function App() {
                   <button
                     onClick={() => setIsSettingsOpen(true)}
                     className={cn(
-                      "p-1.5 sm:p-2 bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg transition-all flex-shrink-0",
+                      "p-1.5 sm:p-2 bg-app border border-line rounded-lg transition-all flex-shrink-0",
                       rigctldProcessStatus === "running" ? "text-emerald-500 border-emerald-500/50" : "text-red-500 border-red-500/50"
                     )}
                     title="Rigctld Settings"
@@ -905,18 +918,25 @@ export default function App() {
                   <button
                     onClick={() => setIsCompactEditMode(v => !v)}
                     className={cn(
-                      "p-1.5 sm:p-2 bg-[#0a0a0a] border rounded-lg transition-all flex-shrink-0",
+                      "p-1.5 sm:p-2 bg-app border rounded-lg transition-all flex-shrink-0",
                       isCompactEditMode
                         ? "text-emerald-400 border-emerald-500/70 bg-emerald-500/10"
-                        : "text-[#8e9299] border-[#2a2b2e] hover:text-emerald-400"
+                        : "text-muted border-line hover:text-emerald-400"
                     )}
                     title={isCompactEditMode ? "Exit layout editor" : "Edit layout"}
                   >
                     <LayoutGrid size={18} />
                   </button>
                   <button
+                    onClick={toggleTheme}
+                    className="p-1.5 sm:p-2 bg-app border border-line rounded-lg text-muted hover:text-ink transition-all flex-shrink-0"
+                    title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+                  >
+                    {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+                  </button>
+                  <button
                     onClick={logout}
-                    className="p-1.5 sm:p-2 bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg text-[#8e9299] hover:text-red-400 hover:border-red-500/50 transition-all flex-shrink-0"
+                    className="p-1.5 sm:p-2 bg-app border border-line rounded-lg text-muted hover:text-red-400 hover:border-red-500/50 transition-all flex-shrink-0"
                     title={`Sign out (${currentUser?.callsign ?? ''})`}
                   >
                     <LogOut size={18} />
@@ -934,13 +954,15 @@ export default function App() {
                   onToggleEditMode={() => setIsPhoneEditMode(v => !v)}
                   isFullscreenActive={isFullscreenWakeLockActive}
                   onToggleFullscreen={toggleFullscreenWakeLock}
+                  theme={theme}
+                  onToggleTheme={toggleTheme}
                   onLogout={logout}
                   callsign={currentUser?.callsign ?? ''}
                 />
               )}
               <button
                 onClick={() => setHeaderCollapsed(true)}
-                className="p-1.5 sm:p-2 bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg text-[#8e9299] hover:text-white transition-all flex-shrink-0"
+                className="p-1.5 sm:p-2 bg-app border border-line rounded-lg text-muted hover:text-ink transition-all flex-shrink-0"
                 title="Collapse header"
               >
                 <ChevronUp size={18} />
@@ -1365,20 +1387,20 @@ export default function App() {
         {/* Portable Setup Modal */}
         {showSetupModal && (
           <div className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
-            <div className="bg-[#151619] border border-[#2a2b2e] rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-              <div className="p-6 border-b border-[#2a2b2e] flex justify-between items-center bg-[#1a1b1e]">
+            <div className="bg-panel border border-line rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+              <div className="p-6 border-b border-line flex justify-between items-center bg-panel-2">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg">
                     <Server size={20} />
                   </div>
                   <div>
                     <h2 className="text-lg font-bold uppercase tracking-tight">Portable Setup</h2>
-                    <p className="text-[0.625rem] text-[#8e9299] uppercase tracking-widest">Run RigControl locally on your computer</p>
+                    <p className="text-[0.625rem] text-muted uppercase tracking-widest">Run RigControl locally on your computer</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowSetupModal(false)}
-                  className="p-2 hover:bg-white/5 rounded-full transition-colors text-[#8e9299] hover:text-white"
+                  className="p-2 hover:bg-ink/5 rounded-full transition-colors text-muted hover:text-ink"
                 >
                   <X size={20} />
                 </button>
@@ -1389,7 +1411,7 @@ export default function App() {
                     <Monitor size={16} />
                     <h3 className="text-sm font-bold uppercase">1. Install the App</h3>
                   </div>
-                  <p className="text-xs text-[#8e9299] leading-relaxed">
+                  <p className="text-xs text-muted leading-relaxed">
                     Click the <span className="text-blue-400 font-bold">INSTALL</span> button in the header to add RigControl to your desktop or home screen.
                   </p>
                 </section>
@@ -1399,16 +1421,16 @@ export default function App() {
                     <h3 className="text-sm font-bold uppercase">2. Run the Portable Backend</h3>
                   </div>
                   <div className="space-y-3">
-                    <p className="text-xs text-[#8e9299] leading-relaxed">
+                    <p className="text-xs text-muted leading-relaxed">
                       To control your local radio without port forwarding, run the backend server on the same computer as your radio.
                     </p>
-                    <div className="bg-[#0a0a0a] p-4 rounded-lg border border-[#2a2b2e] space-y-3">
+                    <div className="bg-app p-4 rounded-lg border border-line space-y-3">
                       <p className="text-[0.625rem] text-emerald-500/70 font-bold uppercase">Quick Start Command:</p>
-                      <code className="block text-[0.6875rem] text-white bg-black/50 p-3 rounded border border-white/5 break-all">
+                      <code className="block text-[0.6875rem] text-ink bg-panel-2 p-3 rounded border border-ink/5 break-all">
                         git clone https://github.com/example/rigcontrol-web.git<br/>
                         cd rigcontrol-web && npm install && npm start
                       </code>
-                      <p className="text-[0.625rem] text-[#4a4b4e] italic">* Requires Node.js and Hamlib (rigctld) installed on your system.</p>
+                      <p className="text-[0.625rem] text-faint italic">* Requires Node.js and Hamlib (rigctld) installed on your system.</p>
                     </div>
                   </div>
                 </section>
@@ -1418,22 +1440,22 @@ export default function App() {
                     <h3 className="text-sm font-bold uppercase">3. Configure Backend URL</h3>
                   </div>
                   <div className="space-y-4">
-                    <p className="text-xs text-[#8e9299] leading-relaxed">
-                      Once your local backend is running, point this app to it. If running on the same machine, use <code className="text-white">https://localhost:3000</code>.
+                    <p className="text-xs text-muted leading-relaxed">
+                      Once your local backend is running, point this app to it. If running on the same machine, use <code className="text-ink">https://localhost:3000</code>.
                     </p>
                     <div className="flex flex-col gap-2">
-                      <label className="text-[0.625rem] uppercase text-[#8e9299]">Local Backend URL</label>
+                      <label className="text-[0.625rem] uppercase text-muted">Local Backend URL</label>
                       <div className="flex gap-2">
                         <input
                           type="text"
                           value={backendUrl}
                           onChange={(e) => setBackendUrl(e.target.value)}
-                          className="flex-1 bg-[#0a0a0a] border border-[#2a2b2e] rounded px-4 py-2 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                          className="flex-1 bg-app border border-line rounded px-4 py-2 text-sm focus:outline-none focus:border-blue-500 transition-colors"
                           placeholder="https://localhost:3000"
                         />
                         <button
                           onClick={() => window.location.reload()}
-                          className="px-4 py-2 bg-blue-500/20 text-blue-500 border border-blue-500/50 rounded text-xs font-bold uppercase hover:bg-blue-500 hover:text-white transition-all"
+                          className="px-4 py-2 bg-blue-500/20 text-blue-500 border border-blue-500/50 rounded text-xs font-bold uppercase hover:bg-blue-500 hover:text-ink transition-all"
                         >
                           Apply
                         </button>
@@ -1443,10 +1465,10 @@ export default function App() {
                   </div>
                 </section>
               </div>
-              <div className="p-6 bg-[#1a1b1e] border-t border-[#2a2b2e] flex justify-end">
+              <div className="p-6 bg-panel-2 border-t border-line flex justify-end">
                 <button
                   onClick={() => setShowSetupModal(false)}
-                  className="px-6 py-2 bg-[#2a2b2e] hover:bg-[#3a3b3e] text-white rounded font-bold uppercase text-xs transition-all"
+                  className="px-6 py-2 bg-line hover:bg-line-strong text-ink rounded font-bold uppercase text-xs transition-all"
                 >
                   Close
                 </button>

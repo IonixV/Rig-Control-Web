@@ -12,19 +12,19 @@ interface SizeControlProps {
 function SizeControl({ label, value, min, max, onChange }: SizeControlProps) {
   return (
     <div className="flex items-center gap-1.5">
-      <span className="text-[0.625rem] uppercase tracking-widest text-[#8e9299] font-bold w-8">{label}</span>
+      <span className="text-[0.625rem] uppercase tracking-widest text-muted font-bold w-8">{label}</span>
       <button
         onClick={() => onChange(Math.max(min, value - 1))}
         disabled={value <= min}
-        className="w-6 h-6 rounded flex items-center justify-center bg-[#1a1b1e] border border-[#2a2b2e] text-[#8e9299] hover:text-white hover:border-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+        className="w-6 h-6 rounded flex items-center justify-center bg-panel-2 border border-line text-muted hover:text-ink hover:border-ink/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
       >
         <Minus size={10} />
       </button>
-      <span className="text-sm font-bold font-mono text-white w-4 text-center">{value}</span>
+      <span className="text-sm font-bold font-mono text-ink w-4 text-center">{value}</span>
       <button
         onClick={() => onChange(Math.min(max, value + 1))}
         disabled={value >= max}
-        className="w-6 h-6 rounded flex items-center justify-center bg-[#1a1b1e] border border-[#2a2b2e] text-[#8e9299] hover:text-white hover:border-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+        className="w-6 h-6 rounded flex items-center justify-center bg-panel-2 border border-line text-muted hover:text-ink hover:border-ink/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
       >
         <Plus size={10} />
       </button>
@@ -60,7 +60,7 @@ export default function EditToolbar({
   onDone,
 }: EditToolbarProps) {
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-sm border-t border-[#2a2b2e] px-4 py-2.5 flex items-center justify-between gap-4">
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-app/95 backdrop-blur-sm border-t border-line px-4 py-2.5 flex items-center justify-between gap-4">
       <div className="flex items-center gap-4">
         {showColsControl && (
           <SizeControl label="Cols" value={cols} min={1} max={maxCols} onChange={onColsChange} />
@@ -81,7 +81,7 @@ export default function EditToolbar({
         )}
         <button
           onClick={onReset}
-          className="flex items-center gap-1.5 text-xs text-[#8e9299] hover:text-white px-3 py-1.5 rounded border border-[#2a2b2e] hover:border-white/20 transition-all"
+          className="flex items-center gap-1.5 text-xs text-muted hover:text-ink px-3 py-1.5 rounded border border-line hover:border-ink/20 transition-all"
           title="Reset to default layout"
         >
           <RotateCcw size={12} />

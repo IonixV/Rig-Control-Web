@@ -25,8 +25,8 @@ export default function ModeBwPanel({
 }: ModeBwPanelProps) {
   const isPhone = variant === "phone";
   const selectClass = isPhone
-    ? "flex-1 bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-3 py-2 text-sm font-bold focus:outline-none focus:border-emerald-500"
-    : "bg-[#0a0a0a] border border-[#2a2b2e] rounded px-2 py-1 text-xs focus:outline-none focus:border-emerald-500";
+    ? "flex-1 bg-app border border-line rounded-lg px-3 py-2 text-sm font-bold focus:outline-none focus:border-emerald-500"
+    : "bg-app border border-line rounded px-2 py-1 text-xs focus:outline-none focus:border-emerald-500";
 
   return (
     <>

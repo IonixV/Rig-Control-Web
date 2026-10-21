@@ -63,8 +63,8 @@ function VideoSettingsModal({
   if (!isOpen) return null;
   return (
 <div className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
-  <div className="bg-[#151619] w-full max-w-md rounded-2xl border border-[#2a2b2e] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-    <div className="p-6 border-b border-[#2a2b2e] flex items-center justify-between bg-[#1a1b1e]">
+  <div className="bg-panel w-full max-w-md rounded-2xl border border-line shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+    <div className="p-6 border-b border-line flex items-center justify-between bg-panel-2">
       <div className="flex items-center gap-3">
         <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-500">
           <Monitor size={20} />
@@ -75,7 +75,7 @@ function VideoSettingsModal({
       </div>
       <button 
         onClick={() => onClose()}
-        className="p-2 hover:bg-[#2a2b2e] rounded-xl text-[#8e9299] transition-all"
+        className="p-2 hover:bg-line rounded-xl text-muted transition-all"
       >
         <X size={20} />
       </button>
@@ -84,7 +84,7 @@ function VideoSettingsModal({
     <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
       <div className="space-y-4">
         <div className="space-y-2">
-          <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Video Device</label>
+          <label className="text-[0.625rem] uppercase text-muted font-bold">Video Device</label>
           <select
             value={videoSettings.device}
             onChange={(e) => {
@@ -92,18 +92,18 @@ function VideoSettingsModal({
               setVideoSettings(newSettings);
               socket?.emit("update-video-settings", newSettings);
             }}
-            className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-all"
+            className="w-full bg-app border border-line rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-all"
           >
             <option value="">Select Device</option>
             {videoDevices.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
           </select>
           {!isElectronSource && videoDevices.length === 0 && (
-            <p className="text-[0.625rem] text-[#8e9299]">Device list is populated by the host Electron app.</p>
+            <p className="text-[0.625rem] text-muted">Device list is populated by the host Electron app.</p>
           )}
         </div>
 
         <div className="space-y-2">
-          <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Resolution (Width × Height)</label>
+          <label className="text-[0.625rem] uppercase text-muted font-bold">Resolution (Width × Height)</label>
           <div className="flex items-center gap-2">
             <input
               type="text"
@@ -127,9 +127,9 @@ function VideoSettingsModal({
                   }
                 }, 800);
               }}
-              className="w-24 bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-3 py-3 text-sm text-center focus:outline-none focus:border-emerald-500 transition-all"
+              className="w-24 bg-app border border-line rounded-lg px-3 py-3 text-sm text-center focus:outline-none focus:border-emerald-500 transition-all"
             />
-            <span className="text-[#8e9299] font-bold text-sm">×</span>
+            <span className="text-muted font-bold text-sm">×</span>
             <input
               type="text"
               inputMode="numeric"
@@ -152,13 +152,13 @@ function VideoSettingsModal({
                   }
                 }, 800);
               }}
-              className="w-24 bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-3 py-3 text-sm text-center focus:outline-none focus:border-emerald-500 transition-all"
+              className="w-24 bg-app border border-line rounded-lg px-3 py-3 text-sm text-center focus:outline-none focus:border-emerald-500 transition-all"
             />
           </div>
         </div>
 
         <div className="space-y-2">
-          <label className="text-[0.625rem] uppercase text-[#8e9299] font-bold">Framerate</label>
+          <label className="text-[0.625rem] uppercase text-muted font-bold">Framerate</label>
           <select
             value={videoSettings.framerate}
             onChange={(e) => {
@@ -166,7 +166,7 @@ function VideoSettingsModal({
               setVideoSettings(newSettings);
               socket?.emit("update-video-settings", newSettings);
             }}
-            className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-all"
+            className="w-full bg-app border border-line rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-all"
           >
             <option value="">Select FPS</option>
             <option value="5">5 fps</option>

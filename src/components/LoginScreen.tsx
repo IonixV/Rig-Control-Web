@@ -32,27 +32,27 @@ export default function LoginScreen({ onLogin, loginError, retryAfter }: Props) 
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-app flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         {/* Header */}
         <div className="flex items-center justify-center gap-3 mb-8">
           <img src="/rcw-r-64.png" className="w-8 h-8" alt="" />
-          <h1 className="text-2xl font-bold tracking-tighter uppercase italic text-white">
+          <h1 className="text-2xl font-bold tracking-tighter uppercase italic text-ink">
             RigControl Web
           </h1>
         </div>
 
         {/* Card */}
-        <div className="bg-[#111] border border-[#2a2b2e] rounded-xl p-6 space-y-5">
+        <div className="bg-deep border border-line rounded-xl p-6 space-y-5">
           <div>
-            <h2 className="text-sm font-bold uppercase tracking-widest text-[#8e9299]">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-muted">
               Sign In
             </h2>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1">
-              <label className="text-xs font-bold uppercase tracking-wider text-[#8e9299]">
+              <label className="text-xs font-bold uppercase tracking-wider text-muted">
                 Callsign
               </label>
               <input
@@ -62,13 +62,13 @@ export default function LoginScreen({ onLogin, loginError, retryAfter }: Props) 
                 onChange={(e) => setCallsign(e.target.value.toUpperCase())}
                 autoComplete="username"
                 spellCheck={false}
-                className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-emerald-600 transition-colors placeholder-[#444]"
+                className="w-full bg-app border border-line rounded-lg px-3 py-2 text-sm font-mono text-ink focus:outline-none focus:border-emerald-600 transition-colors placeholder-faint"
                 placeholder="W1ABC"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold uppercase tracking-wider text-[#8e9299]">
+              <label className="text-xs font-bold uppercase tracking-wider text-muted">
                 Password
               </label>
               <input
@@ -76,7 +76,7 @@ export default function LoginScreen({ onLogin, loginError, retryAfter }: Props) 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
-                className="w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-emerald-600 transition-colors"
+                className="w-full bg-app border border-line rounded-lg px-3 py-2 text-sm font-mono text-ink focus:outline-none focus:border-emerald-600 transition-colors"
               />
             </div>
 
@@ -92,7 +92,7 @@ export default function LoginScreen({ onLogin, loginError, retryAfter }: Props) 
               className={cn(
                 "w-full flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold uppercase text-sm tracking-wider transition-all",
                 locked || !callsign.trim() || !password
-                  ? "bg-[#1a1b1e] text-[#444] border border-[#2a2b2e] cursor-not-allowed"
+                  ? "bg-panel-2 text-faint border border-line cursor-not-allowed"
                   : "bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500"
               )}
             >

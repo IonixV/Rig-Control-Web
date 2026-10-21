@@ -51,7 +51,7 @@ export default function RfLevelsPanel({
       {/* RF Power */}
       <div className={isPhone ? "space-y-1.5" : ""}>
           <div className="flex justify-between items-center">
-            <span className="text-xs uppercase text-[#8e9299]">RF Power</span>
+            <span className="text-xs uppercase text-muted">RF Power</span>
             <span className="text-sm text-emerald-500 font-bold">{Math.round(localRFPower * 100)}%</span>
           </div>
           <input
@@ -63,7 +63,7 @@ export default function RfLevelsPanel({
             disabled={!connected}
             onChange={(e) => { isDraggingRF.current = true; setLocalRFPower(parseFloat(e.target.value) / 100); }}
             data-testid="rflevels-rfpower-slider"
-            className={cn(`w-full accent-emerald-500 ${sliderH} bg-[#0a0a0a] rounded-lg appearance-none cursor-pointer`, !connected && "opacity-50 cursor-not-allowed")}
+            className={cn(`w-full accent-emerald-500 ${sliderH} bg-app rounded-lg appearance-none cursor-pointer`, !connected && "opacity-50 cursor-not-allowed")}
           />
         </div>
 
@@ -71,7 +71,7 @@ export default function RfLevelsPanel({
       {rfLevelCapabilities.supported && (
         <div className={isPhone ? "space-y-1.5" : "mt-3"}>
             <div className="flex justify-between items-center">
-              <span className="text-xs uppercase text-[#8e9299]">RF Level</span>
+              <span className="text-xs uppercase text-muted">RF Level</span>
               <span className="text-sm text-emerald-500 font-bold">{Math.round(localRFLevel * 100)}%</span>
             </div>
             <input
@@ -81,7 +81,7 @@ export default function RfLevelsPanel({
               disabled={!connected}
               onChange={(e) => { isDraggingRFLevel.current = true; setLocalRFLevel(parseFloat(e.target.value)); }}
               data-testid="rflevels-rflevel-slider"
-              className={cn(`w-full accent-emerald-500 ${sliderH} bg-[#0a0a0a] rounded-lg appearance-none cursor-pointer`, !connected && "opacity-50 cursor-not-allowed")}
+              className={cn(`w-full accent-emerald-500 ${sliderH} bg-app rounded-lg appearance-none cursor-pointer`, !connected && "opacity-50 cursor-not-allowed")}
             />
           </div>
       )}
@@ -98,7 +98,7 @@ export default function RfLevelsPanel({
         return (
           <div className={isPhone ? "space-y-1.5" : "mt-3"}>
             <div className="flex justify-between items-center">
-              <span className="text-xs uppercase text-[#8e9299]">DNR Level</span>
+              <span className="text-xs uppercase text-muted">DNR Level</span>
               <span className="text-sm text-emerald-500 font-bold">Lvl {nrStepIdx}</span>
             </div>
             <input
@@ -113,7 +113,7 @@ export default function RfLevelsPanel({
                 setLocalNRLevel(Math.min(nrCapabilities.range.max, nrCapabilities.range.min + stepIdx * nrCapabilities.range.step));
               }}
               data-testid="rflevels-dnr-slider"
-              className={cn(`w-full accent-emerald-500 ${sliderH} bg-[#0a0a0a] rounded-lg appearance-none cursor-pointer`, !connected && "opacity-50 cursor-not-allowed")}
+              className={cn(`w-full accent-emerald-500 ${sliderH} bg-app rounded-lg appearance-none cursor-pointer`, !connected && "opacity-50 cursor-not-allowed")}
             />
           </div>
         );
@@ -123,7 +123,7 @@ export default function RfLevelsPanel({
       {nbCapabilities.levelSupported && (
         <div className={isPhone ? "space-y-1.5" : "mt-3"}>
             <div className="flex justify-between items-center">
-              <span className="text-xs uppercase text-[#8e9299]">NB Level</span>
+              <span className="text-xs uppercase text-muted">NB Level</span>
               <span className="text-sm text-emerald-500 font-bold">Lvl {Math.round(localNBLevel)}</span>
             </div>
             <input
@@ -133,7 +133,7 @@ export default function RfLevelsPanel({
               disabled={!connected}
               onChange={(e) => { isDraggingNB.current = true; setLocalNBLevel(parseFloat(e.target.value)); }}
               data-testid="rflevels-nb-slider"
-              className={cn(`w-full accent-emerald-500 ${sliderH} bg-[#0a0a0a] rounded-lg appearance-none cursor-pointer`, !connected && "opacity-50 cursor-not-allowed")}
+              className={cn(`w-full accent-emerald-500 ${sliderH} bg-app rounded-lg appearance-none cursor-pointer`, !connected && "opacity-50 cursor-not-allowed")}
             />
           </div>
       )}

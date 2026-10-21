@@ -93,14 +93,14 @@ export default function DiagnosticsTab({ socket, appVersion }: Props) {
           <h3 className="text-[0.625rem] uppercase text-emerald-500 font-bold">Debug Flags</h3>
           <button
             onClick={enableAll}
-            className="text-[0.5rem] uppercase font-bold text-[#8e9299] hover:text-white transition-colors"
+            className="text-[0.5rem] uppercase font-bold text-muted hover:text-ink transition-colors"
           >
             Enable All
           </button>
         </div>
         <div className="grid grid-cols-2 gap-2">
           {FLAG_LABELS.map(({ key, label }) => (
-            <label key={key} className="flex items-center gap-2 text-xs text-[#e0e0e0] cursor-pointer">
+            <label key={key} className="flex items-center gap-2 text-xs text-ink cursor-pointer">
               <input
                 type="checkbox"
                 checked={flags[key]}
@@ -114,22 +114,22 @@ export default function DiagnosticsTab({ socket, appVersion }: Props) {
       </div>
 
       {/* Diagnostic Log */}
-      <div className="space-y-2 pt-4 border-t border-[#2a2b2e]">
+      <div className="space-y-2 pt-4 border-t border-line">
         <div className="flex items-center justify-between">
-          <label className="text-[0.625rem] uppercase text-[#8e9299]">Diagnostic Log</label>
+          <label className="text-[0.625rem] uppercase text-muted">Diagnostic Log</label>
           <button
             onClick={clearView}
-            className="text-[0.5rem] uppercase font-bold text-[#8e9299] hover:text-white transition-colors"
+            className="text-[0.5rem] uppercase font-bold text-muted hover:text-ink transition-colors"
           >
             Clear View
           </button>
         </div>
-        <div className="bg-[#0a0a0a] border border-[#2a2b2e] rounded-lg p-3 h-64 overflow-y-auto custom-scrollbar font-mono text-[0.625rem] space-y-1">
+        <div className="bg-app border border-line rounded-lg p-3 h-64 overflow-y-auto custom-scrollbar font-mono text-[0.625rem] space-y-1">
           {logs.length === 0 ? (
-            <p className="text-[#4a4b4e] italic">No log lines yet...</p>
+            <p className="text-faint italic">No log lines yet...</p>
           ) : (
             logs.map((log, i) => (
-              <div key={i} className="text-[#8e9299] break-all">
+              <div key={i} className="text-muted break-all">
                 {log}
               </div>
             ))
@@ -144,7 +144,7 @@ export default function DiagnosticsTab({ socket, appVersion }: Props) {
               "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded text-[0.625rem] font-bold uppercase border transition-all",
               copyStatus === "copied"
                 ? "bg-emerald-500/20 border-emerald-500 text-emerald-400"
-                : "bg-[#1a1b1e] border-[#2a2b2e] text-[#8e9299] hover:text-white hover:border-emerald-500/50"
+                : "bg-panel-2 border-line text-muted hover:text-ink hover:border-emerald-500/50"
             )}
           >
             {copyStatus === "copied" ? <Check size={12} /> : <Copy size={12} />}
@@ -156,7 +156,7 @@ export default function DiagnosticsTab({ socket, appVersion }: Props) {
               "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded text-[0.625rem] font-bold uppercase border transition-all",
               saveStatus === "saved"
                 ? "bg-emerald-500/20 border-emerald-500 text-emerald-400"
-                : "bg-[#1a1b1e] border-[#2a2b2e] text-[#8e9299] hover:text-white hover:border-emerald-500/50"
+                : "bg-panel-2 border-line text-muted hover:text-ink hover:border-emerald-500/50"
             )}
           >
             {saveStatus === "saved" ? <Check size={12} /> : <Save size={12} />}

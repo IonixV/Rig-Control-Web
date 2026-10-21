@@ -61,7 +61,7 @@ export default function ComboSpotSettingsModal(props: ComboSpotSettingsModalProp
   if (!isOpen) return null;
 
   const ac = acFor(activeTab);
-  const inputClass = cn("w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 text-sm text-white focus:outline-none", ac.focus);
+  const inputClass = cn("w-full bg-app border border-line rounded px-3 py-2 text-sm text-ink focus:outline-none", ac.focus);
 
   const nonDxConfig = activeTab === 'pota' ? {
     pollRate: props.potaPollRate, setPollRate: props.setPotaPollRate,
@@ -85,9 +85,9 @@ export default function ComboSpotSettingsModal(props: ComboSpotSettingsModalProp
 
   return (
     <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
-      <div className="bg-[#151619] border border-[#2a2b2e] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="bg-panel border border-line rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
 
-        <div className="p-4 border-b border-[#2a2b2e] flex justify-between items-center bg-[#1a1b1e]">
+        <div className="p-4 border-b border-line flex justify-between items-center bg-panel-2">
           <div className="flex items-center gap-2">
             <div className={cn("p-1.5 rounded-lg", ac.iconBg)}>
               <MapPin size={16} />
@@ -96,14 +96,14 @@ export default function ComboSpotSettingsModal(props: ComboSpotSettingsModalProp
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 hover:bg-white/5 rounded-full transition-colors text-[#8e9299] hover:text-white"
+            className="p-1.5 hover:bg-ink/5 rounded-full transition-colors text-muted hover:text-ink"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Tab bar */}
-        <div className="flex border-b border-[#2a2b2e] bg-[#1a1b1e]">
+        <div className="flex border-b border-line bg-panel-2">
           {TABS.map(t => (
             <button
               key={t.key}
@@ -112,7 +112,7 @@ export default function ComboSpotSettingsModal(props: ComboSpotSettingsModalProp
                 'px-4 py-2 text-[0.5625rem] uppercase tracking-widest font-bold transition-colors border-b-2 -mb-px',
                 activeTab === t.key
                   ? t.ac.activeTab
-                  : 'text-[#8e9299] border-transparent hover:text-white'
+                  : 'text-muted border-transparent hover:text-ink'
               )}
             >
               {t.label}
@@ -124,9 +124,9 @@ export default function ComboSpotSettingsModal(props: ComboSpotSettingsModalProp
           {activeTab === 'dx' && (
             <>
               <label className="flex items-center justify-between cursor-pointer select-none">
-                <span className="text-[0.625rem] uppercase tracking-widest font-bold text-[#8e9299]">
+                <span className="text-[0.625rem] uppercase tracking-widest font-bold text-muted">
                   Enable DX Cluster
-                  <span className="block normal-case tracking-normal font-normal text-[0.625rem] text-[#5a5b5e] mt-0.5">
+                  <span className="block normal-case tracking-normal font-normal text-[0.625rem] text-faint-2 mt-0.5">
                     {props.dxClusterEnabled ? (props.dxConnected ? 'Connected' : (props.dxError ?? 'Connecting…')) : 'Disabled'}
                   </span>
                 </span>
@@ -140,22 +140,22 @@ export default function ComboSpotSettingsModal(props: ComboSpotSettingsModalProp
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[0.625rem] uppercase text-[#8e9299]">Cluster Host</label>
+                  <label className="text-[0.625rem] uppercase text-muted">Cluster Host</label>
                   <input type="text" value={props.dxHost} onChange={e => props.setDxHost(e.target.value)} className={inputClass} placeholder="w3lpl.net" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[0.625rem] uppercase text-[#8e9299]">Port</label>
+                  <label className="text-[0.625rem] uppercase text-muted">Port</label>
                   <input type="number" value={props.dxPort} onChange={e => props.setDxPort(Number(e.target.value))} className={inputClass} placeholder="7373" />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-[0.625rem] uppercase text-[#8e9299]">Login Callsign</label>
+                <label className="text-[0.625rem] uppercase text-muted">Login Callsign</label>
                 <input type="text" value={props.dxLoginCallsign} onChange={e => props.setDxLoginCallsign(e.target.value.toUpperCase())} className={inputClass} placeholder="Your callsign" />
               </div>
 
               <div className="space-y-1">
-                <label className="text-[0.625rem] uppercase text-[#8e9299]">Max Spot Age</label>
+                <label className="text-[0.625rem] uppercase text-muted">Max Spot Age</label>
                 <select
                   value={props.dxMaxAge}
                   onChange={e => props.setDxMaxAge(Number(e.target.value))}
@@ -166,7 +166,7 @@ export default function ComboSpotSettingsModal(props: ComboSpotSettingsModalProp
               </div>
 
               <div className="space-y-1">
-                <label className="text-[0.625rem] uppercase text-[#8e9299]">Callsign / Prefix Filter</label>
+                <label className="text-[0.625rem] uppercase text-muted">Callsign / Prefix Filter</label>
                 <input
                   type="text"
                   value={callsignRaw}
@@ -178,7 +178,7 @@ export default function ComboSpotSettingsModal(props: ComboSpotSettingsModalProp
               </div>
 
               <div className="space-y-1">
-                <label className="text-[0.625rem] uppercase text-[#8e9299]">Keyword Filter</label>
+                <label className="text-[0.625rem] uppercase text-muted">Keyword Filter</label>
                 <input
                   type="text"
                   value={keywordRaw}
@@ -195,21 +195,21 @@ export default function ComboSpotSettingsModal(props: ComboSpotSettingsModalProp
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[0.625rem] uppercase text-[#8e9299]">Poll Frequency</label>
+                  <label className="text-[0.625rem] uppercase text-muted">Poll Frequency</label>
                   <select
                     value={nonDxConfig.pollRate}
                     onChange={e => nonDxConfig.setPollRate(Number(e.target.value))}
-                    className={cn("w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 text-sm text-white appearance-none cursor-pointer focus:outline-none", ac.focus)}
+                    className={cn("w-full bg-app border border-line rounded px-3 py-2 text-sm text-ink appearance-none cursor-pointer focus:outline-none", ac.focus)}
                   >
                     {[1, 2, 3, 4, 5].map(m => <option key={m} value={m}>{m} min</option>)}
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[0.625rem] uppercase text-[#8e9299]">Max Spot Age</label>
+                  <label className="text-[0.625rem] uppercase text-muted">Max Spot Age</label>
                   <select
                     value={nonDxConfig.maxAge}
                     onChange={e => nonDxConfig.setMaxAge(Number(e.target.value))}
-                    className={cn("w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 text-sm text-white appearance-none cursor-pointer focus:outline-none", ac.focus)}
+                    className={cn("w-full bg-app border border-line rounded px-3 py-2 text-sm text-ink appearance-none cursor-pointer focus:outline-none", ac.focus)}
                   >
                     {[1, 3, 5, 10, 15].map(m => <option key={m} value={m}>{m} min</option>)}
                   </select>
@@ -217,14 +217,14 @@ export default function ComboSpotSettingsModal(props: ComboSpotSettingsModalProp
               </div>
 
               <div className="space-y-2">
-                <label className="text-[0.625rem] uppercase text-[#8e9299]">Mode Filter</label>
+                <label className="text-[0.625rem] uppercase text-muted">Mode Filter</label>
                 <PillToggleGroup ac={ac} options={MODE_OPTIONS} selected={nonDxConfig.modeFilter} onChange={nonDxConfig.setModeFilter} layout="wrap" />
               </div>
             </>
           )}
 
           <div className="space-y-2">
-            <label className="text-[0.625rem] uppercase text-[#8e9299]">Band Filter</label>
+            <label className="text-[0.625rem] uppercase text-muted">Band Filter</label>
             <PillToggleGroup ac={ac} options={BAND_OPTIONS} selected={activeBandFilter} onChange={setActiveBandFilter} layout="grid-4" />
           </div>
         </div>

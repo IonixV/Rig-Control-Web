@@ -1,7 +1,77 @@
 @import "tailwindcss";
 
+/* Semantic theme tokens. Dark is the default; light overrides below.
+   Utilities: bg-app, bg-panel, bg-panel-2, border-line, text-ink, text-muted, ... */
+@theme {
+  --color-app: #0a0a0a;
+  --color-deep: #111111;
+  --color-panel: #151619;
+  --color-panel-2: #1a1b1e;
+  --color-line: #2a2b2e;
+  --color-line-strong: #3a3b3e;
+  --color-ink: #e0e0e0;
+  --color-muted: #8e9299;
+  --color-muted-2: #aaaaaa;
+  --color-faint: #4a4b4e;
+  --color-faint-2: #5a5b5e;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-app: #f4f5f7;
+  --color-deep: #e6e8eb;
+  --color-panel: #ffffff;
+  --color-panel-2: #eceef1;
+  --color-line: #d3d6db;
+  --color-line-strong: #c0c4ca;
+  --color-ink: #1a1b1e;
+  --color-muted: #5b6068;
+  --color-muted-2: #4a4f57;
+  --color-faint: #8a8f98;
+  --color-faint-2: #7a7f88;
+
+  /* Accent contrast: light-on-dark accent shades are remapped to darker ones
+     (text-*-300/400) and dark tinted backgrounds (bg-*-900/40) to light tints. */
+  --color-emerald-200: var(--color-emerald-800);
+  --color-emerald-300: var(--color-emerald-800);
+  --color-emerald-400: var(--color-emerald-700);
+  --color-emerald-900: var(--color-emerald-100);
+  --color-red-200: var(--color-red-800);
+  --color-red-300: var(--color-red-800);
+  --color-red-400: var(--color-red-700);
+  --color-red-900: var(--color-red-100);
+  --color-amber-200: var(--color-amber-800);
+  --color-amber-300: var(--color-amber-800);
+  --color-amber-400: var(--color-amber-700);
+  --color-amber-900: var(--color-amber-100);
+  --color-blue-200: var(--color-blue-800);
+  --color-blue-300: var(--color-blue-800);
+  --color-blue-400: var(--color-blue-700);
+  --color-blue-900: var(--color-blue-100);
+  --color-sky-200: var(--color-sky-800);
+  --color-sky-300: var(--color-sky-800);
+  --color-sky-400: var(--color-sky-700);
+  --color-sky-900: var(--color-sky-100);
+  --color-green-200: var(--color-green-800);
+  --color-green-300: var(--color-green-800);
+  --color-green-400: var(--color-green-700);
+  --color-green-900: var(--color-green-100);
+  --color-yellow-200: var(--color-yellow-800);
+  --color-yellow-300: var(--color-yellow-800);
+  --color-yellow-400: var(--color-yellow-700);
+  --color-yellow-900: var(--color-yellow-100);
+  --color-orange-200: var(--color-orange-800);
+  --color-orange-300: var(--color-orange-800);
+  --color-orange-400: var(--color-orange-700);
+  --color-orange-900: var(--color-orange-100);
+}
+
 html, body {
-  background-color: #0a0a0a;
+  background-color: var(--color-app);
 }
 
 .cw-scroll {

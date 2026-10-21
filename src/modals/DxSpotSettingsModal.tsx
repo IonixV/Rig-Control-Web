@@ -59,13 +59,13 @@ export default function DxSpotSettingsModal({
 
   if (!isOpen) return null;
 
-  const inputClass = cn("w-full bg-[#0a0a0a] border border-[#2a2b2e] rounded px-3 py-2 text-sm text-white focus:outline-none", ac.focus);
+  const inputClass = cn("w-full bg-app border border-line rounded px-3 py-2 text-sm text-ink focus:outline-none", ac.focus);
 
   return (
     <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
-      <div className="bg-[#151619] border border-[#2a2b2e] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="bg-panel border border-line rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
 
-        <div className="p-4 border-b border-[#2a2b2e] flex justify-between items-center bg-[#1a1b1e]">
+        <div className="p-4 border-b border-line flex justify-between items-center bg-panel-2">
           <div className="flex items-center gap-2">
             <div className={cn("p-1.5 rounded-lg", ac.iconBg)}>
               <Radio size={16} />
@@ -74,7 +74,7 @@ export default function DxSpotSettingsModal({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 hover:bg-white/5 rounded-full transition-colors text-[#8e9299] hover:text-white"
+            className="p-1.5 hover:bg-ink/5 rounded-full transition-colors text-muted hover:text-ink"
           >
             <X size={18} />
           </button>
@@ -82,9 +82,9 @@ export default function DxSpotSettingsModal({
 
         <div className="p-6 space-y-6">
           <label className="flex items-center justify-between cursor-pointer select-none">
-            <span className="text-[0.625rem] uppercase tracking-widest font-bold text-[#8e9299]">
+            <span className="text-[0.625rem] uppercase tracking-widest font-bold text-muted">
               Enable DX Cluster
-              <span className="block normal-case tracking-normal font-normal text-[0.625rem] text-[#5a5b5e] mt-0.5">
+              <span className="block normal-case tracking-normal font-normal text-[0.625rem] text-faint-2 mt-0.5">
                 {dxClusterEnabled ? (dxConnected ? 'Connected' : (dxError ?? 'Connecting…')) : 'Disabled'}
               </span>
             </span>
@@ -98,7 +98,7 @@ export default function DxSpotSettingsModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-[0.625rem] uppercase text-[#8e9299]">Cluster Host</label>
+              <label className="text-[0.625rem] uppercase text-muted">Cluster Host</label>
               <input
                 type="text"
                 value={dxHost}
@@ -108,7 +108,7 @@ export default function DxSpotSettingsModal({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[0.625rem] uppercase text-[#8e9299]">Port</label>
+              <label className="text-[0.625rem] uppercase text-muted">Port</label>
               <input
                 type="number"
                 value={dxPort}
@@ -120,7 +120,7 @@ export default function DxSpotSettingsModal({
           </div>
 
           <div className="space-y-1">
-            <label className="text-[0.625rem] uppercase text-[#8e9299]">Login Callsign</label>
+            <label className="text-[0.625rem] uppercase text-muted">Login Callsign</label>
             <input
               type="text"
               value={dxLoginCallsign}
@@ -131,7 +131,7 @@ export default function DxSpotSettingsModal({
           </div>
 
           <div className="space-y-1">
-            <label className="text-[0.625rem] uppercase text-[#8e9299]">Max Spot Age</label>
+            <label className="text-[0.625rem] uppercase text-muted">Max Spot Age</label>
             <select
               value={dxMaxAge}
               onChange={e => setDxMaxAge(Number(e.target.value))}
@@ -142,7 +142,7 @@ export default function DxSpotSettingsModal({
           </div>
 
           <div className="space-y-1">
-            <label className="text-[0.625rem] uppercase text-[#8e9299]">Callsign / Prefix Filter</label>
+            <label className="text-[0.625rem] uppercase text-muted">Callsign / Prefix Filter</label>
             <input
               type="text"
               value={callsignRaw}
@@ -154,7 +154,7 @@ export default function DxSpotSettingsModal({
           </div>
 
           <div className="space-y-1">
-            <label className="text-[0.625rem] uppercase text-[#8e9299]">Keyword Filter</label>
+            <label className="text-[0.625rem] uppercase text-muted">Keyword Filter</label>
             <input
               type="text"
               value={keywordRaw}
@@ -166,7 +166,7 @@ export default function DxSpotSettingsModal({
           </div>
 
           <div className="space-y-2">
-            <label className="text-[0.625rem] uppercase text-[#8e9299]">Band Filter</label>
+            <label className="text-[0.625rem] uppercase text-muted">Band Filter</label>
             <PillToggleGroup ac={ac} options={BAND_OPTIONS} selected={dxBandFilter} onChange={setDxBandFilter} layout="grid-4" />
           </div>
         </div>
